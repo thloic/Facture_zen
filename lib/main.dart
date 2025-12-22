@@ -1,6 +1,8 @@
 import 'package:facture_zen/features/home/viewmodels/home_viewmodel.dart';
 import 'package:facture_zen/features/home/views/home_screen.dart';
+import 'package:facture_zen/features/invoicing/views/invoice_history_screen.dart';
 import 'package:facture_zen/features/invoicing/views/voice_recording_screen.dart';
+import 'package:facture_zen/features/profile/views/profile_screenn.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -8,7 +10,9 @@ import 'features/auth/viewmodels/login_viewmodel.dart';
 import 'features/auth/viewmodels/register_viewmodel.dart';
 import 'features/auth/views/login_screen.dart';
 import 'features/auth/views/register_screen.dart';
+import 'features/invoicing/viewmodels/invoice_history_viewmodel.dart';
 import 'features/invoicing/viewmodels/voice_recording_viewmodel.dart';
+import 'features/profile/viewmodels/profile_viewmodel.dart';
 
 void main() {
   runApp(const MyApp());
@@ -26,6 +30,8 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => RegisterViewModel()),
         ChangeNotifierProvider(create: (_)=> HomeViewModel()),
         ChangeNotifierProvider(create: (_) => VoiceRecordingViewModel()),
+        ChangeNotifierProvider(create: (_) => InvoiceHistoryViewModel()),
+        ChangeNotifierProvider(create: (_) => ProfileViewModel()),
       ],
       child: MaterialApp(
         title: 'FactureZen',
@@ -40,6 +46,8 @@ class MyApp extends StatelessWidget {
           '/register': (context) => const RegisterScreen(),
           '/home':(context)=> const HomeScreen(),
           '/record':(context)=> const VoiceRecordingScreen(),
+          '/historiqueInvoicing':(context)=> const InvoiceHistoryScreen(),
+          '/settings':(context)=> const ProfileScreen(),
         },
       ),
     );
