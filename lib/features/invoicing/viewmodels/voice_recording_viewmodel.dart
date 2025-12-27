@@ -1,6 +1,9 @@
 import 'package:flutter/foundation.dart';
 import 'dart:async';
 
+/// VoiceRecordingViewModel
+/// Gère l'état et la logique de l'enregistrement vocal
+/// Respecte l'architecture MVVM - cette classe est le ViewModel
 class VoiceRecordingViewModel extends ChangeNotifier {
   // Services injectés
   // final VoiceRecognitionService _voiceService;
@@ -10,12 +13,14 @@ class VoiceRecordingViewModel extends ChangeNotifier {
   bool _isRecording = false;
   bool _isGenerating = false;
   int _durationInSeconds = 0;
+  String? _transcribedText;
   Timer? _timer;
 
   // Getters pour exposer l'état à la View
   bool get isRecording => _isRecording;
   bool get isGenerating => _isGenerating;
   int get durationInSeconds => _durationInSeconds;
+  String? get transcribedText => _transcribedText;
 
   /// Retourne true si on peut réinitialiser (durée > 0 et pas en enregistrement)
   bool get canReset => _durationInSeconds > 0 && !_isRecording;
@@ -84,6 +89,7 @@ class VoiceRecordingViewModel extends ChangeNotifier {
       _stopTimer();
       _durationInSeconds = 0;
       _isRecording = false;
+      _transcribedText = null;
       notifyListeners();
 
       // TODO: Supprimer l'enregistrement audio
@@ -95,8 +101,9 @@ class VoiceRecordingViewModel extends ChangeNotifier {
   }
 
   /// Valide et traite l'enregistrement
-  Future<void> validate() async {
-    if (!canValidate) return;
+  /// Retourne le texte transcrit
+  Future<String?> validate() async {
+    if (!canValidate) return null;
 
     try {
       _stopTimer();
@@ -111,22 +118,24 @@ class VoiceRecordingViewModel extends ChangeNotifier {
       // final audioPath = await _voiceService.getRecordingPath();
       // final transcription = await _invoiceService.transcribeAudio(audioPath);
 
-      // Simulation du traitement
+      // Simulation du traitement (3 secondes)
       await Future.delayed(const Duration(seconds: 3));
 
-      // TODO: Parser le texte transcrit pour générer la facture
-      // final invoiceData = await _invoiceService.parseTranscription(transcription);
+      // Texte de test (Lorem ipsum long)
+      _transcribedText = '''
+exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+''';
 
       _isGenerating = false;
       notifyListeners();
 
-      // TODO: Navigation vers l'écran de prévisualisation de facture
-      // avec les données extraites
+      return _transcribedText;
 
     } catch (e) {
       _isGenerating = false;
       notifyListeners();
       debugPrint('Erreur validation: $e');
+      return null;
     }
   }
 
