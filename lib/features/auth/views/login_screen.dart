@@ -44,7 +44,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (success && mounted) {
       // Navigation vers l'écran principal après succès
       // TODO: Remplacer par la route appropriée
-      // Navigator.pushReplacementNamed(context, '/home');
+      Navigator.pushReplacementNamed(context, '/home');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Connexion réussie !'),

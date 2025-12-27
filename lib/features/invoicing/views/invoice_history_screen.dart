@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../../common/widgets/curved_bottom_nav.dart';
 import '../viewmodels/invoice_history_viewmodel.dart';
 import '../../../common/utils/responsive_utils.dart';
 
@@ -80,6 +81,9 @@ class _InvoiceHistoryScreenState extends State<InvoiceHistoryScreen> {
             ],
           );
         },
+      ),
+      bottomNavigationBar: const CurvedBottomNav(
+        currentIndex: 2, // Index 2 = Historique
       ),
     );
   }

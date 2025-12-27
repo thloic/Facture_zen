@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../../common/widgets/curved_bottom_nav.dart';
 import '../viewmodels/voice_recording_viewmodel.dart';
 import '../../../common/widgets/app_logo.dart';
 import '../../../common/utils/responsive_utils.dart';
@@ -110,6 +111,9 @@ class _VoiceRecordingScreenState extends State<VoiceRecordingScreen>
             );
           },
         ),
+      ),
+      bottomNavigationBar: const CurvedBottomNav(
+        currentIndex: 1, // Index 1 = Facture
       ),
     );
   }

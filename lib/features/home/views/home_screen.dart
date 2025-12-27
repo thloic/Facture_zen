@@ -74,15 +74,8 @@ class _HomeScreenState extends State<HomeScreen> {
           },
         ),
       ),
-      bottomNavigationBar: Consumer<HomeViewModel>(
-        builder: (context, viewModel, child) {
-          return CurvedBottomNav(
-            currentIndex: viewModel.currentPageIndex,
-            onTap: (index) {
-              viewModel.setCurrentPage(index);
-            },
-          );
-        },
+      bottomNavigationBar: const CurvedBottomNav(
+        currentIndex: 0,
       ),
     );
   }

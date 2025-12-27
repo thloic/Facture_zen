@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../../common/widgets/curved_bottom_nav.dart';
 import '../viewmodels/profile_viewmodel.dart';
 import '../../../common/utils/responsive_utils.dart';
 import 'dart:math' as math;
@@ -97,6 +98,9 @@ class ProfileScreen extends StatelessWidget {
             ],
           );
         },
+      ),
+      bottomNavigationBar: const CurvedBottomNav(
+        currentIndex: 3, // Index 3 = Profil
       ),
     );
   }
