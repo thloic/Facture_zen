@@ -23,7 +23,7 @@ class DefaultFirebaseOptions {
     appId: '1:664151721016:android:350facd0997f58954152cd',    // ⬅️ À TROUVER
     messagingSenderId: '664151721016', // ⬅️ À TROUVER
     projectId: 'facturezen',
-    databaseURL: 'https://facturezen-default-rtdb.europe-west1.firebasedatabase.app',
+    databaseURL: 'https://facturezen-558b0-default-rtdb.firebaseio.com',
   );
 
   // Configuration iOS
@@ -32,7 +32,7 @@ class DefaultFirebaseOptions {
     appId: 'REMPLACE_PAR_TON_APP_ID_IOS',
     messagingSenderId: 'REMPLACE_PAR_TON_SENDER_ID',
     projectId: 'facturezen',
-    databaseURL: 'https://facturezen-default-rtdb.europe-west1.firebasedatabase.app',
+    databaseURL: 'https://facturezen-558b0-default-rtdb.firebaseio.com',
     iosBundleId: 'com.example.factureZen',
   );
 }

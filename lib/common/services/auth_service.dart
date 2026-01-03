@@ -25,7 +25,7 @@ class AuthService {
 
   /// Inscription avec email et mot de passe
   /// @param email L'adresse email
-  /// @param password Le mot de passe
+  /// @param password Le mot de passe (sera automatiquement hashé par Firebase Auth)
   /// @param companyName Le nom de l'entreprise
   /// @param companyAddress L'adresse de l'entreprise
   /// @return L'utilisateur créé ou null en cas d'erreur
@@ -36,7 +36,10 @@ class AuthService {
     required String companyAddress,
   }) async {
     try {
+      debugPrint('🔥 Tentative d\'inscription pour: $email');
+
       // Créer le compte Firebase Auth
+      // ⚠️ Firebase Auth hash AUTOMATIQUEMENT le mot de passe de manière sécurisée
       final UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
@@ -44,25 +47,34 @@ class AuthService {
 
       final user = userCredential.user;
       if (user != null) {
-        // Sauvegarder les informations supplémentaires dans Realtime Database
-        await _database.child('users').child(user.uid).set({
-          'email': email,
-          'companyName': companyName,
-          'companyAddress': companyAddress,
-          'createdAt': ServerValue.timestamp,
-          'updatedAt': ServerValue.timestamp,
-        });
+        debugPrint('✅ Compte Firebase Auth créé: ${user.uid}');
 
-        debugPrint('✅ Compte créé avec succès: ${user.uid}');
+        // Sauvegarder les informations supplémentaires dans Realtime Database
+        // ⚠️ JAMAIS stocker le mot de passe ici, même hashé !
+        try {
+          await _database.child('users').child(user.uid).set({
+            'email': email,
+            'companyName': companyName,
+            'companyAddress': companyAddress,
+            'createdAt': ServerValue.timestamp,
+            'updatedAt': ServerValue.timestamp,
+          });
+          debugPrint('✅ Données utilisateur sauvegardées dans Realtime Database');
+        } catch (dbError) {
+          debugPrint('❌ Erreur sauvegarde dans Realtime Database: $dbError');
+          // L'utilisateur est créé dans Auth mais pas dans Database
+          // Tu peux décider de supprimer le compte Auth ou le laisser
+          throw Exception('Compte créé mais données non sauvegardées. Erreur: $dbError');
+        }
       }
 
       return user;
     } on FirebaseAuthException catch (e) {
-      debugPrint('❌ Erreur Firebase Auth: ${e.code}');
+      debugPrint('❌ Erreur Firebase Auth: ${e.code} - ${e.message}');
       throw _handleAuthException(e);
     } catch (e) {
       debugPrint('❌ Erreur inscription: $e');
-      throw Exception('Une erreur est survenue lors de l\'inscription');
+      throw Exception('Une erreur est survenue lors de l\'inscription: $e');
     }
   }
 
@@ -75,6 +87,8 @@ class AuthService {
     required String password,
   }) async {
     try {
+      debugPrint('🔥 Tentative de connexion pour: $email');
+
       final UserCredential userCredential = await _auth.signInWithEmailAndPassword(
         email: email,
         password: password,
@@ -82,21 +96,27 @@ class AuthService {
 
       final user = userCredential.user;
       if (user != null) {
-        // Mettre à jour la date de dernière connexion
-        await _database.child('users').child(user.uid).update({
-          'lastLoginAt': ServerValue.timestamp,
-        });
+        debugPrint('✅ Connexion Firebase Auth réussie: ${user.uid}');
 
-        debugPrint('✅ Connexion réussie: ${user.uid}');
+        // Mettre à jour la date de dernière connexion
+        try {
+          await _database.child('users').child(user.uid).update({
+            'lastLoginAt': ServerValue.timestamp,
+          });
+          debugPrint('✅ Date de connexion mise à jour');
+        } catch (dbError) {
+          debugPrint('⚠️ Impossible de mettre à jour lastLoginAt: $dbError');
+          // Ce n'est pas critique, on continue
+        }
       }
 
       return user;
     } on FirebaseAuthException catch (e) {
-      debugPrint('❌ Erreur Firebase Auth: ${e.code}');
+      debugPrint('❌ Erreur Firebase Auth: ${e.code} - ${e.message}');
       throw _handleAuthException(e);
     } catch (e) {
       debugPrint('❌ Erreur connexion: $e');
-      throw Exception('Une erreur est survenue lors de la connexion');
+      throw Exception('Une erreur est survenue lors de la connexion: $e');
     }
   }
 
@@ -116,12 +136,16 @@ class AuthService {
   /// @return Les données de l'utilisateur
   Future<Map<String, dynamic>?> getUserData(String userId) async {
     try {
+      debugPrint('🔥 Récupération des données pour: $userId');
       final snapshot = await _database.child('users').child(userId).get();
 
       if (snapshot.exists) {
+        debugPrint('✅ Données utilisateur récupérées');
         return Map<String, dynamic>.from(snapshot.value as Map);
+      } else {
+        debugPrint('⚠️ Aucune donnée trouvée pour cet utilisateur');
+        return null;
       }
-      return null;
     } catch (e) {
       debugPrint('❌ Erreur récupération données: $e');
       return null;
@@ -138,7 +162,7 @@ class AuthService {
       debugPrint('✅ Données utilisateur mises à jour');
     } catch (e) {
       debugPrint('❌ Erreur mise à jour données: $e');
-      throw Exception('Impossible de mettre à jour les données');
+      throw Exception('Impossible de mettre à jour les données: $e');
     }
   }
 
@@ -197,71 +221,5 @@ class AuthService {
       default:
         return 'Une erreur est survenue: ${e.message}';
     }
-  }
-}
-
-// ========================================
-// Fichier: lib/common/models/user_model.dart
-// ========================================
-
-/// UserModel
-/// Modèle de données pour un utilisateur
-class UserModel {
-  final String uid;
-  final String email;
-  final String companyName;
-  final String companyAddress;
-  final DateTime createdAt;
-  final DateTime? lastLoginAt;
-
-  UserModel({
-    required this.uid,
-    required this.email,
-    required this.companyName,
-    required this.companyAddress,
-    required this.createdAt,
-    this.lastLoginAt,
-  });
-
-  /// Crée un UserModel depuis les données Firebase
-  factory UserModel.fromJson(String uid, Map<String, dynamic> json) {
-    return UserModel(
-      uid: uid,
-      email: json['email'] ?? '',
-      companyName: json['companyName'] ?? '',
-      companyAddress: json['companyAddress'] ?? '',
-      createdAt: DateTime.fromMillisecondsSinceEpoch(json['createdAt'] ?? 0),
-      lastLoginAt: json['lastLoginAt'] != null
-          ? DateTime.fromMillisecondsSinceEpoch(json['lastLoginAt'])
-          : null,
-    );
-  }
-
-  /// Convertit le UserModel en JSON
-  Map<String, dynamic> toJson() {
-    return {
-      'email': email,
-      'companyName': companyName,
-      'companyAddress': companyAddress,
-      'createdAt': createdAt.millisecondsSinceEpoch,
-      'lastLoginAt': lastLoginAt?.millisecondsSinceEpoch,
-    };
-  }
-
-  /// Crée une copie avec certains champs modifiés
-  UserModel copyWith({
-    String? email,
-    String? companyName,
-    String? companyAddress,
-    DateTime? lastLoginAt,
-  }) {
-    return UserModel(
-      uid: uid,
-      email: email ?? this.email,
-      companyName: companyName ?? this.companyName,
-      companyAddress: companyAddress ?? this.companyAddress,
-      createdAt: createdAt,
-      lastLoginAt: lastLoginAt ?? this.lastLoginAt,
-    );
   }
 }
