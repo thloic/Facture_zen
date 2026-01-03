@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "664151721016",
+    "firebase_url": "https://facturezen-558b0-default-rtdb.firebaseio.com",
+    "project_id": "facturezen-558b0",
+    "storage_bucket": "facturezen-558b0.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:664151721016:android:350facd0997f58954152cd",
+        "android_client_info": {
+          "package_name": "com.example.facture_zen"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDOU72PP_rlXxP-6YTAG5RQBce3zf91nEY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

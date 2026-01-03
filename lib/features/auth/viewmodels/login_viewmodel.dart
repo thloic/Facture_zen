@@ -1,41 +1,43 @@
 import 'package:flutter/foundation.dart';
+import '../../../common/services/auth_service.dart';
 
 class LoginViewModel extends ChangeNotifier {
+  final AuthService _authService;
 
-  // État de la vue
   bool _isLoading = false;
   String? _errorMessage;
 
-  // Getters pour exposer l'état à la View
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   bool get hasError => _errorMessage != null;
 
-  // TODO: Injection du service d'authentification
-  // LoginViewModel(this._authService);
+  LoginViewModel({AuthService? authService})
+      : _authService = authService ?? AuthService();
 
   Future<bool> login(String email, String password) async {
-    // Réinitialisation de l'état
     _errorMessage = null;
     _setLoading(true);
 
     try {
-      // Validation côté client
       if (!_validateInputs(email, password)) {
         return false;
       }
 
-      // TODO: Appel au service d'authentification Firebase
-      // await _authService.signInWithEmailAndPassword(email, password);
+      final user = await _authService.signIn(
+        email: email,
+        password: password,
+      );
 
-      // Simulation pour le moment
-      await Future.delayed(const Duration(seconds: 2));
-
-      _setLoading(false);
-      return true;
-
+      if (user != null) {
+        _setLoading(false);
+        return true;
+      } else {
+        _errorMessage = 'Échec de la connexion';
+        _setLoading(false);
+        return false;
+      }
     } catch (e) {
-      _errorMessage = _handleAuthError(e);
+      _errorMessage = e.toString();
       _setLoading(false);
       return false;
     }
@@ -60,12 +62,6 @@ class LoginViewModel extends ChangeNotifier {
       return false;
     }
 
-    if (password.length < 6) {
-      _errorMessage = 'Le mot de passe doit contenir au moins 6 caractères';
-      _setLoading(false);
-      return false;
-    }
-
     return true;
   }
 
@@ -76,44 +72,15 @@ class LoginViewModel extends ChangeNotifier {
     return emailRegex.hasMatch(email);
   }
 
-  String _handleAuthError(dynamic error) {
-    final errorString = error.toString().toLowerCase();
-
-    if (errorString.contains('user-not-found')) {
-      return 'Aucun compte trouvé avec cet email';
-    } else if (errorString.contains('wrong-password')) {
-      return 'Mot de passe incorrect';
-    } else if (errorString.contains('invalid-email')) {
-      return 'Format d\'email invalide';
-    } else if (errorString.contains('user-disabled')) {
-      return 'Ce compte a été désactivé';
-    } else if (errorString.contains('too-many-requests')) {
-      return 'Trop de tentatives. Réessayez plus tard';
-    } else if (errorString.contains('network')) {
-      return 'Erreur de connexion. Vérifiez votre internet';
-    } else {
-      return 'Une erreur est survenue. Veuillez réessayer';
-    }
-  }
-
-  /// Modifie l'état de chargement et notifie les listeners
   void _setLoading(bool value) {
     _isLoading = value;
     notifyListeners();
   }
 
-  /// Réinitialise le message d'erreur
-  /// Utile pour effacer l'erreur quand l'utilisateur modifie les champs
   void clearError() {
     if (_errorMessage != null) {
       _errorMessage = null;
       notifyListeners();
     }
-  }
-
-  /// Nettoyage lors de la destruction du ViewModel
-  @override
-  void dispose() {
-    super.dispose();
   }
 }
