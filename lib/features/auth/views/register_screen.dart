@@ -52,7 +52,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (success && mounted) {
       // Navigation vers l'écran principal après succès
       // TODO: Remplacer par la route appropriée
-      // Navigator.pushReplacementNamed(context, '/home');
+      Navigator.pushReplacementNamed(context, '/login');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Inscription réussie !'),
@@ -65,7 +65,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   /// Navigation vers la page de connexion
   void _navigateToLogin() {
     // TODO: Implémenter la navigation
-    // Navigator.pushReplacementNamed(context, '/login');
+    Navigator.pushNamed(context, '/login');
   }
 
   @override
@@ -137,8 +137,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             // Champ Email
                             CustomTextField(
                               controller: _emailController,
-                              hintText: 'Adresse de votre entreprise',
-                              prefixIcon: Icons.phone_outlined,
+                              hintText: 'Email de votre entreprise',
+                              prefixIcon: Icons.mail,
                               keyboardType: TextInputType.emailAddress,
                               onChanged: (_) => viewModel.clearError(),
                             ),

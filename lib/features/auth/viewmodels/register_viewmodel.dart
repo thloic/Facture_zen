@@ -1,9 +1,13 @@
 import 'package:flutter/foundation.dart';
+import '../../../common/services/auth_service.dart';
 
-
+/// RegisterViewModel
+/// Gère l'état et la logique de présentation de l'écran d'inscription
+/// Respecte l'architecture MVVM - cette classe est le ViewModel
+/// Utilise Provider pour la gestion d'état
 class RegisterViewModel extends ChangeNotifier {
-  // Services injectés
-  // final AuthService _authService;
+  // Service d'authentification injecté
+  final AuthService _authService;
 
   // État de la vue
   bool _isLoading = false;
@@ -14,10 +18,18 @@ class RegisterViewModel extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
   bool get hasError => _errorMessage != null;
 
-  // TODO: Injection du service d'authentification
-  // RegisterViewModel(this._authService);
+  /// Constructeur avec injection du service
+  RegisterViewModel({AuthService? authService})
+      : _authService = authService ?? AuthService();
 
-
+  /// Tente d'inscrire l'utilisateur avec ses informations
+  /// Gère la logique métier de validation et d'enregistrement
+  /// @param companyName Le nom de l'entreprise
+  /// @param companyAddress L'adresse de l'entreprise
+  /// @param email L'adresse email de l'utilisateur
+  /// @param password Le mot de passe de l'utilisateur
+  /// @param confirmPassword La confirmation du mot de passe
+  /// @return true si l'inscription réussit, false sinon
   Future<bool> register({
     required String companyName,
     required String companyAddress,
@@ -41,17 +53,28 @@ class RegisterViewModel extends ChangeNotifier {
         return false;
       }
 
-      // TODO: Appel au service d'authentification Firebase
+      // Appel au service d'authentification Firebase
+      final user = await _authService.signUp(
+        email: email,
+        password: password,
+        companyName: companyName,
+        companyAddress: companyAddress,
+      );
 
-      // Simulation pour le moment
-      await Future.delayed(const Duration(seconds: 2));
-
-      _setLoading(false);
-      return true;
+      if (user != null) {
+        debugPrint('✅ Inscription réussie pour: ${user.email}');
+        _setLoading(false);
+        return true;
+      } else {
+        _errorMessage = 'Échec de l\'inscription';
+        _setLoading(false);
+        return false;
+      }
 
     } catch (e) {
-      _errorMessage = _handleAuthError(e);
+      _errorMessage = e.toString();
       _setLoading(false);
+      debugPrint('❌ Erreur inscription: $e');
       return false;
     }
   }
@@ -155,25 +178,6 @@ class RegisterViewModel extends ChangeNotifier {
     final hasLetter = RegExp(r'[a-zA-Z]').hasMatch(password);
     final hasDigit = RegExp(r'[0-9]').hasMatch(password);
     return hasLetter && hasDigit;
-  }
-
-
-  String _handleAuthError(dynamic error) {
-    final errorString = error.toString().toLowerCase();
-
-    if (errorString.contains('email-already-in-use')) {
-      return 'Cet email est déjà utilisé';
-    } else if (errorString.contains('invalid-email')) {
-      return 'Format d\'email invalide';
-    } else if (errorString.contains('weak-password')) {
-      return 'Le mot de passe est trop faible';
-    } else if (errorString.contains('network')) {
-      return 'Erreur de connexion. Vérifiez votre internet';
-    } else if (errorString.contains('too-many-requests')) {
-      return 'Trop de tentatives. Réessayez plus tard';
-    } else {
-      return 'Une erreur est survenue. Veuillez réessayer';
-    }
   }
 
   /// Modifie l'état de chargement et notifie les listeners

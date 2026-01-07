@@ -1,21 +1,29 @@
 import 'package:flutter/foundation.dart';
 import 'dart:async';
+import '../../../common/services/voice_recognition_service.dart';
+import '../services/voice_recognition_service.dart';
 
+/// VoiceRecordingViewModel
+/// Gère l'état et la logique de l'enregistrement vocal
+/// Respecte l'architecture MVVM - cette classe est le ViewModel
 class VoiceRecordingViewModel extends ChangeNotifier {
   // Services injectés
-  // final VoiceRecognitionService _voiceService;
-  // final InvoiceGenerationService _invoiceService;
+  final VoiceRecognitionService _voiceService;
 
   // État de l'enregistrement
   bool _isRecording = false;
   bool _isGenerating = false;
   int _durationInSeconds = 0;
+  String? _transcribedText;
+  String? _audioPath;
   Timer? _timer;
 
   // Getters pour exposer l'état à la View
   bool get isRecording => _isRecording;
   bool get isGenerating => _isGenerating;
   int get durationInSeconds => _durationInSeconds;
+  String? get transcribedText => _transcribedText;
+  String? get audioPath => _audioPath;
 
   /// Retourne true si on peut réinitialiser (durée > 0 et pas en enregistrement)
   bool get canReset => _durationInSeconds > 0 && !_isRecording;
@@ -30,8 +38,9 @@ class VoiceRecordingViewModel extends ChangeNotifier {
     return '$minutes:$seconds';
   }
 
-  // TODO: Injection des services
-  // VoiceRecordingViewModel(this._voiceService, this._invoiceService);
+  /// Constructeur avec injection du service
+  VoiceRecordingViewModel({VoiceRecognitionService? voiceService})
+      : _voiceService = voiceService ?? VoiceRecognitionService();
 
   /// Démarre ou met en pause l'enregistrement
   Future<void> toggleRecording() async {
@@ -45,34 +54,45 @@ class VoiceRecordingViewModel extends ChangeNotifier {
   /// Démarre l'enregistrement vocal
   Future<void> _startRecording() async {
     try {
-      _isRecording = true;
-      notifyListeners();
+      debugPrint('🎙️ Tentative de démarrage enregistrement...');
 
-      // TODO: Démarrer l'enregistrement audio réel
-      // await _voiceService.startRecording();
+      // Démarrer l'enregistrement audio réel
+      final started = await _voiceService.startRecording();
 
-      // Démarrer le timer
-      _startTimer();
+      if (started) {
+        _isRecording = true;
+        _startTimer();
+        notifyListeners();
+        debugPrint('✅ Enregistrement démarré avec succès');
+      } else {
+        debugPrint('❌ Échec démarrage enregistrement');
+      }
 
     } catch (e) {
       _isRecording = false;
       notifyListeners();
-      debugPrint('Erreur démarrage enregistrement: $e');
+      debugPrint('❌ Erreur démarrage enregistrement: $e');
+
+      // Afficher un message d'erreur à l'utilisateur
+      rethrow;
     }
   }
 
   /// Met en pause l'enregistrement
   Future<void> _pauseRecording() async {
     try {
+      debugPrint('⏸️ Mise en pause...');
+
+      // Mettre en pause l'enregistrement audio réel
+      await _voiceService.pauseRecording();
+
       _isRecording = false;
       _stopTimer();
       notifyListeners();
 
-      // TODO: Mettre en pause l'enregistrement audio réel
-      // await _voiceService.pauseRecording();
-
+      debugPrint('✅ Pause effectuée');
     } catch (e) {
-      debugPrint('Erreur pause enregistrement: $e');
+      debugPrint('❌ Erreur pause enregistrement: $e');
     }
   }
 
@@ -81,52 +101,70 @@ class VoiceRecordingViewModel extends ChangeNotifier {
     if (!canReset) return;
 
     try {
+      debugPrint('🔄 Réinitialisation...');
+
       _stopTimer();
+
+      // Supprimer l'enregistrement audio
+      await _voiceService.deleteRecording();
+
       _durationInSeconds = 0;
       _isRecording = false;
+      _transcribedText = null;
+      _audioPath = null;
+
       notifyListeners();
 
-      // TODO: Supprimer l'enregistrement audio
-      // await _voiceService.deleteRecording();
-
+      debugPrint('✅ Réinitialisation effectuée');
     } catch (e) {
-      debugPrint('Erreur reset: $e');
+      debugPrint('❌ Erreur reset: $e');
     }
   }
 
   /// Valide et traite l'enregistrement
-  Future<void> validate() async {
-    if (!canValidate) return;
+  /// Retourne le texte transcrit
+  Future<String?> validate() async {
+    if (!canValidate) return null;
 
     try {
+      debugPrint('✅ Validation de l\'enregistrement...');
+
       _stopTimer();
       _isRecording = false;
       _isGenerating = true;
       notifyListeners();
 
-      // TODO: Arrêter l'enregistrement
-      // await _voiceService.stopRecording();
+      // Arrêter l'enregistrement et récupérer le chemin du fichier
+      _audioPath = await _voiceService.stopRecording();
 
-      // TODO: Envoyer l'audio pour transcription
-      // final audioPath = await _voiceService.getRecordingPath();
-      // final transcription = await _invoiceService.transcribeAudio(audioPath);
+      if (_audioPath != null) {
+        debugPrint('📁 Fichier audio sauvegardé: $_audioPath');
 
-      // Simulation du traitement
-      await Future.delayed(const Duration(seconds: 3));
+        // TODO: Envoyer l'audio pour transcription avec une API de Speech-to-Text
+        // Par exemple: Google Cloud Speech-to-Text, OpenAI Whisper, etc.
+        // final transcription = await _transcribeAudio(_audioPath!);
 
-      // TODO: Parser le texte transcrit pour générer la facture
-      // final invoiceData = await _invoiceService.parseTranscription(transcription);
+        // Simulation du traitement (3 secondes)
+        await Future.delayed(const Duration(seconds: 3));
+
+        // Texte de test (Lorem ipsum long)
+        _transcribedText = '''
+exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+''';
+      } else {
+        debugPrint('⚠️ Aucun fichier audio sauvegardé');
+      }
 
       _isGenerating = false;
       notifyListeners();
 
-      // TODO: Navigation vers l'écran de prévisualisation de facture
-      // avec les données extraites
+      return _transcribedText;
 
     } catch (e) {
       _isGenerating = false;
       notifyListeners();
-      debugPrint('Erreur validation: $e');
+      debugPrint('❌ Erreur validation: $e');
+      return null;
     }
   }
 
@@ -134,8 +172,6 @@ class VoiceRecordingViewModel extends ChangeNotifier {
   void cancelGeneration() {
     _isGenerating = false;
     notifyListeners();
-
-    // TODO: Annuler les requêtes en cours
   }
 
   /// Démarre le timer d'enregistrement
@@ -157,6 +193,7 @@ class VoiceRecordingViewModel extends ChangeNotifier {
   @override
   void dispose() {
     _stopTimer();
+    _voiceService.dispose();
     super.dispose();
   }
 }

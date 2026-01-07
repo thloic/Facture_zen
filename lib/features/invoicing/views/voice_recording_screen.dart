@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../../common/widgets/curved_bottom_nav.dart';
 import '../viewmodels/voice_recording_viewmodel.dart';
 import '../../../common/widgets/app_logo.dart';
 import '../../../common/utils/responsive_utils.dart';
+import 'text_preview_screen.dart';
 import 'dart:math' as math;
 
 /// VoiceRecordingScreen
@@ -60,6 +62,23 @@ class _VoiceRecordingScreenState extends State<VoiceRecordingScreen>
     }
   }
 
+  /// Gère la validation et la navigation
+  Future<void> _handleValidation(VoiceRecordingViewModel viewModel) async {
+    final transcribedText = await viewModel.validate();
+
+    if (transcribedText != null && mounted) {
+      // Navigation vers l'écran de prévisualisation
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => TextPreviewScreen(
+            transcribedText: transcribedText,
+          ),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final responsive = ResponsiveUtils(context);
@@ -104,12 +123,13 @@ class _VoiceRecordingScreenState extends State<VoiceRecordingScreen>
                     ],
                   ),
                 ),
-
-
               ],
             );
           },
         ),
+      ),
+      bottomNavigationBar: const CurvedBottomNav(
+        currentIndex: 1, // Index 1 = Facture
       ),
     );
   }
@@ -220,7 +240,9 @@ class _VoiceRecordingScreenState extends State<VoiceRecordingScreen>
         _buildActionButton(
           icon: Icons.check,
           size: 56,
-          onPressed: viewModel.canValidate ? viewModel.validate : null,
+          onPressed: viewModel.canValidate
+              ? () => _handleValidation(viewModel)
+              : null,
           backgroundColor: const Color(0xFFE5E7EB),
           iconColor: const Color(0xFF6B7280),
         ),
@@ -344,45 +366,6 @@ class _VoiceRecordingScreenState extends State<VoiceRecordingScreen>
             ],
           ),
         ),
-      ),
-    );
-  }
-
-
-  /// Widget - Item de navigation
-  Widget _buildNavItem(IconData icon, String label, bool isActive, ResponsiveUtils responsive) {
-    return InkWell(
-      onTap: () {
-        // TODO: Navigation vers les autres écrans
-      },
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            icon,
-            size: 24,
-            color: isActive ? const Color(0xFF5B5FC7) : const Color(0xFF9CA3AF),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: responsive.getAdaptiveTextSize(12),
-              color: isActive ? const Color(0xFF5B5FC7) : const Color(0xFF9CA3AF),
-              fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
-            ),
-          ),
-          if (isActive)
-            Container(
-              margin: const EdgeInsets.only(top: 4),
-              width: 6,
-              height: 6,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                color: Color(0xFF5B5FC7),
-              ),
-            ),
-        ],
       ),
     );
   }
