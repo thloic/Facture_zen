@@ -1,97 +1,141 @@
 import 'package:flutter/foundation.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../../../common/models/user_model.dart';
+import '../../../common/services/auth_service.dart';
 
+/// ProfileViewModel
+/// Gère l'état et la logique du profil utilisateur
+/// Respecte l'architecture MVVM - cette classe est le ViewModel
 class ProfileViewModel extends ChangeNotifier {
   // Services injectés
-  // final AuthService _authService;
-  // final UserService _userService;
+  final AuthService _authService;
 
   // Données utilisateur
-  String? _userName;
-  String? _userEmail;
+  UserModel? _currentUser;
   String? _userAvatarUrl;
-  String? _userCompanyName;
-  String? _userCompanyAddress;
 
   // État de la vue
   bool _isLoading = false;
   String? _errorMessage;
 
   // Getters pour exposer l'état à la View
-  String? get userName => _userName;
-  String? get userEmail => _userEmail;
+  String? get userName => _currentUser?.companyName ?? 'Utilisateur';
+  String? get userEmail => _currentUser?.email;
   String? get userAvatarUrl => _userAvatarUrl;
-  String? get userCompanyName => _userCompanyName;
-  String? get userCompanyAddress => _userCompanyAddress;
+  String? get userCompanyName => _currentUser?.companyName;
+  String? get userCompanyAddress => _currentUser?.companyAddress;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   bool get hasError => _errorMessage != null;
+  User? get firebaseUser => _authService.currentUser;
 
-  // TODO: Injection des services
-  // ProfileViewModel(this._authService, this._userService);
+  /// Constructeur avec injection du service
+  ProfileViewModel({AuthService? authService})
+      : _authService = authService ?? AuthService() {
+    // Charger automatiquement le profil au démarrage
+    loadUserProfile();
+  }
 
-  /// Charge les informations du profil utilisateur
+  /// Charge les informations du profil utilisateur depuis Firebase
   Future<void> loadUserProfile() async {
     _setLoading(true);
     _errorMessage = null;
 
     try {
-      // TODO: Récupérer les infos depuis Firebase/API
-      // final user = await _userService.getCurrentUser();
-      // _userName = user.name;
-      // _userEmail = user.email;
-      // _userAvatarUrl = user.avatarUrl;
-      // _userCompanyName = user.companyName;
-      // _userCompanyAddress = user.companyAddress;
+      debugPrint('🔥 Chargement du profil utilisateur...');
 
-      // Données de test pour le moment
-      await Future.delayed(const Duration(seconds: 1));
-      _userName = 'Maxine Watson';
-      _userEmail = 'maxinewatson@gmail.com';
-      _userAvatarUrl = null; // Pas d'image pour l'instant
-      _userCompanyName = 'Watson Consulting';
-      _userCompanyAddress = '123 Rue de la Paix, Paris';
+      // Récupérer l'utilisateur Firebase Auth actuel
+      final user = _authService.currentUser;
+
+      if (user == null) {
+        _errorMessage = 'Aucun utilisateur connecté';
+        _setLoading(false);
+        debugPrint('❌ Aucun utilisateur connecté');
+        return;
+      }
+
+      debugPrint('✅ Utilisateur Firebase Auth: ${user.uid}');
+      debugPrint('📧 Email: ${user.email}');
+
+      // Récupérer les données depuis Realtime Database
+      final userData = await _authService.getUserData(user.uid);
+
+      if (userData != null) {
+        _currentUser = UserModel.fromJson(user.uid, userData);
+        debugPrint('✅ Profil chargé avec succès');
+        debugPrint('👤 Nom entreprise: ${_currentUser?.companyName}');
+        debugPrint('📍 Adresse: ${_currentUser?.companyAddress}');
+      } else {
+        debugPrint('⚠️ Aucune donnée dans Realtime Database pour cet utilisateur');
+        // Créer un UserModel minimal avec les infos de Firebase Auth
+        _currentUser = UserModel(
+          uid: user.uid,
+          email: user.email ?? '',
+          companyName: 'Entreprise',
+          companyAddress: 'Adresse non renseignée',
+          createdAt: DateTime.now(),
+        );
+      }
 
       _setLoading(false);
     } catch (e) {
       _errorMessage = 'Impossible de charger le profil';
       _setLoading(false);
-      debugPrint('Erreur chargement profil: $e');
+      debugPrint('❌ Erreur chargement profil: $e');
     }
   }
 
   /// Met à jour les informations du profil
-  /// @param name Nouveau nom
   /// @param companyName Nouveau nom d'entreprise
   /// @param companyAddress Nouvelle adresse
   Future<bool> updateProfile({
-    String? name,
     String? companyName,
     String? companyAddress,
   }) async {
+    if (_currentUser == null) {
+      _errorMessage = 'Aucun utilisateur connecté';
+      return false;
+    }
+
     _setLoading(true);
     _errorMessage = null;
 
     try {
-      // TODO: Mettre à jour dans Firebase/API
-      // await _userService.updateUserProfile(
-      //   name: name,
-      //   companyName: companyName,
-      //   companyAddress: companyAddress,
-      // );
+      debugPrint('🔥 Mise à jour du profil...');
 
-      // Simulation
-      await Future.delayed(const Duration(seconds: 1));
+      // Préparer les données à mettre à jour
+      final Map<String, dynamic> updateData = {};
 
-      if (name != null) _userName = name;
-      if (companyName != null) _userCompanyName = companyName;
-      if (companyAddress != null) _userCompanyAddress = companyAddress;
+      if (companyName != null && companyName.isNotEmpty) {
+        updateData['companyName'] = companyName;
+      }
 
+      if (companyAddress != null && companyAddress.isNotEmpty) {
+        updateData['companyAddress'] = companyAddress;
+      }
+
+      if (updateData.isEmpty) {
+        _errorMessage = 'Aucune modification à enregistrer';
+        _setLoading(false);
+        return false;
+      }
+
+      // Mettre à jour dans Firebase Realtime Database
+      await _authService.updateUserData(_currentUser!.uid, updateData);
+
+      // Mettre à jour le modèle local
+      _currentUser = _currentUser!.copyWith(
+        companyName: companyName ?? _currentUser!.companyName,
+        companyAddress: companyAddress ?? _currentUser!.companyAddress,
+      );
+
+      debugPrint('✅ Profil mis à jour avec succès');
       _setLoading(false);
       return true;
     } catch (e) {
       _errorMessage = 'Impossible de mettre à jour le profil';
       _setLoading(false);
-      debugPrint('Erreur mise à jour profil: $e');
+      debugPrint('❌ Erreur mise à jour profil: $e');
       return false;
     }
   }
@@ -103,11 +147,11 @@ class ProfileViewModel extends ChangeNotifier {
     _errorMessage = null;
 
     try {
-      // TODO: Upload de l'image et mise à jour
-      // final uploadedUrl = await _userService.uploadAvatar(imagePath);
+      // TODO: Upload vers Firebase Storage
+      // final uploadedUrl = await _storageService.uploadAvatar(imagePath);
       // _userAvatarUrl = uploadedUrl;
 
-      // Simulation
+      // Simulation pour le moment
       await Future.delayed(const Duration(seconds: 2));
       _userAvatarUrl = imagePath;
 
@@ -117,7 +161,7 @@ class ProfileViewModel extends ChangeNotifier {
     } catch (e) {
       _errorMessage = 'Impossible de mettre à jour la photo';
       _setLoading(false);
-      debugPrint('Erreur upload avatar: $e');
+      debugPrint('❌ Erreur upload avatar: $e');
       return false;
     }
   }
@@ -125,20 +169,20 @@ class ProfileViewModel extends ChangeNotifier {
   /// Déconnecte l'utilisateur
   Future<void> logout() async {
     try {
-      // TODO: Déconnexion Firebase
-      // await _authService.signOut();
+      debugPrint('🔥 Déconnexion en cours...');
 
-      // Réinitialiser les données
-      _userName = null;
-      _userEmail = null;
+      // Déconnexion Firebase
+      await _authService.signOut();
+
+      // Réinitialiser les données locales
+      _currentUser = null;
       _userAvatarUrl = null;
-      _userCompanyName = null;
-      _userCompanyAddress = null;
 
+      debugPrint('✅ Déconnexion réussie');
       notifyListeners();
     } catch (e) {
       _errorMessage = 'Erreur lors de la déconnexion';
-      debugPrint('Erreur déconnexion: $e');
+      debugPrint('❌ Erreur déconnexion: $e');
       notifyListeners();
     }
   }
@@ -149,18 +193,22 @@ class ProfileViewModel extends ChangeNotifier {
     _errorMessage = null;
 
     try {
-      // TODO: Supprimer le compte Firebase
-      // await _authService.deleteAccount();
+      debugPrint('🔥 Suppression du compte...');
 
-      // Simulation
-      await Future.delayed(const Duration(seconds: 2));
+      // Supprimer le compte Firebase
+      await _authService.deleteAccount();
 
+      // Réinitialiser les données
+      _currentUser = null;
+      _userAvatarUrl = null;
+
+      debugPrint('✅ Compte supprimé');
       _setLoading(false);
       return true;
     } catch (e) {
       _errorMessage = 'Impossible de supprimer le compte';
       _setLoading(false);
-      debugPrint('Erreur suppression compte: $e');
+      debugPrint('❌ Erreur suppression compte: $e');
       return false;
     }
   }
@@ -180,18 +228,43 @@ class ProfileViewModel extends ChangeNotifier {
         return false;
       }
 
-      // TODO: Changer le mot de passe Firebase
-      // await _authService.updatePassword(currentPassword, newPassword);
+      debugPrint('🔥 Changement du mot de passe...');
 
-      // Simulation
-      await Future.delayed(const Duration(seconds: 1));
+      // Récupérer l'utilisateur actuel
+      final user = _authService.currentUser;
+      if (user == null || user.email == null) {
+        _errorMessage = 'Utilisateur non connecté';
+        _setLoading(false);
+        return false;
+      }
 
+      // Réauthentifier l'utilisateur avec le mot de passe actuel
+      final credential = EmailAuthProvider.credential(
+        email: user.email!,
+        password: currentPassword,
+      );
+
+      await user.reauthenticateWithCredential(credential);
+
+      // Changer le mot de passe
+      await user.updatePassword(newPassword);
+
+      debugPrint('✅ Mot de passe changé avec succès');
       _setLoading(false);
       return true;
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'wrong-password') {
+        _errorMessage = 'Mot de passe actuel incorrect';
+      } else {
+        _errorMessage = 'Impossible de changer le mot de passe';
+      }
+      _setLoading(false);
+      debugPrint('❌ Erreur changement mot de passe: ${e.code}');
+      return false;
     } catch (e) {
       _errorMessage = 'Impossible de changer le mot de passe';
       _setLoading(false);
-      debugPrint('Erreur changement mot de passe: $e');
+      debugPrint('❌ Erreur changement mot de passe: $e');
       return false;
     }
   }
@@ -216,3 +289,4 @@ class ProfileViewModel extends ChangeNotifier {
     super.dispose();
   }
 }
+

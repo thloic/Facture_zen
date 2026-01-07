@@ -36,8 +36,15 @@ class MyApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         Provider<AuthService>.value(value: authService),
-        ChangeNotifierProvider(create: (_) => LoginViewModel()),
-        ChangeNotifierProvider(create: (_) => RegisterViewModel()),
+        ChangeNotifierProvider(
+          create: (_) => ProfileViewModel(authService: authService),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => LoginViewModel(authService: authService),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => RegisterViewModel(authService: authService),
+        ),
         ChangeNotifierProvider(create: (_)=> HomeViewModel()),
         ChangeNotifierProvider(create: (_) => VoiceRecordingViewModel()),
         ChangeNotifierProvider(create: (_) => InvoiceHistoryViewModel()),
