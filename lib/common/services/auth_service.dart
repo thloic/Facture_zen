@@ -5,6 +5,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/foundation.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 /// AuthService
 /// Service d'authentification Firebase
@@ -13,6 +14,7 @@ class AuthService {
   // Instances Firebase
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final DatabaseReference _database = FirebaseDatabase.instance.ref();
+  final GoogleSignIn _googleSignIn = GoogleSignIn();
 
   /// Récupère l'utilisateur actuellement connecté
   User? get currentUser => _auth.currentUser;
@@ -40,10 +42,8 @@ class AuthService {
 
       // Créer le compte Firebase Auth
       // ⚠️ Firebase Auth hash AUTOMATIQUEMENT le mot de passe de manière sécurisée
-      final UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
+      final UserCredential userCredential = await _auth
+          .createUserWithEmailAndPassword(email: email, password: password);
 
       final user = userCredential.user;
       if (user != null) {
@@ -59,12 +59,16 @@ class AuthService {
             'createdAt': ServerValue.timestamp,
             'updatedAt': ServerValue.timestamp,
           });
-          debugPrint('✅ Données utilisateur sauvegardées dans Realtime Database');
+          debugPrint(
+            '✅ Données utilisateur sauvegardées dans Realtime Database',
+          );
         } catch (dbError) {
           debugPrint('❌ Erreur sauvegarde dans Realtime Database: $dbError');
           // L'utilisateur est créé dans Auth mais pas dans Database
           // Tu peux décider de supprimer le compte Auth ou le laisser
-          throw Exception('Compte créé mais données non sauvegardées. Erreur: $dbError');
+          throw Exception(
+            'Compte créé mais données non sauvegardées. Erreur: $dbError',
+          );
         }
       }
 
@@ -89,10 +93,8 @@ class AuthService {
     try {
       debugPrint('🔥 Tentative de connexion pour: $email');
 
-      final UserCredential userCredential = await _auth.signInWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
+      final UserCredential userCredential = await _auth
+          .signInWithEmailAndPassword(email: email, password: password);
 
       final user = userCredential.user;
       if (user != null) {
@@ -123,11 +125,90 @@ class AuthService {
   /// Déconnexion
   Future<void> signOut() async {
     try {
-      await _auth.signOut();
+      await Future.wait([_auth.signOut(), _googleSignIn.signOut()]);
       debugPrint('✅ Déconnexion réussie');
     } catch (e) {
       debugPrint('❌ Erreur déconnexion: $e');
       throw Exception('Une erreur est survenue lors de la déconnexion');
+    }
+  }
+
+  /// Connexion avec Google
+  /// @return L'utilisateur connecté ou null en cas d'erreur
+  Future<User?> signInWithGoogle() async {
+    try {
+      debugPrint('🔥 Tentative de connexion avec Google');
+
+      // Déclencher le flux d'authentification Google
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+
+      if (googleUser == null) {
+        debugPrint('⚠️ Connexion Google annulée par l\'utilisateur');
+        return null;
+      }
+
+      debugPrint('✅ Utilisateur Google sélectionné: ${googleUser.email}');
+
+      // Obtenir les détails d'authentification
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+
+      // Créer les credentials Firebase
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      // Se connecter à Firebase avec les credentials Google
+      final UserCredential userCredential = await _auth.signInWithCredential(
+        credential,
+      );
+      final user = userCredential.user;
+
+      if (user != null) {
+        debugPrint('✅ Connexion Firebase réussie: ${user.uid}');
+
+        // Vérifier si c'est un nouvel utilisateur
+        if (userCredential.additionalUserInfo?.isNewUser ?? false) {
+          debugPrint('🆕 Nouvel utilisateur, création du profil...');
+
+          // Créer le profil dans Realtime Database pour les nouveaux utilisateurs
+          try {
+            await _database.child('users').child(user.uid).set({
+              'email': user.email ?? '',
+              'companyName': user.displayName ?? 'Entreprise',
+              'companyAddress': 'Adresse non renseignée',
+              'avatarUrl': user.photoURL,
+              'createdAt': ServerValue.timestamp,
+              'updatedAt': ServerValue.timestamp,
+              'authProvider': 'google',
+            });
+            debugPrint('✅ Profil créé dans Realtime Database');
+          } catch (dbError) {
+            debugPrint('❌ Erreur création profil: $dbError');
+          }
+        } else {
+          // Mettre à jour la date de dernière connexion pour les utilisateurs existants
+          try {
+            await _database.child('users').child(user.uid).update({
+              'lastLoginAt': ServerValue.timestamp,
+            });
+            debugPrint('✅ Date de connexion mise à jour');
+          } catch (dbError) {
+            debugPrint('⚠️ Impossible de mettre à jour lastLoginAt: $dbError');
+          }
+        }
+      }
+
+      return user;
+    } on FirebaseAuthException catch (e) {
+      debugPrint('❌ Erreur Firebase Auth: ${e.code} - ${e.message}');
+      throw _handleAuthException(e);
+    } catch (e) {
+      debugPrint('❌ Erreur connexion Google: $e');
+      throw Exception(
+        'Une erreur est survenue lors de la connexion avec Google: $e',
+      );
     }
   }
 
@@ -170,11 +251,18 @@ class AuthService {
   /// @param email L'adresse email
   Future<void> resetPassword(String email) async {
     try {
+      debugPrint(
+        '🔥 Tentative d\'envoi email de réinitialisation pour: $email',
+      );
       await _auth.sendPasswordResetEmail(email: email);
-      debugPrint('✅ Email de réinitialisation envoyé');
+      debugPrint('✅ Email de réinitialisation envoyé à $email');
+      debugPrint('📧 Vérifiez votre boîte mail (y compris les spams)');
     } on FirebaseAuthException catch (e) {
-      debugPrint('❌ Erreur réinitialisation: ${e.code}');
+      debugPrint('❌ Erreur réinitialisation: ${e.code} - ${e.message}');
       throw _handleAuthException(e);
+    } catch (e) {
+      debugPrint('❌ Erreur inconnue: $e');
+      throw Exception('Erreur lors de l\'envoi de l\'email: $e');
     }
   }
 

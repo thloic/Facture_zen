@@ -3,8 +3,8 @@ import 'package:provider/provider.dart';
 import '../../../common/widgets/curved_bottom_nav.dart';
 import '../viewmodels/profile_viewmodel.dart';
 import '../../../common/utils/responsive_utils.dart';
+import '../../auth/views/login_screen.dart';
 import 'dart:math' as math;
-
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -68,7 +68,9 @@ class ProfileScreen extends StatelessWidget {
                                 onTap: () => _navigateToAccountInfo(context),
                                 responsive: responsive,
                               ),
-                              SizedBox(height: responsive.getAdaptiveSpacing(12)),
+                              SizedBox(
+                                height: responsive.getAdaptiveSpacing(12),
+                              ),
                               _buildMenuItem(
                                 icon: Icons.settings_outlined,
                                 label: 'Paramètres',
@@ -77,7 +79,9 @@ class ProfileScreen extends StatelessWidget {
                                 onTap: () => _navigateToSettings(context),
                                 responsive: responsive,
                               ),
-                              SizedBox(height: responsive.getAdaptiveSpacing(12)),
+                              SizedBox(
+                                height: responsive.getAdaptiveSpacing(12),
+                              ),
                               _buildMenuItem(
                                 icon: Icons.logout,
                                 label: 'Déconnexion',
@@ -113,10 +117,7 @@ class ProfileScreen extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF7B7FE8),
-            Color(0xFF5B5FC7),
-          ],
+          colors: [Color(0xFF7B7FE8), Color(0xFF5B5FC7)],
         ),
       ),
       child: CustomPaint(
@@ -127,7 +128,10 @@ class ProfileScreen extends StatelessWidget {
   }
 
   /// Widget - Avatar et nom de l'utilisateur
-  Widget _buildUserAvatar(ProfileViewModel viewModel, ResponsiveUtils responsive) {
+  Widget _buildUserAvatar(
+    ProfileViewModel viewModel,
+    ResponsiveUtils responsive,
+  ) {
     return Column(
       children: [
         // Avatar circulaire
@@ -147,18 +151,15 @@ class ProfileScreen extends StatelessWidget {
           ),
           child: ClipOval(
             child: viewModel.userAvatarUrl != null
-                ? Image.network(
-              viewModel.userAvatarUrl!,
-              fit: BoxFit.cover,
-            )
+                ? Image.network(viewModel.userAvatarUrl!, fit: BoxFit.cover)
                 : Container(
-              color: const Color(0xFF5B5FC7),
-              child: const Icon(
-                Icons.person,
-                size: 50,
-                color: Colors.white,
-              ),
-            ),
+                    color: const Color(0xFF5B5FC7),
+                    child: const Icon(
+                      Icons.person,
+                      size: 50,
+                      color: Colors.white,
+                    ),
+                  ),
           ),
         ),
 
@@ -200,10 +201,7 @@ class ProfileScreen extends StatelessWidget {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: const Color(0xFFE5E7EB),
-              width: 1,
-            ),
+            border: Border.all(color: const Color(0xFFE5E7EB), width: 1),
           ),
           child: Row(
             children: [
@@ -215,11 +213,7 @@ class ProfileScreen extends StatelessWidget {
                   color: iconBgColor,
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(
-                  icon,
-                  color: iconColor,
-                  size: 20,
-                ),
+                child: Icon(icon, color: iconColor, size: 20),
               ),
 
               SizedBox(width: responsive.getAdaptiveSpacing(16)),
@@ -261,9 +255,7 @@ class ProfileScreen extends StatelessWidget {
   void _navigateToSettings(BuildContext context) {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => const SettingsScreen(),
-      ),
+      MaterialPageRoute(builder: (context) => const SettingsScreen()),
     );
   }
 
@@ -280,18 +272,21 @@ class ProfileScreen extends StatelessWidget {
             child: const Text('Annuler'),
           ),
           TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              viewModel.logout();
-              // TODO: Navigation vers login
-              // NavigationHelper.navigateAndRemoveUntil(
-              //   context,
-              //   AppRoutes.login,
-              // );
+            onPressed: () async {
+              Navigator.pop(context); // Fermer la boîte de dialogue
+
+              // Effectuer la déconnexion
+              await viewModel.logout();
+
+              // Naviguer vers l'écran de login et supprimer toute la pile de navigation
+              if (context.mounted) {
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (context) => const LoginScreen()),
+                  (route) => false, // Supprime toutes les routes précédentes
+                );
+              }
             },
-            style: TextButton.styleFrom(
-              foregroundColor: Colors.red,
-            ),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
             child: const Text('Déconnexion'),
           ),
         ],
@@ -310,7 +305,9 @@ class ProfileBackgroundPainter extends CustomPainter {
       ..style = PaintingStyle.stroke;
 
     // Dessiner plusieurs lignes courbes aléatoires
-    final random = math.Random(42); // Seed fixe pour avoir toujours le même motif
+    final random = math.Random(
+      42,
+    ); // Seed fixe pour avoir toujours le même motif
 
     for (int i = 0; i < 8; i++) {
       final path = Path();
@@ -437,7 +434,10 @@ class SettingsScreen extends StatelessWidget {
   }
 
   /// Widget - En-tête avec avatar et email
-  Widget _buildUserHeader(ProfileViewModel viewModel, ResponsiveUtils responsive) {
+  Widget _buildUserHeader(
+    ProfileViewModel viewModel,
+    ResponsiveUtils responsive,
+  ) {
     return Container(
       padding: EdgeInsets.all(responsive.getAdaptiveSpacing(16)),
       decoration: BoxDecoration(
@@ -456,15 +456,8 @@ class SettingsScreen extends StatelessWidget {
             ),
             child: ClipOval(
               child: viewModel.userAvatarUrl != null
-                  ? Image.network(
-                viewModel.userAvatarUrl!,
-                fit: BoxFit.cover,
-              )
-                  : const Icon(
-                Icons.person,
-                size: 25,
-                color: Colors.white,
-              ),
+                  ? Image.network(viewModel.userAvatarUrl!, fit: BoxFit.cover)
+                  : const Icon(Icons.person, size: 25, color: Colors.white),
             ),
           ),
 
@@ -533,11 +526,7 @@ class SettingsScreen extends StatelessWidget {
                   color: iconBgColor,
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(
-                  icon,
-                  color: iconColor,
-                  size: 20,
-                ),
+                child: Icon(icon, color: iconColor, size: 20),
               ),
 
               SizedBox(width: responsive.getAdaptiveSpacing(16)),
@@ -582,14 +571,21 @@ class SettingsScreen extends StatelessWidget {
             child: const Text('Annuler'),
           ),
           TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              viewModel.logout();
-              // TODO: Navigation vers login
+            onPressed: () async {
+              Navigator.pop(context); // Fermer la boîte de dialogue
+
+              // Effectuer la déconnexion
+              await viewModel.logout();
+
+              // Naviguer vers l'écran de login et supprimer toute la pile de navigation
+              if (context.mounted) {
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (context) => const LoginScreen()),
+                  (route) => false, // Supprime toutes les routes précédentes
+                );
+              }
             },
-            style: TextButton.styleFrom(
-              foregroundColor: Colors.red,
-            ),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
             child: const Text('Déconnexion'),
           ),
         ],

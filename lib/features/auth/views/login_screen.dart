@@ -6,6 +6,7 @@ import '../../../common/widgets/custom_text_field.dart';
 import '../../../common/widgets/error_message.dart';
 import '../../../common/widgets/app_logo.dart';
 import '../../../common/utils/responsive_utils.dart';
+import 'forgot_password_screen.dart';
 
 /// LoginScreen
 /// Page d'authentification de l'application FactureZen
@@ -43,11 +44,27 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (success && mounted) {
       // Navigation vers l'écran principal après succès
-      // TODO: Remplacer par la route appropriée
       Navigator.pushReplacementNamed(context, '/home');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Connexion réussie !'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
+  }
+
+  /// Gère la connexion avec Google
+  Future<void> _handleGoogleSignIn() async {
+    context.read<LoginViewModel>().clearError();
+
+    final success = await context.read<LoginViewModel>().signInWithGoogle();
+
+    if (success && mounted) {
+      Navigator.pushReplacementNamed(context, '/home');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Connexion avec Google réussie !'),
           backgroundColor: Colors.green,
         ),
       );
@@ -66,9 +83,7 @@ class _LoginScreenState extends State<LoginScreen> {
           builder: (context, constraints) {
             return SingleChildScrollView(
               child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  minHeight: constraints.maxHeight,
-                ),
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
                 child: IntrinsicHeight(
                   child: Padding(
                     padding: EdgeInsets.symmetric(
@@ -95,7 +110,9 @@ class _LoginScreenState extends State<LoginScreen> {
                             // Affichage du message d'erreur si présent
                             if (viewModel.hasError) ...[
                               ErrorMessage(message: viewModel.errorMessage!),
-                              SizedBox(height: responsive.getAdaptiveSpacing(16)),
+                              SizedBox(
+                                height: responsive.getAdaptiveSpacing(16),
+                              ),
                             ],
 
                             // Champ email
@@ -125,7 +142,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                   size: 20,
                                 ),
                                 onPressed: () {
-                                  setState(() => _obscurePassword = !_obscurePassword);
+                                  setState(
+                                    () => _obscurePassword = !_obscurePassword,
+                                  );
                                 },
                               ),
                             ),
@@ -144,6 +163,16 @@ class _LoginScreenState extends State<LoginScreen> {
                               isLoading: viewModel.isLoading,
                               height: responsive.getAdaptiveHeight(56),
                             ),
+
+                            SizedBox(height: responsive.getAdaptiveSpacing(24)),
+
+                            // Séparateur "OU"
+                            _buildOrDivider(responsive),
+
+                            SizedBox(height: responsive.getAdaptiveSpacing(24)),
+
+                            // Bouton de connexion avec Google
+                            _buildGoogleSignInButton(responsive, viewModel),
 
                             SizedBox(height: responsive.getAdaptiveSpacing(24)),
 
@@ -187,8 +216,12 @@ class _LoginScreenState extends State<LoginScreen> {
       alignment: Alignment.centerRight,
       child: TextButton(
         onPressed: () {
-          // TODO: Navigation vers la page de récupération de mot de passe
-          // Navigator.pushNamed(context, '/forgot-password');
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const ForgotPasswordScreen(),
+            ),
+          );
         },
         style: TextButton.styleFrom(
           padding: EdgeInsets.zero,
@@ -222,7 +255,6 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
         TextButton(
           onPressed: () {
-            // TODO: Navigation vers la page d'inscription
             Navigator.pushNamed(context, '/register');
           },
           style: TextButton.styleFrom(
@@ -240,6 +272,86 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  /// Widget - Séparateur "OU"
+  Widget _buildOrDivider(ResponsiveUtils responsive) {
+    return Row(
+      children: [
+        Expanded(child: Divider(color: const Color(0xFFE5E7EB), thickness: 1)),
+        Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: responsive.getAdaptiveSpacing(16),
+          ),
+          child: Text(
+            'OU',
+            style: TextStyle(
+              color: const Color(0xFF6B7280),
+              fontSize: responsive.getAdaptiveTextSize(14),
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+        Expanded(child: Divider(color: const Color(0xFFE5E7EB), thickness: 1)),
+      ],
+    );
+  }
+
+  /// Widget - Bouton de connexion avec Google
+  Widget _buildGoogleSignInButton(
+    ResponsiveUtils responsive,
+    LoginViewModel viewModel,
+  ) {
+    return SizedBox(
+      width: double.infinity,
+      height: responsive.getAdaptiveHeight(56),
+      child: OutlinedButton(
+        onPressed: viewModel.isLoading ? null : _handleGoogleSignIn,
+        style: OutlinedButton.styleFrom(
+          side: const BorderSide(color: Color(0xFFE5E7EB), width: 1.5),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          backgroundColor: Colors.white,
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Logo Google
+            Image.asset(
+              'assets/images/google_logo.png',
+              height: 24,
+              width: 24,
+              errorBuilder: (context, error, stackTrace) {
+                // Fallback si l'image n'existe pas
+                return Container(
+                  height: 24,
+                  width: 24,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.red.shade50,
+                  ),
+                  child: const Icon(
+                    Icons.g_mobiledata,
+                    color: Colors.red,
+                    size: 20,
+                  ),
+                );
+              },
+            ),
+            SizedBox(width: responsive.getAdaptiveSpacing(12)),
+            Text(
+              'Continuer avec Google',
+              style: TextStyle(
+                fontSize: responsive.getAdaptiveTextSize(16),
+                fontWeight: FontWeight.w500,
+                color: const Color(0xFF1F2937),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

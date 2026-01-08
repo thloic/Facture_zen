@@ -13,7 +13,20 @@
           "package_name": "com.example.facture_zen"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "664151721016-uptrqrt4bgl7l9jsu75pjtorg42kihao.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.facture_zen",
+            "certificate_hash": "d1e679015f50b2e8093fac16694d92a6326b3f58"
+          }
+        },
+        {
+          "client_id": "664151721016-qd4nkndn7jt3v48fhks98gc0jn803vji.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyDOU72PP_rlXxP-6YTAG5RQBce3zf91nEY"
@@ -21,7 +34,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "664151721016-qd4nkndn7jt3v48fhks98gc0jn803vji.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

@@ -10,8 +10,10 @@ import 'package:provider/provider.dart';
 import 'common/services/auth_service.dart';
 import 'features/auth/viewmodels/login_viewmodel.dart';
 import 'features/auth/viewmodels/register_viewmodel.dart';
+import 'features/auth/viewmodels/forgot_password_viewmodel.dart';
 import 'features/auth/views/login_screen.dart';
 import 'features/auth/views/register_screen.dart';
+import 'features/auth/views/forgot_password_screen.dart';
 import 'features/invoicing/viewmodels/invoice_history_viewmodel.dart';
 import 'features/invoicing/viewmodels/voice_recording_viewmodel.dart';
 import 'features/profile/viewmodels/profile_viewmodel.dart';
@@ -20,9 +22,7 @@ import 'firebase_options.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   runApp(const MyApp());
 }
 
@@ -45,7 +45,10 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(
           create: (_) => RegisterViewModel(authService: authService),
         ),
-        ChangeNotifierProvider(create: (_)=> HomeViewModel()),
+        ChangeNotifierProvider(
+          create: (_) => ForgotPasswordViewModel(authService: authService),
+        ),
+        ChangeNotifierProvider(create: (_) => HomeViewModel()),
         ChangeNotifierProvider(create: (_) => VoiceRecordingViewModel()),
         ChangeNotifierProvider(create: (_) => InvoiceHistoryViewModel()),
         ChangeNotifierProvider(create: (_) => ProfileViewModel()),
@@ -61,10 +64,11 @@ class MyApp extends StatelessWidget {
         routes: {
           '/login': (context) => const LoginScreen(),
           '/register': (context) => const RegisterScreen(),
-          '/home':(context)=> const HomeScreen(),
-          '/record':(context)=> const VoiceRecordingScreen(),
-          '/historiqueInvoicing':(context)=> const InvoiceHistoryScreen(),
-          '/settings':(context)=> const ProfileScreen(),
+          '/forgot-password': (context) => const ForgotPasswordScreen(),
+          '/home': (context) => const HomeScreen(),
+          '/record': (context) => const VoiceRecordingScreen(),
+          '/historiqueInvoicing': (context) => const InvoiceHistoryScreen(),
+          '/settings': (context) => const ProfileScreen(),
         },
       ),
     );
