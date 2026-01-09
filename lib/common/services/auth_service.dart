@@ -67,7 +67,7 @@ class AuthService {
           // L'utilisateur est créé dans Auth mais pas dans Database
           // Tu peux décider de supprimer le compte Auth ou le laisser
           throw Exception(
-            'Compte créé mais données non sauvegardées. Erreur: $dbError',
+            'Votre compte a été créé mais certaines informations n\'ont pas pu être enregistrées. Veuillez contacter le support.',
           );
         }
       }
@@ -78,7 +78,7 @@ class AuthService {
       throw _handleAuthException(e);
     } catch (e) {
       debugPrint('❌ Erreur inscription: $e');
-      throw Exception('Une erreur est survenue lors de l\'inscription: $e');
+      throw Exception('Impossible de créer votre compte pour le moment. Veuillez réessayer ou contacter le support si le problème persiste.');
     }
   }
 
@@ -118,7 +118,7 @@ class AuthService {
       throw _handleAuthException(e);
     } catch (e) {
       debugPrint('❌ Erreur connexion: $e');
-      throw Exception('Une erreur est survenue lors de la connexion: $e');
+      throw Exception('Impossible de vous connecter pour le moment. Veuillez vérifier vos identifiants et réessayer.');
     }
   }
 
@@ -129,7 +129,7 @@ class AuthService {
       debugPrint('✅ Déconnexion réussie');
     } catch (e) {
       debugPrint('❌ Erreur déconnexion: $e');
-      throw Exception('Une erreur est survenue lors de la déconnexion');
+      throw Exception('Impossible de vous déconnecter. Veuillez fermer et rouvrir l\'application.');
     }
   }
 
@@ -207,7 +207,7 @@ class AuthService {
     } catch (e) {
       debugPrint('❌ Erreur connexion Google: $e');
       throw Exception(
-        'Une erreur est survenue lors de la connexion avec Google: $e',
+        'Impossible de vous connecter avec Google. Vérifiez votre connexion internet et réessayez.',
       );
     }
   }
@@ -243,7 +243,7 @@ class AuthService {
       debugPrint('✅ Données utilisateur mises à jour');
     } catch (e) {
       debugPrint('❌ Erreur mise à jour données: $e');
-      throw Exception('Impossible de mettre à jour les données: $e');
+      throw Exception('Impossible de sauvegarder vos modifications. Vérifiez votre connexion internet et réessayez.');
     }
   }
 
@@ -262,7 +262,7 @@ class AuthService {
       throw _handleAuthException(e);
     } catch (e) {
       debugPrint('❌ Erreur inconnue: $e');
-      throw Exception('Erreur lors de l\'envoi de l\'email: $e');
+      throw Exception('Impossible d\'envoyer l\'email de réinitialisation. Vérifiez que l\'adresse email est correcte et réessayez.');
     }
   }
 
@@ -281,33 +281,68 @@ class AuthService {
       }
     } catch (e) {
       debugPrint('❌ Erreur suppression compte: $e');
-      throw Exception('Impossible de supprimer le compte');
+      throw Exception('Impossible de supprimer votre compte. Cette action nécessite une connexion récente. Déconnectez-vous, reconnectez-vous puis réessayez.');
     }
   }
 
   /// Transforme les exceptions Firebase en messages compréhensibles
   String _handleAuthException(FirebaseAuthException e) {
     switch (e.code) {
+      // Erreurs liées au mot de passe
       case 'weak-password':
-        return 'Le mot de passe est trop faible';
-      case 'email-already-in-use':
-        return 'Cet email est déjà utilisé';
-      case 'invalid-email':
-        return 'Format d\'email invalide';
-      case 'user-not-found':
-        return 'Aucun compte trouvé avec cet email';
+        return 'Le mot de passe est trop faible. Utilisez au moins 6 caractères avec des lettres et des chiffres.';
       case 'wrong-password':
-        return 'Mot de passe incorrect';
+        return 'Le mot de passe que vous avez saisi est incorrect. Veuillez réessayer.';
+      
+      // Erreurs liées à l'email
+      case 'email-already-in-use':
+        return 'Cette adresse email est déjà utilisée. Connectez-vous ou utilisez une autre adresse.';
+      case 'invalid-email':
+        return 'L\'adresse email n\'est pas valide. Vérifiez qu\'elle est au bon format (exemple@email.com).';
+      
+      // Erreurs liées au compte
+      case 'user-not-found':
+        return 'Aucun compte n\'existe avec cette adresse email. Vérifiez l\'email ou créez un nouveau compte.';
       case 'user-disabled':
-        return 'Ce compte a été désactivé';
+        return 'Votre compte a été désactivé. Contactez le support pour plus d\'informations.';
+      
+      // Erreurs de sécurité
       case 'too-many-requests':
-        return 'Trop de tentatives. Réessayez plus tard';
+        return 'Trop de tentatives de connexion. Veuillez patienter quelques minutes avant de réessayer.';
       case 'operation-not-allowed':
-        return 'Opération non autorisée';
+        return 'Cette méthode de connexion n\'est pas activée. Contactez le support.';
+      
+      // Erreurs de réseau
       case 'network-request-failed':
-        return 'Erreur de connexion. Vérifiez votre internet';
+        return 'Impossible de se connecter au serveur. Vérifiez votre connexion internet et réessayez.';
+      
+      // Erreurs de session
+      case 'requires-recent-login':
+        return 'Cette action nécessite une connexion récente. Veuillez vous déconnecter et vous reconnecter.';
+      case 'expired-action-code':
+        return 'Ce lien a expiré. Demandez un nouveau lien de réinitialisation.';
+      case 'invalid-action-code':
+        return 'Le lien est invalide ou a déjà été utilisé. Demandez un nouveau lien.';
+      
+      // Erreurs liées aux informations d'identification
+      case 'invalid-credential':
+        return 'Les informations de connexion sont invalides ou ont expiré. Veuillez réessayer.';
+      case 'account-exists-with-different-credential':
+        return 'Un compte existe déjà avec cette adresse email mais avec une autre méthode de connexion.';
+      
+      // Erreurs de validation
+      case 'missing-email':
+        return 'Veuillez saisir une adresse email.';
+      case 'missing-password':
+        return 'Veuillez saisir un mot de passe.';
+      case 'invalid-verification-code':
+        return 'Le code de vérification est invalide. Veuillez réessayer.';
+      case 'invalid-verification-id':
+        return 'La session de vérification a expiré. Veuillez recommencer.';
+      
+      // Erreur par défaut
       default:
-        return 'Une erreur est survenue: ${e.message}';
+        return 'Une erreur inattendue s\'est produite. Veuillez réessayer. Si le problème persiste, contactez le support.';
     }
   }
 }
