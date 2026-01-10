@@ -1,223 +1,263 @@
-// ========================================
-// Fichier: lib/common/services/voice_recognition_service.dart
-// ========================================
-
-import 'package:flutter/foundation.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:record/record.dart';
-import 'package:permission_handler/permission_handler.dart';
+import 'dart:async';
 import 'dart:io';
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
+import 'package:record/record.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:http/http.dart' as http;
 
-/// VoiceRecognitionService
-/// Service d'enregistrement audio
-/// Gère l'enregistrement, la pause et la sauvegarde de fichiers audio
+/// Service de reconnaissance vocale avec intégration Groq Whisper
+/// Gère l'enregistrement, la transcription et la visualisation audio
 class VoiceRecognitionService {
-  // Instance du recorder
-  final AudioRecorder _audioRecorder = AudioRecorder();
-
-  // Chemin du fichier d'enregistrement
-  String? _recordingPath;
+  final AudioRecorder _recorder = AudioRecorder();
 
   // État de l'enregistrement
   bool _isRecording = false;
-  bool _isPaused = false;
+  String? _currentAudioPath;
 
-  /// Getters
-  bool get isRecording => _isRecording;
-  bool get isPaused => _isPaused;
-  String? get recordingPath => _recordingPath;
+  // Stream pour les amplitudes audio (pour la visualisation)
+  final StreamController<double> _amplitudeController = StreamController<double>.broadcast();
+  Stream<double> get amplitudeStream => _amplitudeController.stream;
 
-  /// Vérifie et demande les permissions du microphone
-  Future<bool> checkAndRequestPermission() async {
-    try {
-      debugPrint('🎙️ Vérification des permissions microphone...');
+  Timer? _amplitudeTimer;
 
-      final status = await Permission.microphone.request();
+  // Configuration Groq API (GRATUIT)
+  static const String _groqApiKey = '';
+  static const String _whisperEndpoint = 'https://api.groq.com/openai/v1/audio/transcriptions';
 
-      if (status.isGranted) {
-        debugPrint('✅ Permission microphone accordée');
-        return true;
-      } else if (status.isDenied) {
-        debugPrint('❌ Permission microphone refusée');
-        return false;
-      } else if (status.isPermanentlyDenied) {
-        debugPrint('⚠️ Permission microphone définitivement refusée');
-        // Ouvrir les paramètres
-        await openAppSettings();
-        return false;
-      }
+  VoiceRecognitionService();
 
-      return false;
-    } catch (e) {
-      debugPrint('❌ Erreur vérification permissions: $e');
-      return false;
+  /// Vérifie et demande les permissions microphone
+  Future<bool> _checkPermissions() async {
+    final status = await Permission.microphone.status;
+
+    if (status.isDenied || status.isPermanentlyDenied) {
+      final result = await Permission.microphone.request();
+      return result.isGranted;
     }
+
+    return status.isGranted;
   }
 
   /// Démarre l'enregistrement audio
   Future<bool> startRecording() async {
     try {
       // Vérifier les permissions
-      final hasPermission = await checkAndRequestPermission();
+      final hasPermission = await _checkPermissions();
       if (!hasPermission) {
-        throw Exception('Permission microphone refusée');
+        debugPrint('❌ Permission microphone refusée');
+        return false;
       }
 
-      // Vérifier si le recorder est disponible
-      if (await _audioRecorder.hasPermission() == false) {
-        throw Exception('Pas de permission pour le microphone');
-      }
-
-      // Générer le chemin du fichier
+      // Générer un nom de fichier unique
       final directory = await getApplicationDocumentsDirectory();
       final timestamp = DateTime.now().millisecondsSinceEpoch;
-      _recordingPath = '${directory.path}/facture_audio_$timestamp.m4a';
-
-      debugPrint('🎙️ Démarrage de l\'enregistrement...');
-      debugPrint('📁 Chemin: $_recordingPath');
+      _currentAudioPath = '${directory.path}/recording_$timestamp.m4a';
 
       // Configuration de l'enregistrement
       const config = RecordConfig(
-        encoder: AudioEncoder.aacLc, // AAC format (compatible iOS & Android)
-        bitRate: 128000,             // Qualité audio
-        sampleRate: 44100,           // Fréquence d'échantillonnage
+        encoder: AudioEncoder.aacLc,
+        bitRate: 128000,
+        sampleRate: 44100,
+        numChannels: 1,
       );
 
       // Démarrer l'enregistrement
-      await _audioRecorder.start(config, path: _recordingPath!);
-
+      await _recorder.start(config, path: _currentAudioPath!);
       _isRecording = true;
-      _isPaused = false;
 
-      debugPrint('✅ Enregistrement démarré avec succès');
+      // Démarrer la surveillance de l'amplitude
+      _startAmplitudeMonitoring();
+
+      debugPrint('✅ Enregistrement démarré: $_currentAudioPath');
       return true;
 
     } catch (e) {
-      debugPrint('❌ Erreur démarrage enregistrement: $e');
+      debugPrint('❌ Erreur startRecording: $e');
       _isRecording = false;
-      _isPaused = false;
-      rethrow;
+      return false;
     }
+  }
+
+  /// Surveille l'amplitude audio pour la visualisation
+  void _startAmplitudeMonitoring() {
+    _amplitudeTimer?.cancel();
+
+    _amplitudeTimer = Timer.periodic(const Duration(milliseconds: 100), (timer) async {
+      if (!_isRecording) {
+        timer.cancel();
+        return;
+      }
+
+      try {
+        final amplitude = await _recorder.getAmplitude();
+        final normalized = (amplitude.current + 160) / 160;
+        final clamped = normalized.clamp(0.0, 1.0);
+        _amplitudeController.add(clamped);
+      } catch (e) {
+        debugPrint('⚠️ Erreur amplitude: $e');
+      }
+    });
   }
 
   /// Met en pause l'enregistrement
   Future<void> pauseRecording() async {
+    if (!_isRecording) return;
+
     try {
-      if (!_isRecording) return;
+      await _recorder.pause();
+      _isRecording = false;
+      _amplitudeTimer?.cancel();
+      _amplitudeController.add(0.0);
 
-      debugPrint('⏸️ Pause de l\'enregistrement...');
-
-      await _audioRecorder.pause();
-
-      _isPaused = true;
-
-      debugPrint('✅ Enregistrement mis en pause');
+      debugPrint('⏸️ Enregistrement en pause');
     } catch (e) {
-      debugPrint('❌ Erreur pause enregistrement: $e');
-      rethrow;
+      debugPrint('❌ Erreur pauseRecording: $e');
     }
   }
 
-  /// Reprend l'enregistrement après une pause
+  /// Reprend l'enregistrement
   Future<void> resumeRecording() async {
+    if (_isRecording) return;
+
     try {
-      if (!_isPaused) return;
+      await _recorder.resume();
+      _isRecording = true;
+      _startAmplitudeMonitoring();
 
-      debugPrint('▶️ Reprise de l\'enregistrement...');
-
-      await _audioRecorder.resume();
-
-      _isPaused = false;
-
-      debugPrint('✅ Enregistrement repris');
+      debugPrint('▶️ Enregistrement repris');
     } catch (e) {
-      debugPrint('❌ Erreur reprise enregistrement: $e');
-      rethrow;
+      debugPrint('❌ Erreur resumeRecording: $e');
     }
   }
 
   /// Arrête l'enregistrement et retourne le chemin du fichier
   Future<String?> stopRecording() async {
     try {
-      if (!_isRecording) return null;
+      _amplitudeTimer?.cancel();
+      _amplitudeController.add(0.0);
 
-      debugPrint('⏹️ Arrêt de l\'enregistrement...');
-
-      final path = await _audioRecorder.stop();
-
+      final path = await _recorder.stop();
       _isRecording = false;
-      _isPaused = false;
 
-      if (path != null) {
-        _recordingPath = path;
-
-        // Vérifier que le fichier existe
-        final file = File(path);
-        if (await file.exists()) {
-          final fileSize = await file.length();
-          debugPrint('✅ Enregistrement arrêté');
-          debugPrint('📁 Fichier sauvegardé: $path');
-          debugPrint('📊 Taille: ${(fileSize / 1024).toStringAsFixed(2)} KB');
-        } else {
-          debugPrint('⚠️ Le fichier n\'existe pas: $path');
-        }
-      }
-
+      debugPrint('⏹️ Enregistrement arrêté: $path');
       return path;
+
     } catch (e) {
-      debugPrint('❌ Erreur arrêt enregistrement: $e');
+      debugPrint('❌ Erreur stopRecording: $e');
       _isRecording = false;
-      _isPaused = false;
-      rethrow;
+      return null;
     }
   }
 
-  /// Supprime le fichier d'enregistrement actuel
-  Future<void> deleteRecording() async {
+  /// Transcrit l'audio avec Groq Whisper API (GRATUIT)
+  Future<String?> transcribeAudio(String audioPath) async {
     try {
-      if (_recordingPath != null) {
-        final file = File(_recordingPath!);
-        if (await file.exists()) {
-          await file.delete();
-          debugPrint('🗑️ Fichier supprimé: $_recordingPath');
+      debugPrint('🎯 Début transcription avec Groq Whisper...');
+
+      final audioFile = File(audioPath);
+
+      if (!await audioFile.exists()) {
+        debugPrint('❌ Fichier audio introuvable: $audioPath');
+        return null;
+      }
+
+      // Vérifier la taille du fichier
+      final fileSize = await audioFile.length();
+      debugPrint('📦 Taille fichier: ${(fileSize / 1024 / 1024).toStringAsFixed(2)} MB');
+
+      if (fileSize > 25 * 1024 * 1024) {
+        debugPrint('❌ Fichier trop volumineux (max 25 MB)');
+        return null;
+      }
+
+      // Préparer la requête multipart
+      final request = http.MultipartRequest('POST', Uri.parse(_whisperEndpoint));
+
+      // Headers
+      request.headers['Authorization'] = 'Bearer $_groqApiKey';
+
+      // Fichier audio
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'file',
+          audioPath,
+          filename: 'audio.m4a',
+        ),
+      );
+
+      // Paramètres
+      request.fields['model'] = 'whisper-large-v3';
+      request.fields['language'] = 'fr';
+      request.fields['response_format'] = 'json';
+      request.fields['temperature'] = '0.0';
+
+      // Envoyer la requête
+      debugPrint('📤 Envoi à Groq Whisper API...');
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      debugPrint('📥 Réponse API: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final jsonResponse = json.decode(response.body);
+        final transcription = jsonResponse['text'] as String?;
+
+        if (transcription != null && transcription.isNotEmpty) {
+          // ✅ CORRECTION : Afficher seulement les 50 premiers caractères SI le texte est assez long
+          final preview = transcription.length > 50
+              ? '${transcription.substring(0, 50)}...'
+              : transcription;
+          debugPrint('✅ Transcription réussie: $preview');
+          return transcription;
+        } else {
+          debugPrint('⚠️ Transcription vide');
+          return null;
         }
-        _recordingPath = null;
+
+      } else {
+        debugPrint('❌ Erreur API Whisper: ${response.statusCode}');
+        debugPrint('📄 Response body: ${response.body}');
+
+        // Analyser l'erreur pour donner un message utile
+        try {
+          final errorJson = json.decode(response.body);
+          debugPrint('💬 Message d\'erreur: ${errorJson['error']}');
+        } catch (_) {
+          // Pas de JSON dans l'erreur
+        }
+
+        return null;
       }
-    } catch (e) {
-      debugPrint('❌ Erreur suppression fichier: $e');
+
+    } catch (e, stackTrace) {
+      debugPrint('❌ Erreur transcription: $e');
+      debugPrint('📍 StackTrace: $stackTrace');
+      return null;
     }
   }
 
-  /// Récupère l'amplitude audio en temps réel (pour animations)
-  Stream<double> getAmplitudeStream() async* {
-    while (_isRecording && !_isPaused) {
-      try {
-        final amplitude = await _audioRecorder.getAmplitude();
-        // Normaliser entre 0.0 et 1.0
-        final normalizedAmplitude = (amplitude.current + 50) / 50;
-        yield normalizedAmplitude.clamp(0.0, 1.0);
-      } catch (e) {
-        yield 0.0;
-      }
-      await Future.delayed(const Duration(milliseconds: 100));
-    }
-  }
+  /// Supprime le fichier audio enregistré
+  Future<void> deleteRecording() async {
+    if (_currentAudioPath == null) return;
 
-  /// Vérifie si on a la permission du microphone
-  Future<bool> hasPermission() async {
-    return await _audioRecorder.hasPermission();
-  }
-
-  /// Libère les ressources
-  Future<void> dispose() async {
     try {
-      if (_isRecording) {
-        await stopRecording();
+      final file = File(_currentAudioPath!);
+      if (await file.exists()) {
+        await file.delete();
+        debugPrint('🗑️ Fichier audio supprimé');
       }
-      await _audioRecorder.dispose();
-      debugPrint('🧹 VoiceRecognitionService dispose');
+      _currentAudioPath = null;
     } catch (e) {
-      debugPrint('❌ Erreur dispose: $e');
+      debugPrint('❌ Erreur deleteRecording: $e');
     }
+  }
+
+  /// Nettoyage
+  void dispose() {
+    _amplitudeTimer?.cancel();
+    _amplitudeController.close();
+    _recorder.dispose();
   }
 }
