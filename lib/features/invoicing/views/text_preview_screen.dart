@@ -255,7 +255,20 @@ Génère le JSON de la facture selon le format spécifié.
               .trim();
         }
 
-        final invoiceData = json.decode(cleanedContent);
+        final rawData = json.decode(cleanedContent);
+
+        // ✅ CORRECTION : Convertir explicitement les types
+        final invoiceData = {
+          'clientName': rawData['clientName'] as String? ?? '',
+          'clientAddress': rawData['clientAddress'] as String? ?? '',
+          'items': (rawData['items'] as List<dynamic>?)
+              ?.map((item) => {
+            'description': item['description'] as String? ?? '',
+            'quantity': (item['quantity'] as num?)?.toInt() ?? 0,
+            'unitPrice': (item['unitPrice'] as num?)?.toDouble() ?? 0.0,
+          })
+              .toList() ?? [],
+        };
 
         debugPrint('✅ Facture générée: $invoiceData');
 
