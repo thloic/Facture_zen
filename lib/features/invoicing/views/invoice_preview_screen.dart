@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
-import '../../../common/widgets/primary_button.dart';
+import '../template/invoice_model.dart';
+import '../template/invoice_template_base.dart';
+import 'template_selector_modal.dart';
 import '../../../common/utils/responsive_utils.dart';
-import 'invoice_final_screen.dart';
 
-/// InvoicePreviewScreen
-/// Écran d'aperçu de la facture extraite du texte
-/// Affiche les informations parsées (client, marchandises, montants)
-class InvoicePreviewScreen extends StatelessWidget {
+/// Écran de prévisualisation de la facture avec sélection de template
+class InvoicePreviewScreen extends StatefulWidget {
   final Map<String, dynamic> invoiceData;
 
   const InvoicePreviewScreen({
@@ -15,12 +14,69 @@ class InvoicePreviewScreen extends StatelessWidget {
   }) : super(key: key);
 
   @override
+  State<InvoicePreviewScreen> createState() => _InvoicePreviewScreenState();
+}
+
+class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
+  // Template actuellement sélectionné
+  InvoiceTemplateType _selectedTemplate = InvoiceTemplateType.classic;
+
+  late InvoiceModel _invoice;
+
+  @override
+  void initState() {
+    super.initState();
+    // Convertir les données en modèle
+    _invoice = InvoiceModel.fromMap(widget.invoiceData);
+  }
+
+  /// Affiche le modal de sélection de template
+  void _showTemplateSelector() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => SizedBox(
+        height: MediaQuery.of(context).size.height * 0.7,
+        child: TemplateSelectorModal(
+          currentTemplate: _selectedTemplate,
+          onTemplateSelected: (template) {
+            setState(() {
+              _selectedTemplate = template;
+            });
+          },
+        ),
+      ),
+    );
+  }
+
+  /// Partage la facture (TODO: implémenter avec share_plus)
+  void _shareInvoice() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Fonctionnalité de partage bientôt disponible'),
+        backgroundColor: Color(0xFF5B5FC7),
+      ),
+    );
+  }
+
+  /// Télécharge la facture en PDF (TODO: implémenter avec pdf package)
+  void _downloadPDF() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Génération PDF bientôt disponible'),
+        backgroundColor: Color(0xFF5B5FC7),
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     final responsive = ResponsiveUtils(context);
-    final items = invoiceData['items'] as List<Map<String, dynamic>>? ?? [];
+    final template = InvoiceTemplateFactory.createTemplate(_selectedTemplate);
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.grey.shade100,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -29,7 +85,7 @@ class InvoicePreviewScreen extends StatelessWidget {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          'Génération du texte',
+          'Aperçu de la facture',
           style: TextStyle(
             fontSize: responsive.getAdaptiveTextSize(18),
             fontWeight: FontWeight.w600,
@@ -37,293 +93,171 @@ class InvoicePreviewScreen extends StatelessWidget {
           ),
         ),
         centerTitle: true,
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                padding: EdgeInsets.all(responsive.horizontalPadding),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Section Client
-                    _buildClientSection(responsive),
-
-                    SizedBox(height: responsive.getAdaptiveSpacing(32)),
-
-                    // En-tête du tableau
-                    _buildTableHeader(responsive),
-
-                    SizedBox(height: responsive.getAdaptiveSpacing(16)),
-
-                    // Liste des articles
-                    ...items.map((item) => _buildItemRow(item, responsive)),
-                  ],
+        actions: [
+          // Bouton info template actuel
+          Container(
+            margin: const EdgeInsets.only(right: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: template.primaryColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  template.icon,
+                  size: 16,
+                  color: template.primaryColor,
                 ),
-              ),
-            ),
-
-            // Bouton "Générer la facture"
-            Padding(
-              padding: EdgeInsets.all(responsive.horizontalPadding),
-              child: PrimaryButton(
-                text: 'Générer la facture',
-                onPressed: () => _showCreationModalAndGenerate(context),
-                height: responsive.getAdaptiveHeight(56),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// Widget - Section informations client
-  Widget _buildClientSection(ResponsiveUtils responsive) {
-    final clientName = invoiceData['clientName'] ?? 'Client inconnu';
-    final clientAddress = invoiceData['clientAddress'] ?? '';
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Client',
-          style: TextStyle(
-            fontSize: responsive.getAdaptiveTextSize(14),
-            color: const Color(0xFF6B7280),
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        SizedBox(height: responsive.getAdaptiveSpacing(8)),
-        Text(
-          clientName,
-          style: TextStyle(
-            fontSize: responsive.getAdaptiveTextSize(16),
-            fontWeight: FontWeight.w600,
-            color: const Color(0xFF5B5FC7),
-          ),
-        ),
-        if (clientAddress.isNotEmpty) ...[
-          SizedBox(height: responsive.getAdaptiveSpacing(4)),
-          Text(
-            clientAddress,
-            style: TextStyle(
-              fontSize: responsive.getAdaptiveTextSize(14),
-              color: const Color(0xFF5B5FC7),
+                const SizedBox(width: 6),
+                Text(
+                  template.name,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: template.primaryColor,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
-      ],
-    );
-  }
-
-  /// Widget - En-tête du tableau des marchandises
-  Widget _buildTableHeader(ResponsiveUtils responsive) {
-    return Row(
-      children: [
-        Expanded(
-          flex: 3,
-          child: Text(
-            'Marchandises',
-            style: TextStyle(
-              fontSize: responsive.getAdaptiveTextSize(14),
-              color: const Color(0xFF9CA3AF),
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ),
-        SizedBox(
-          width: 60,
-          child: Text(
-            'Qté',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: responsive.getAdaptiveTextSize(14),
-              color: const Color(0xFF9CA3AF),
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ),
-        SizedBox(
-          width: 80,
-          child: Text(
-            'Prix Unit. (€)',
-            textAlign: TextAlign.right,
-            style: TextStyle(
-              fontSize: responsive.getAdaptiveTextSize(14),
-              color: const Color(0xFF9CA3AF),
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  /// Widget - Ligne d'article
-  Widget _buildItemRow(Map<String, dynamic> item, ResponsiveUtils responsive) {
-    final description = item['description'] ?? '';
-    final quantity = item['quantity']?.toString() ?? '0';
-    final unitPrice = item['unitPrice']?.toStringAsFixed(2) ?? '0.00';
-
-    return Padding(
-      padding: EdgeInsets.symmetric(
-        vertical: responsive.getAdaptiveSpacing(12),
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      body: Column(
         children: [
-          // Description
+          // Zone de prévisualisation
           Expanded(
-            flex: 3,
-            child: Text(
-              description,
-              style: TextStyle(
-                fontSize: responsive.getAdaptiveTextSize(15),
-                color: const Color(0xFF1F2937),
+            child: Container(
+              margin: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 20,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: template.buildInvoice(context, _invoice),
               ),
             ),
           ),
 
-          // Quantité
-          SizedBox(
-            width: 60,
-            child: Text(
-              quantity,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: responsive.getAdaptiveTextSize(15),
-                color: const Color(0xFF1F2937),
-              ),
+          // Barre d'actions avec les 3 boutons
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, -2),
+                ),
+              ],
             ),
-          ),
+            child: Row(
+              children: [
+                // Bouton 1: Changer de template
+                Expanded(
+                  child: _ActionButton(
+                    icon: Icons.palette_outlined,
+                    label: 'Template',
+                    onPressed: _showTemplateSelector,
+                    backgroundColor: const Color(0xFF5B5FC7),
+                    textColor: Colors.white,
+                  ),
+                ),
 
-          // Prix unitaire
-          SizedBox(
-            width: 80,
-            child: Text(
-              unitPrice,
-              textAlign: TextAlign.right,
-              style: TextStyle(
-                fontSize: responsive.getAdaptiveTextSize(15),
-                color: const Color(0xFF5B5FC7),
-                fontWeight: FontWeight.w600,
-              ),
+                const SizedBox(width: 12),
+
+                // Bouton 2: Partager
+                Expanded(
+                  child: _ActionButton(
+                    icon: Icons.share_outlined,
+                    label: 'Partager',
+                    onPressed: _shareInvoice,
+                    backgroundColor: Colors.white,
+                    textColor: const Color(0xFF5B5FC7),
+                    hasBorder: true,
+                  ),
+                ),
+
+                const SizedBox(width: 12),
+
+                // Bouton 3: Télécharger PDF
+                Expanded(
+                  child: _ActionButton(
+                    icon: Icons.download_outlined,
+                    label: 'PDF',
+                    onPressed: _downloadPDF,
+                    backgroundColor: Colors.white,
+                    textColor: const Color(0xFF5B5FC7),
+                    hasBorder: true,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
       ),
     );
-  }
-
-  /// Affiche le modal de création puis navigue vers la facture finale
-  Future<void> _showCreationModalAndGenerate(BuildContext context) async {
-    // Afficher le modal
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const InvoiceCreationModal(),
-    );
-
-    // Simuler la création du PDF (3 secondes)
-    await Future.delayed(const Duration(seconds: 3));
-
-    // Fermer le modal
-    if (context.mounted) {
-      Navigator.of(context).pop();
-
-      // Naviguer vers l'aperçu final de la facture
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => InvoiceFinalScreen(
-            invoiceData: invoiceData,
-          ),
-        ),
-      );
-    }
   }
 }
 
-/// InvoiceCreationModal
-/// Modal de création de la facture PDF
-class InvoiceCreationModal extends StatelessWidget {
-  const InvoiceCreationModal({Key? key}) : super(key: key);
+/// Widget de bouton d'action personnalisé
+class _ActionButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onPressed;
+  final Color backgroundColor;
+  final Color textColor;
+  final bool hasBorder;
+
+  const _ActionButton({
+    required this.icon,
+    required this.label,
+    required this.onPressed,
+    required this.backgroundColor,
+    required this.textColor,
+    this.hasBorder = false,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final responsive = ResponsiveUtils(context);
-
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      child: Container(
-        margin: EdgeInsets.symmetric(
-          horizontal: responsive.horizontalPadding,
-        ),
-        padding: EdgeInsets.all(responsive.getAdaptiveSpacing(32)),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Icône des ondes sonores (animation)
-            Container(
-              width: 60,
-              height: 60,
-              decoration: BoxDecoration(
-                color: const Color(0xFF5B5FC7).withOpacity(0.1),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.graphic_eq,
-                color: Color(0xFF5B5FC7),
-                size: 32,
-              ),
-            ),
-
-            SizedBox(height: responsive.getAdaptiveSpacing(24)),
-
-            // Titre
-            Text(
-              'Création de la facture',
-              style: TextStyle(
-                fontSize: responsive.getAdaptiveTextSize(18),
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF1F2937),
-              ),
-            ),
-
-            SizedBox(height: responsive.getAdaptiveSpacing(12)),
-
-            // Description
-            Text(
-              'Patientez pendant que nous mettons votre\nfacture en format PDF',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: responsive.getAdaptiveTextSize(14),
-                color: const Color(0xFF6B7280),
-                height: 1.5,
-              ),
-            ),
-
-            SizedBox(height: responsive.getAdaptiveSpacing(24)),
-
-            // Bouton Annuler
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text(
-                'Annuler',
+    return Material(
+      color: backgroundColor,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          decoration: BoxDecoration(
+            border: hasBorder
+                ? Border.all(color: const Color(0xFF5B5FC7), width: 2)
+                : null,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, color: textColor, size: 24),
+              const SizedBox(height: 4),
+              Text(
+                label,
                 style: TextStyle(
-                  fontSize: responsive.getAdaptiveTextSize(16),
-                  color: const Color(0xFF6B7280),
+                  fontSize: 12,
                   fontWeight: FontWeight.w600,
+                  color: textColor,
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
