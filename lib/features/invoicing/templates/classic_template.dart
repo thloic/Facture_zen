@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import '../models/invoice_model.dart';
 import 'invoice_template_base.dart';
-import 'invoice_model.dart';
 
 /// Template Classique : Style professionnel traditionnel
 class ClassicTemplate implements InvoiceTemplate {
@@ -107,35 +107,48 @@ class ClassicTemplate implements InvoiceTemplate {
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'FACTURE',
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
+          const Flexible(
+            child: Text(
+              'FACTURE',
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                'N° ${invoice.invoiceNumber}',
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
+          Flexible(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'N° ${invoice.invoiceNumber}',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.right,
                 ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Date: ${_formatDate(invoice.invoiceDate)}',
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Colors.white70,
+                const SizedBox(height: 4),
+                Text(
+                  'Date: ${_formatDate(invoice.invoiceDate)}',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Colors.white70,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
@@ -166,17 +179,23 @@ class ClassicTemplate implements InvoiceTemplate {
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 4),
               Text(
                 invoice.companyAddress,
                 style: const TextStyle(fontSize: 14, color: Colors.grey),
+                maxLines: 4,
+                overflow: TextOverflow.ellipsis,
               ),
               if (invoice.companyPhone != null) ...[
                 const SizedBox(height: 2),
                 Text(
                   invoice.companyPhone!,
                   style: const TextStyle(fontSize: 14, color: Colors.grey),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
               if (invoice.companySiret != null) ...[
@@ -184,6 +203,8 @@ class ClassicTemplate implements InvoiceTemplate {
                 Text(
                   'SIRET: ${invoice.companySiret!}',
                   style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ],
@@ -212,11 +233,15 @@ class ClassicTemplate implements InvoiceTemplate {
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 4),
               Text(
                 invoice.clientAddress,
                 style: const TextStyle(fontSize: 14, color: Colors.grey),
+                maxLines: 4,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
@@ -290,7 +315,11 @@ class ClassicTemplate implements InvoiceTemplate {
                 children: [
                   Expanded(
                     flex: 3,
-                    child: Text(item.description),
+                    child: Text(
+                      item.description,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                   Expanded(
                     child: Text(
@@ -302,6 +331,8 @@ class ClassicTemplate implements InvoiceTemplate {
                     child: Text(
                       '${item.unitPrice.toStringAsFixed(2)} €',
                       textAlign: TextAlign.right,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   Expanded(
@@ -309,6 +340,8 @@ class ClassicTemplate implements InvoiceTemplate {
                       '${item.total.toStringAsFixed(2)} €',
                       textAlign: TextAlign.right,
                       style: const TextStyle(fontWeight: FontWeight.w600),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ],
@@ -329,7 +362,7 @@ class ClassicTemplate implements InvoiceTemplate {
             const SizedBox(
               width: 120,
               child: Text(
-                'Sous-total HT:',
+                'Sous-total:',
                 style: TextStyle(fontSize: 14),
               ),
             ),
@@ -343,27 +376,52 @@ class ClassicTemplate implements InvoiceTemplate {
             ),
           ],
         ),
-        const SizedBox(height: 8),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            const SizedBox(
-              width: 120,
-              child: Text(
-                'TVA (20%):',
-                style: TextStyle(fontSize: 14),
+        if (invoice.hasDiscount) ...[
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              SizedBox(
+                width: 120,
+                child: Text(
+                  invoice.discountLabel ?? 'Réduction:',
+                  style: const TextStyle(fontSize: 14, color: Colors.red),
+                ),
               ),
-            ),
-            SizedBox(
-              width: 100,
-              child: Text(
-                '${invoice.taxAmount.toStringAsFixed(2)} €',
-                textAlign: TextAlign.right,
-                style: const TextStyle(fontSize: 14),
+              SizedBox(
+                width: 100,
+                child: Text(
+                  '-${invoice.discountAmount.toStringAsFixed(2)} €',
+                  textAlign: TextAlign.right,
+                  style: const TextStyle(fontSize: 14, color: Colors.red),
+                ),
               ),
-            ),
-          ],
-        ),
+            ],
+          ),
+        ],
+        if (invoice.hasTax) ...[
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              SizedBox(
+                width: 120,
+                child: Text(
+                  'TVA (${invoice.taxRate}%):',
+                  style: const TextStyle(fontSize: 14),
+                ),
+              ),
+              SizedBox(
+                width: 100,
+                child: Text(
+                  '${invoice.taxAmount.toStringAsFixed(2)} €',
+                  textAlign: TextAlign.right,
+                  style: const TextStyle(fontSize: 14),
+                ),
+              ),
+            ],
+          ),
+        ],
         const SizedBox(height: 8),
         Container(
           padding: const EdgeInsets.all(12),
@@ -374,11 +432,11 @@ class ClassicTemplate implements InvoiceTemplate {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              const SizedBox(
+              SizedBox(
                 width: 120,
                 child: Text(
-                  'TOTAL TTC:',
-                  style: TextStyle(
+                  invoice.hasTax ? 'TOTAL TTC:' : 'TOTAL:',
+                  style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,

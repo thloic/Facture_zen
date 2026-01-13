@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'invoice_model.dart';
+import '../models/invoice_model.dart';
 import 'invoice_template_base.dart';
 
 /// Template Moderne : Style coloré et dynamique

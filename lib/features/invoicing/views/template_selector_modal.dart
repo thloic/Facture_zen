@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../template/invoice_template_base.dart';
+import '../templates/invoice_template_base.dart';
 
-/// Modal de sélection de template avec prévisualisation
+/// Modal de sélection de template avec défilement horizontal
 class TemplateSelectorModal extends StatelessWidget {
   final InvoiceTemplateType currentTemplate;
   final Function(InvoiceTemplateType) onTemplateSelected;
@@ -29,7 +29,7 @@ class TemplateSelectorModal extends StatelessWidget {
         children: [
           // Poignée
           Container(
-            margin: const EdgeInsets.only(top: 12),
+            margin: const EdgeInsets.only(top: 12, bottom: 8),
             width: 40,
             height: 4,
             decoration: BoxDecoration(
@@ -40,56 +40,90 @@ class TemplateSelectorModal extends StatelessWidget {
 
           // Titre
           Padding(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
             child: Row(
               children: [
-                const Icon(Icons.palette, color: Color(0xFF5B5FC7)),
+                const Icon(Icons.palette, color: Color(0xFF5B5FC7), size: 24),
                 const SizedBox(width: 12),
-                const Text(
-                  'Choisir un template',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
+                const Expanded(
+                  child: Text(
+                    'Afficher d\'autres formats',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                const Spacer(),
                 IconButton(
-                  icon: const Icon(Icons.close),
+                  icon: const Icon(Icons.close, size: 20),
                   onPressed: () => Navigator.pop(context),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
                 ),
               ],
             ),
           ),
 
-          // Grille de templates
+          const Divider(height: 1),
+
+          // Défilement horizontal des templates
           Expanded(
-            child: GridView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                childAspectRatio: 0.75,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-              ),
+            child: PageView.builder(
               itemCount: templates.length,
+              controller: PageController(
+                viewportFraction: 0.85,
+                initialPage: InvoiceTemplateType.values.indexOf(currentTemplate),
+              ),
+              onPageChanged: (index) {
+                onTemplateSelected(InvoiceTemplateType.values[index]);
+              },
               itemBuilder: (context, index) {
                 final template = templates[index];
                 final templateType = InvoiceTemplateType.values[index];
                 final isSelected = templateType == currentTemplate;
 
-                return _TemplateCard(
-                  template: template,
-                  isSelected: isSelected,
-                  onTap: () {
-                    onTemplateSelected(templateType);
-                    Navigator.pop(context);
-                  },
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
+                  child: _TemplateCard(
+                    template: template,
+                    isSelected: isSelected,
+                    onTap: () {
+                      onTemplateSelected(templateType);
+                    },
+                  ),
                 );
               },
             ),
           ),
 
-          const SizedBox(height: 24),
+          // Bouton de sélection
+          Padding(
+            padding: const EdgeInsets.all(24),
+            child: SizedBox(
+              width: double.infinity,
+              height: 56,
+              child: ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF5B5FC7),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  elevation: 0,
+                ),
+                child: const Text(
+                  'Utiliser ce template',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -114,45 +148,47 @@ class _TemplateCard extends StatelessWidget {
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: isSelected ? template.primaryColor : Colors.grey.shade300,
-            width: isSelected ? 3 : 2,
+            width: isSelected ? 3 : 1,
           ),
-          boxShadow: isSelected
-              ? [
+          boxShadow: [
             BoxShadow(
-              color: template.primaryColor.withOpacity(0.3),
-              blurRadius: 12,
+              color: isSelected
+                  ? template.primaryColor.withOpacity(0.2)
+                  : Colors.black.withOpacity(0.05),
+              blurRadius: isSelected ? 20 : 10,
               offset: const Offset(0, 4),
             ),
-          ]
-              : [],
+          ],
         ),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // Badge sélectionné
             if (isSelected)
               Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 6),
+                padding: const EdgeInsets.symmetric(vertical: 12),
                 decoration: BoxDecoration(
                   color: template.primaryColor,
                   borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(14),
-                    topRight: Radius.circular(14),
+                    topLeft: Radius.circular(18),
+                    topRight: Radius.circular(18),
                   ),
                 ),
                 child: const Row(
                   mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.check_circle, color: Colors.white, size: 16),
-                    SizedBox(width: 6),
+                    Icon(Icons.check_circle, color: Colors.white, size: 18),
+                    SizedBox(width: 8),
                     Text(
                       'Sélectionné',
                       style: TextStyle(
                         color: Colors.white,
-                        fontSize: 12,
+                        fontSize: 13,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -160,54 +196,81 @@ class _TemplateCard extends StatelessWidget {
                 ),
               ),
 
-            // Aperçu du template
+            // Aperçu miniature (taille fixe)
             Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: template.buildThumbnail(context),
+              child: Container(
+                margin: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey.shade200),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      return SizedBox(
+                        width: constraints.maxWidth,
+                        height: constraints.maxHeight,
+                        child: template.buildThumbnail(context),
+                      );
+                    },
+                  ),
+                ),
               ),
             ),
 
-            // Informations
+            // Informations du template
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: Colors.grey.shade50,
                 borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(14),
-                  bottomRight: Radius.circular(14),
+                  bottomLeft: Radius.circular(18),
+                  bottomRight: Radius.circular(18),
                 ),
               ),
-              child: Column(
+              child: Row(
                 children: [
-                  Row(
-                    children: [
-                      Icon(
-                        template.icon,
-                        size: 18,
-                        color: template.primaryColor,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: template.primaryColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      template.icon,
+                      size: 18,
+                      color: template.primaryColor,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
                           template.name,
                           style: const TextStyle(
-                            fontSize: 14,
+                            fontSize: 15,
                             fontWeight: FontWeight.bold,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    template.description,
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Colors.grey.shade600,
+                        const SizedBox(height: 2),
+                        Text(
+                          template.description,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade600,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
                     ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),

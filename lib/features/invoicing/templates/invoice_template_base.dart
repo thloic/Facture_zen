@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import '../models/invoice_model.dart';
 import 'classic_template.dart';
-import 'invoice_model.dart';
+import 'corporate_template.dart';
+import 'creative_template.dart';
+import 'elegant_template.dart';
 import 'minimal_template.dart';
 import 'modern_template.dart';
 
@@ -33,6 +36,9 @@ enum InvoiceTemplateType {
   classic,
   modern,
   minimal,
+  corporate,
+  creative,
+  elegant,
 }
 
 /// Factory pour créer les templates
@@ -45,6 +51,12 @@ class InvoiceTemplateFactory {
         return ModernTemplate();
       case InvoiceTemplateType.minimal:
         return MinimalTemplate();
+      case InvoiceTemplateType.corporate:
+        return CorporateTemplate();
+      case InvoiceTemplateType.creative:
+        return CreativeTemplate();
+      case InvoiceTemplateType.elegant:
+        return ElegantTemplate();
     }
   }
 
@@ -53,6 +65,9 @@ class InvoiceTemplateFactory {
       ClassicTemplate(),
       ModernTemplate(),
       MinimalTemplate(),
+      CorporateTemplate(),
+      CreativeTemplate(),
+      ElegantTemplate(),
     ];
   }
 }
