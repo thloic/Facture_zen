@@ -27,10 +27,6 @@ class _TextPreviewScreenState extends State<TextPreviewScreen> {
   static const String _groqApiKey = '';
   static const String _groqEndpoint = 'https://api.groq.com/openai/v1/chat/completions';
 
-  // Alternative OpenAI (payant mais moins cher avec gpt-4o-mini)
-  // static const String _openaiApiKey = 'sk-...';
-  // static const String _openaiEndpoint = 'https://api.openai.com/v1/chat/completions';
-
   @override
   Widget build(BuildContext context) {
     final responsive = ResponsiveUtils(context);
@@ -189,22 +185,45 @@ Tu es un assistant spécialisé dans la génération de factures professionnelle
 
 RÈGLES STRICTES:
 1. Retourne UNIQUEMENT un JSON valide, sans texte avant ou après
-2. Format JSON exact: {"clientName": "...", "clientAddress": "...", "items": [...]}
+2. Format JSON exact: {"clientName": "...", "clientAddress": "...", "items": [...], "taxRate": null, "discountRate": null}
 3. Chaque item doit avoir: description (string), quantity (number), unitPrice (number)
-4. Si une info manque, mets des valeurs par défaut cohérentes
-5. Les prix doivent être en nombres décimaux (ex: 7.80 pas "7,80€")
+4. Les prix doivent être en nombres décimaux (ex: 7.80 pas "7,80€")
 
-EXEMPLE DE SORTIE:
+RÈGLES TVA ET RÉDUCTIONS (TRÈS IMPORTANT):
+- "taxRate": SEULEMENT si l'utilisateur mentionne explicitement "TVA", "taxe", "avec TVA 20%", etc.
+- Si TVA mentionnée: "taxRate": 20.0 (ou le taux indiqué)
+- Si AUCUNE mention de TVA: "taxRate": null
+- "discountRate": SEULEMENT si l'utilisateur mentionne "remise", "réduction", "rabais", "promotion"
+- "discountLabel": texte de la réduction (ex: "Remise fidélité 10%")
+- Si aucune réduction: "discountRate": null, "discountLabel": null
+
+EXEMPLES:
+1. SANS TVA (défaut):
 {
-  "clientName": "Monsieur Dupont",
-  "clientAddress": "123 Rue de Paris\\n75001 Paris",
-  "items": [
-    {
-      "description": "Réparation fuite salle de bain",
-      "quantity": 1,
-      "unitPrice": 150.00
-    }
-  ]
+  "clientName": "M. Dupont",
+  "clientAddress": "123 Rue de Paris, 75001 Paris",
+  "items": [{"description": "Réparation", "quantity": 1, "unitPrice": 150.00}],
+  "taxRate": null,
+  "discountRate": null
+}
+
+2. AVEC TVA explicite:
+{
+  "clientName": "M. Martin",
+  "clientAddress": "456 Avenue de Lyon, 69000 Lyon",
+  "items": [{"description": "Installation", "quantity": 2, "unitPrice": 200.00}],
+  "taxRate": 20.0,
+  "discountRate": null
+}
+
+3. AVEC RÉDUCTION:
+{
+  "clientName": "Mme Durand",
+  "clientAddress": "789 Boulevard Marseille, 13000 Marseille",
+  "items": [{"description": "Service", "quantity": 1, "unitPrice": 500.00}],
+  "taxRate": null,
+  "discountRate": 10.0,
+  "discountLabel": "Remise client fidèle 10%"
 }
 ''';
 
@@ -224,13 +243,12 @@ Génère le JSON de la facture selon le format spécifié.
           'Authorization': 'Bearer $_groqApiKey',
         },
         body: json.encode({
-          'model': 'llama-3.3-70b-versatile', // Modèle Groq gratuit et performant
-          // Alternative OpenAI: 'gpt-4o-mini' (payant mais moins cher)
+          'model': 'llama-3.3-70b-versatile',
           'messages': [
             {'role': 'system', 'content': systemPrompt},
             {'role': 'user', 'content': userPrompt},
           ],
-          'temperature': 0.1, // Plus déterministe
+          'temperature': 0.1,
           'max_tokens': 1000,
         }),
       );
@@ -257,17 +275,17 @@ Génère le JSON de la facture selon le format spécifié.
 
         final rawData = json.decode(cleanedContent);
 
-        // ✅ CORRECTION : Convertir explicitement les types
-        final invoiceData = {
-          'clientName': rawData['clientName'] as String? ?? '',
+        // ✅ CORRECTION : Convertir explicitement les types pour éviter List<dynamic>
+        final invoiceData = <String, dynamic>{
+          'clientName': rawData['clientName'] as String? ?? 'Client inconnu',
           'clientAddress': rawData['clientAddress'] as String? ?? '',
           'items': (rawData['items'] as List<dynamic>?)
-              ?.map((item) => {
+              ?.map((item) => <String, dynamic>{
             'description': item['description'] as String? ?? '',
-            'quantity': (item['quantity'] as num?)?.toInt() ?? 0,
+            'quantity': (item['quantity'] as num?)?.toInt() ?? 1,
             'unitPrice': (item['unitPrice'] as num?)?.toDouble() ?? 0.0,
           })
-              .toList() ?? [],
+              .toList() ?? <Map<String, dynamic>>[],
         };
 
         debugPrint('✅ Facture générée: $invoiceData');
@@ -288,14 +306,14 @@ Génère le JSON de la facture selon le format spécifié.
         throw Exception('Erreur API: ${response.statusCode} - ${response.body}');
       }
 
-    } catch (e) {
+    } catch (e, stackTrace) {
       debugPrint('❌ Erreur génération facture: $e');
+      debugPrint('📍 StackTrace: $stackTrace');
 
       setState(() {
         _errorMessage = 'Impossible de générer la facture. Vérifiez votre clé API Groq.';
       });
 
-      // Afficher un SnackBar
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

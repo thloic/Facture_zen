@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import '../models/invoice_model.dart';
 import 'classic_template.dart';
-import 'invoice_model.dart';
+import 'corporate_template.dart';
+import 'creative_template.dart';
+import 'elegant_template.dart';
 import 'minimal_template.dart';
 import 'modern_template.dart';
 
@@ -24,6 +27,11 @@ abstract class InvoiceTemplate {
   /// Widget complet de la facture
   Widget buildInvoice(BuildContext context, InvoiceModel invoice);
 
+  /// Méthode de compatibilité (appelle buildInvoice)
+  Widget build(BuildContext context, InvoiceModel invoice) {
+    return buildInvoice(context, invoice);
+  }
+
   /// Génère le PDF (optionnel, pour plus tard)
   Future<void>? generatePDF(InvoiceModel invoice) => null;
 }
@@ -33,6 +41,9 @@ enum InvoiceTemplateType {
   classic,
   modern,
   minimal,
+  corporate,
+  creative,
+  elegant,
 }
 
 /// Factory pour créer les templates
@@ -45,6 +56,12 @@ class InvoiceTemplateFactory {
         return ModernTemplate();
       case InvoiceTemplateType.minimal:
         return MinimalTemplate();
+      case InvoiceTemplateType.corporate:
+        return CorporateTemplate();
+      case InvoiceTemplateType.creative:
+        return CreativeTemplate();
+      case InvoiceTemplateType.elegant:
+        return ElegantTemplate();
     }
   }
 
@@ -53,8 +70,10 @@ class InvoiceTemplateFactory {
       ClassicTemplate(),
       ModernTemplate(),
       MinimalTemplate(),
+      CorporateTemplate(),
+      CreativeTemplate(),
+      ElegantTemplate(),
     ];
   }
 }
 
-// Import des templates (à créer)

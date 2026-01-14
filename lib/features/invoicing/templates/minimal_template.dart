@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import '../models/invoice_model.dart';
 import 'invoice_template_base.dart';
-import 'invoice_model.dart';
 /// Template Minimaliste : Style épuré et simple
 class MinimalTemplate implements InvoiceTemplate {
   @override
@@ -405,6 +405,12 @@ class MinimalTemplate implements InvoiceTemplate {
   @override
   Future<void>? generatePDF(InvoiceModel invoice) {
     // TODO: implement generatePDF
+    throw UnimplementedError();
+  }
+
+  @override
+  Widget build(BuildContext context, InvoiceModel invoice) {
+    // TODO: implement build
     throw UnimplementedError();
   }
 }

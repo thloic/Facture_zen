@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import '../template/invoice_model.dart';
-import '../template/invoice_template_base.dart';
+import '../models/invoice_model.dart';
+import '../templates/invoice_template_base.dart';
 import 'template_selector_modal.dart';
 import '../../../common/utils/responsive_utils.dart';
 
-/// Écran de prévisualisation de la facture avec sélection de template
+/// Écran de prévisualisation de la facture avec sélection de templates
 class InvoicePreviewScreen extends StatefulWidget {
   final Map<String, dynamic> invoiceData;
 
@@ -18,26 +18,23 @@ class InvoicePreviewScreen extends StatefulWidget {
 }
 
 class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
-  // Template actuellement sélectionné
   InvoiceTemplateType _selectedTemplate = InvoiceTemplateType.classic;
-
   late InvoiceModel _invoice;
 
   @override
   void initState() {
     super.initState();
-    // Convertir les données en modèle
     _invoice = InvoiceModel.fromMap(widget.invoiceData);
   }
 
-  /// Affiche le modal de sélection de template
+  /// Affiche le modal de sélection de templates
   void _showTemplateSelector() {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => SizedBox(
-        height: MediaQuery.of(context).size.height * 0.7,
+        height: MediaQuery.of(context).size.height * 0.85,
         child: TemplateSelectorModal(
           currentTemplate: _selectedTemplate,
           onTemplateSelected: (template) {
@@ -50,7 +47,6 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
     );
   }
 
-  /// Partage la facture (TODO: implémenter avec share_plus)
   void _shareInvoice() {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -60,7 +56,6 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
     );
   }
 
-  /// Télécharge la facture en PDF (TODO: implémenter avec pdf package)
   void _downloadPDF() {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -76,7 +71,7 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
     final template = InvoiceTemplateFactory.createTemplate(_selectedTemplate);
 
     return Scaffold(
-      backgroundColor: Colors.grey.shade100,
+      backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -85,7 +80,7 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          'Aperçu de la facture',
+          'Facture',
           style: TextStyle(
             fontSize: responsive.getAdaptiveTextSize(18),
             fontWeight: FontWeight.w600,
@@ -94,169 +89,74 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
         ),
         centerTitle: true,
         actions: [
-          // Bouton info template actuel
-          Container(
-            margin: const EdgeInsets.only(right: 12),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: template.primaryColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  template.icon,
-                  size: 16,
-                  color: template.primaryColor,
+          // Menu 3 points
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert, color: Color(0xFF1F2937)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            offset: const Offset(0, 50),
+            onSelected: (value) {
+              if (value == 'templates') {
+                _showTemplateSelector();
+              } else if (value == 'share') {
+                _shareInvoice();
+              } else if (value == 'pdf') {
+                _downloadPDF();
+              }
+            },
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                value: 'templates',
+                child: Row(
+                  children: [
+                    Icon(Icons.palette_outlined, color: template.primaryColor, size: 20),
+                    const SizedBox(width: 12),
+                    const Text('Changer de templates'),
+                  ],
                 ),
-                const SizedBox(width: 6),
-                Text(
-                  template.name,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: template.primaryColor,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          // Zone de prévisualisation
-          Expanded(
-            child: Container(
-              margin: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 20,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
               ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: template.buildInvoice(context, _invoice),
+              const PopupMenuItem(
+                value: 'share',
+                child: Row(
+                  children: [
+                    Icon(Icons.share_outlined, color: Color(0xFF5B5FC7), size: 20),
+                    SizedBox(width: 12),
+                    Text('Partager'),
+                  ],
+                ),
               ),
-            ),
-          ),
-
-          // Barre d'actions avec les 3 boutons
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, -2),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                // Bouton 1: Changer de template
-                Expanded(
-                  child: _ActionButton(
-                    icon: Icons.palette_outlined,
-                    label: 'Template',
-                    onPressed: _showTemplateSelector,
-                    backgroundColor: const Color(0xFF5B5FC7),
-                    textColor: Colors.white,
-                  ),
-                ),
-
-                const SizedBox(width: 12),
-
-                // Bouton 2: Partager
-                Expanded(
-                  child: _ActionButton(
-                    icon: Icons.share_outlined,
-                    label: 'Partager',
-                    onPressed: _shareInvoice,
-                    backgroundColor: Colors.white,
-                    textColor: const Color(0xFF5B5FC7),
-                    hasBorder: true,
-                  ),
-                ),
-
-                const SizedBox(width: 12),
-
-                // Bouton 3: Télécharger PDF
-                Expanded(
-                  child: _ActionButton(
-                    icon: Icons.download_outlined,
-                    label: 'PDF',
-                    onPressed: _downloadPDF,
-                    backgroundColor: Colors.white,
-                    textColor: const Color(0xFF5B5FC7),
-                    hasBorder: true,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Widget de bouton d'action personnalisé
-class _ActionButton extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback onPressed;
-  final Color backgroundColor;
-  final Color textColor;
-  final bool hasBorder;
-
-  const _ActionButton({
-    required this.icon,
-    required this.label,
-    required this.onPressed,
-    required this.backgroundColor,
-    required this.textColor,
-    this.hasBorder = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: backgroundColor,
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        onTap: onPressed,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          decoration: BoxDecoration(
-            border: hasBorder
-                ? Border.all(color: const Color(0xFF5B5FC7), width: 2)
-                : null,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, color: textColor, size: 24),
-              const SizedBox(height: 4),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: textColor,
+              const PopupMenuItem(
+                value: 'pdf',
+                child: Row(
+                  children: [
+                    Icon(Icons.download_outlined, color: Color(0xFF5B5FC7), size: 20),
+                    SizedBox(width: 12),
+                    Text('Télécharger PDF'),
+                  ],
                 ),
               ),
             ],
+          ),
+        ],
+      ),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.08),
+                  blurRadius: 20,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: template.buildInvoice(context, _invoice),
+            ),
           ),
         ),
       ),
