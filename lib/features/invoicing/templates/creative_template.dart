@@ -333,4 +333,10 @@ class CreativeTemplate implements InvoiceTemplate {
     // TODO: implement generatePDF
     throw UnimplementedError();
   }
+
+  @override
+  Widget build(BuildContext context, InvoiceModel invoice) {
+    // TODO: implement build
+    throw UnimplementedError();
+  }
 }

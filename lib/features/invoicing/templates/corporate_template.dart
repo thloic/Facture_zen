@@ -42,6 +42,11 @@ class CorporateTemplate implements InvoiceTemplate {
   }
 
   @override
+  Widget buildInvoice(BuildContext context, InvoiceModel invoice) {
+    return build(context, invoice);
+  }
+
+  @override
   Widget build(BuildContext context, InvoiceModel invoice) {
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -338,12 +343,6 @@ class CorporateTemplate implements InvoiceTemplate {
         ),
       ],
     );
-  }
-
-  @override
-  Widget buildInvoice(BuildContext context, InvoiceModel invoice) {
-    // TODO: implement buildInvoice
-    throw UnimplementedError();
   }
 
   @override

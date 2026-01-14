@@ -27,6 +27,11 @@ abstract class InvoiceTemplate {
   /// Widget complet de la facture
   Widget buildInvoice(BuildContext context, InvoiceModel invoice);
 
+  /// Méthode de compatibilité (appelle buildInvoice)
+  Widget build(BuildContext context, InvoiceModel invoice) {
+    return buildInvoice(context, invoice);
+  }
+
   /// Génère le PDF (optionnel, pour plus tard)
   Future<void>? generatePDF(InvoiceModel invoice) => null;
 }
@@ -72,4 +77,3 @@ class InvoiceTemplateFactory {
   }
 }
 
-// Import des templates (à créer)
