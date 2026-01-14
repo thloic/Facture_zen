@@ -19,14 +19,13 @@ class _VoiceRecordingScreenState extends State<VoiceRecordingScreen>
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
 
-  // ✅ CORRECTION : Liste MODIFIABLE pour la waveform
-  final List<double> _amplitudeHistory = List.generate(50, (_) => 0.0);
+  // Historique des amplitudes pour l'effet circulaire
+  final List<double> _amplitudeHistory = List.generate(60, (_) => 0.0);
 
   @override
   void initState() {
     super.initState();
 
-    // Animation du pulse
     _pulseController = AnimationController(
       duration: const Duration(milliseconds: 1500),
       vsync: this,
@@ -93,13 +92,8 @@ class _VoiceRecordingScreenState extends State<VoiceRecordingScreen>
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            // Timer circulaire
-                            _buildTimerCircle(viewModel, responsive),
-
-                            SizedBox(height: responsive.getAdaptiveSpacing(40)),
-
-                            // 🎵 VISUALISATION AUDIO EN TEMPS RÉEL
-                            _buildAudioWaveform(viewModel, responsive),
+                            // Timer circulaire avec effet audio autour
+                            _buildTimerWithAudioEffect(viewModel, responsive),
                           ],
                         ),
                       ),
@@ -125,95 +119,95 @@ class _VoiceRecordingScreenState extends State<VoiceRecordingScreen>
     );
   }
 
-  /// Widget - Visualisation audio (waveform en temps réel)
-  Widget _buildAudioWaveform(VoiceRecordingViewModel viewModel, ResponsiveUtils responsive) {
+  /// Widget - Timer avec effet audio circulaire
+  Widget _buildTimerWithAudioEffect(VoiceRecordingViewModel viewModel, ResponsiveUtils responsive) {
     return StreamBuilder<double>(
       stream: viewModel.amplitudeStream,
       builder: (context, snapshot) {
         // Mettre à jour l'historique des amplitudes
         if (snapshot.hasData && snapshot.data != null) {
-          // ✅ Maintenant ça fonctionne car la liste est modifiable
           _amplitudeHistory.removeAt(0);
           _amplitudeHistory.add(snapshot.data!);
         }
 
-        return Container(
-          height: 80,
-          width: responsive.screenWidth * 0.8,
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: CustomPaint(
-            painter: WaveformPainter(
-              amplitudes: _amplitudeHistory,
-              isRecording: viewModel.isRecording,
-            ),
-          ),
-        );
-      },
-    );
-  }
+        return AnimatedBuilder(
+          animation: _pulseAnimation,
+          builder: (context, child) {
+            return Stack(
+              alignment: Alignment.center,
+              children: [
+                // Effet audio circulaire autour du cercle
+                if (viewModel.isRecording)
+                  SizedBox(
+                    width: 320,
+                    height: 320,
+                    child: CustomPaint(
+                      painter: CircularWaveformPainter(
+                        amplitudes: _amplitudeHistory,
+                        isRecording: viewModel.isRecording,
+                      ),
+                    ),
+                  ),
 
-  Widget _buildTimerCircle(VoiceRecordingViewModel viewModel, ResponsiveUtils responsive) {
-    return AnimatedBuilder(
-      animation: _pulseAnimation,
-      builder: (context, child) {
-        return Stack(
-          alignment: Alignment.center,
-          children: [
-            if (viewModel.isRecording)
-              Container(
-                width: 280 + (_pulseAnimation.value * 40),
-                height: 280 + (_pulseAnimation.value * 40),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: const Color(0xFF9C9FE8).withOpacity(
-                    0.2 * (1 - _pulseAnimation.value),
+                // Pulse d'arrière-plan
+                if (viewModel.isRecording)
+                  Container(
+                    width: 280 + (_pulseAnimation.value * 40),
+                    height: 280 + (_pulseAnimation.value * 40),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: const Color(0xFF9C9FE8).withOpacity(
+                        0.15 * (1 - _pulseAnimation.value),
+                      ),
+                    ),
                   ),
-                ),
-              ),
 
-            if (viewModel.isRecording)
-              Container(
-                width: 260 + (_pulseAnimation.value * 20),
-                height: 260 + (_pulseAnimation.value * 20),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: const Color(0xFF9C9FE8).withOpacity(
-                    0.3 * (1 - _pulseAnimation.value),
+                if (viewModel.isRecording)
+                  Container(
+                    width: 260 + (_pulseAnimation.value * 20),
+                    height: 260 + (_pulseAnimation.value * 20),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: const Color(0xFF9C9FE8).withOpacity(
+                        0.25 * (1 - _pulseAnimation.value),
+                      ),
+                    ),
                   ),
-                ),
-              ),
 
-            Container(
-              width: 220,
-              height: 220,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFF6B6FC7), Color(0xFF494D9F)],
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF5B5FC7).withOpacity(0.3),
-                    blurRadius: 30,
-                    offset: const Offset(0, 10),
+                // Cercle principal avec timer
+                Container(
+                  width: 220,
+                  height: 220,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [Color(0xFF6B6FC7), Color(0xFF494D9F)],
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF5B5FC7).withOpacity(0.3),
+                        blurRadius: 30,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              child: Center(
-                child: Text(
-                  viewModel.formattedDuration,
-                  style: TextStyle(
-                    fontSize: responsive.getAdaptiveTextSize(32),
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                    letterSpacing: 2,
+                  child: Center(
+                    child: Text(
+                      viewModel.formattedDuration,
+                      style: TextStyle(
+                        fontSize: responsive.getAdaptiveTextSize(32),
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                        letterSpacing: 2,
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ),
-          ],
+              ],
+            );
+          },
         );
       },
     );
@@ -366,54 +360,66 @@ class _VoiceRecordingScreenState extends State<VoiceRecordingScreen>
   }
 }
 
-/// CustomPainter pour la visualisation waveform
-class WaveformPainter extends CustomPainter {
+/// CustomPainter pour la visualisation circulaire autour du timer (effet Siri)
+class CircularWaveformPainter extends CustomPainter {
   final List<double> amplitudes;
   final bool isRecording;
 
-  WaveformPainter({
+  CircularWaveformPainter({
     required this.amplitudes,
     required this.isRecording,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final baseRadius = size.width / 2.3;
+
     final paint = Paint()
-      ..strokeWidth = 3
+      ..strokeWidth = 3.5
       ..strokeCap = StrokeCap.round
       ..style = PaintingStyle.stroke;
 
-    final barWidth = size.width / amplitudes.length;
-    final centerY = size.height / 2;
+    final int barCount = amplitudes.length;
+    final double angleStep = (2 * math.pi) / barCount;
 
-    for (int i = 0; i < amplitudes.length; i++) {
-      final x = i * barWidth;
+    for (int i = 0; i < barCount; i++) {
+      final angle = i * angleStep - math.pi / 2; // Commencer en haut
       final amplitude = amplitudes[i];
 
-      // Hauteur de la barre (max 80% de la hauteur)
-      final barHeight = (amplitude * size.height * 0.8).clamp(2.0, size.height);
+      // Longueur de la barre basée sur l'amplitude (entre 8 et 45)
+      final barLength = 8 + (amplitude * 37);
 
-      // Couleur : gradient selon la position et l'amplitude
-      final opacity = isRecording ? 1.0 : 0.3;
+      // Point de départ (sur le cercle de base)
+      final startX = center.dx + baseRadius * math.cos(angle);
+      final startY = center.dy + baseRadius * math.sin(angle);
+
+      // Point d'arrivée (vers l'extérieur)
+      final endRadius = baseRadius + barLength;
+      final endX = center.dx + endRadius * math.cos(angle);
+      final endY = center.dy + endRadius * math.sin(angle);
+
+      // Couleur avec gradient basé sur l'amplitude
+      final opacity = isRecording ? (0.6 + amplitude * 0.4) : 0.2;
       final color = Color.lerp(
         const Color(0xFF9C9FE8),
         const Color(0xFF5B5FC7),
-        amplitude,
+        amplitude * 0.7,
       )!.withOpacity(opacity);
 
       paint.color = color;
 
-      // Dessiner la barre verticale centrée
+      // Dessiner la barre radiale
       canvas.drawLine(
-        Offset(x, centerY - barHeight / 2),
-        Offset(x, centerY + barHeight / 2),
+        Offset(startX, startY),
+        Offset(endX, endY),
         paint,
       );
     }
   }
 
   @override
-  bool shouldRepaint(WaveformPainter oldDelegate) {
+  bool shouldRepaint(CircularWaveformPainter oldDelegate) {
     return oldDelegate.amplitudes != amplitudes ||
         oldDelegate.isRecording != isRecording;
   }
