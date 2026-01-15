@@ -28,14 +28,14 @@ class AuthService {
   /// Inscription avec email et mot de passe
   /// @param email L'adresse email
   /// @param password Le mot de passe (sera automatiquement hashé par Firebase Auth)
-  /// @param companyName Le nom de l'entreprise
-  /// @param companyAddress L'adresse de l'entreprise
+  /// @param firstName Le prénom de l'utilisateur
+  /// @param lastName Le nom de l'utilisateur
   /// @return L'utilisateur créé ou null en cas d'erreur
   Future<User?> signUp({
     required String email,
     required String password,
-    required String companyName,
-    required String companyAddress,
+    required String firstName,
+    required String lastName,
   }) async {
     try {
       debugPrint('🔥 Tentative d\'inscription pour: $email');
@@ -54,8 +54,8 @@ class AuthService {
         try {
           await _database.child('users').child(user.uid).set({
             'email': email,
-            'companyName': companyName,
-            'companyAddress': companyAddress,
+            'firstName': firstName,
+            'lastName': lastName,
             'createdAt': ServerValue.timestamp,
             'updatedAt': ServerValue.timestamp,
           });

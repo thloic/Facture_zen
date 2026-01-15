@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../../common/models/user_model.dart';
 import '../../../common/services/auth_service.dart';
+import '../../../common/services/pin_service.dart';
 
 /// ProfileViewModel
 /// Gère l'état et la logique du profil utilisateur
@@ -23,6 +24,9 @@ class ProfileViewModel extends ChangeNotifier {
   String? get userEmail => _currentUser?.email;
   String? get userAvatarUrl => _userAvatarUrl;
   String? get userCompanyName => _currentUser?.companyName;
+  String? get companyName => _currentUser?.companyName;
+  String? get firstName => _currentUser?.firstName;
+  String? get lastName => _currentUser?.lastName;
   String? get userCompanyAddress => _currentUser?.companyAddress;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
@@ -31,7 +35,7 @@ class ProfileViewModel extends ChangeNotifier {
 
   /// Constructeur avec injection du service
   ProfileViewModel({AuthService? authService})
-      : _authService = authService ?? AuthService() {
+    : _authService = authService ?? AuthService() {
     // Charger automatiquement le profil au démarrage
     loadUserProfile();
   }
@@ -66,7 +70,9 @@ class ProfileViewModel extends ChangeNotifier {
         debugPrint('👤 Nom entreprise: ${_currentUser?.companyName}');
         debugPrint('📍 Adresse: ${_currentUser?.companyAddress}');
       } else {
-        debugPrint('⚠️ Aucune donnée dans Realtime Database pour cet utilisateur');
+        debugPrint(
+          '⚠️ Aucune donnée dans Realtime Database pour cet utilisateur',
+        );
         // Créer un UserModel minimal avec les infos de Firebase Auth
         _currentUser = UserModel(
           uid: user.uid,
@@ -87,10 +93,14 @@ class ProfileViewModel extends ChangeNotifier {
 
   /// Met à jour les informations du profil
   /// @param companyName Nouveau nom d'entreprise
-  /// @param companyAddress Nouvelle adresse
+  /// @param companyAddress Nouvelle adresse d'entreprise
+  /// @param firstName Nouveau prénom
+  /// @param lastName Nouveau nom
   Future<bool> updateProfile({
     String? companyName,
     String? companyAddress,
+    String? firstName,
+    String? lastName,
   }) async {
     if (_currentUser == null) {
       _errorMessage = 'Aucun utilisateur connecté';
@@ -114,6 +124,14 @@ class ProfileViewModel extends ChangeNotifier {
         updateData['companyAddress'] = companyAddress;
       }
 
+      if (firstName != null && firstName.isNotEmpty) {
+        updateData['firstName'] = firstName;
+      }
+
+      if (lastName != null && lastName.isNotEmpty) {
+        updateData['lastName'] = lastName;
+      }
+
       if (updateData.isEmpty) {
         _errorMessage = 'Aucune modification à enregistrer';
         _setLoading(false);
@@ -127,6 +145,8 @@ class ProfileViewModel extends ChangeNotifier {
       _currentUser = _currentUser!.copyWith(
         companyName: companyName ?? _currentUser!.companyName,
         companyAddress: companyAddress ?? _currentUser!.companyAddress,
+        firstName: firstName ?? _currentUser!.firstName,
+        lastName: lastName ?? _currentUser!.lastName,
       );
 
       debugPrint('✅ Profil mis à jour avec succès');
@@ -171,6 +191,13 @@ class ProfileViewModel extends ChangeNotifier {
     try {
       debugPrint('🔥 Déconnexion en cours...');
 
+      // NE PAS supprimer le PIN - il reste pour les prochaines connexions
+      // Le PIN permet de se reconnecter rapidement sans email/password
+      
+      // Réinitialiser les tentatives échouées du PIN
+      final pinService = PinService();
+      await pinService.resetFailedAttempts();
+
       // Déconnexion Firebase
       await _authService.signOut();
 
@@ -178,7 +205,7 @@ class ProfileViewModel extends ChangeNotifier {
       _currentUser = null;
       _userAvatarUrl = null;
 
-      debugPrint('✅ Déconnexion réussie');
+      debugPrint('✅ Déconnexion réussie (PIN conservé)');
       notifyListeners();
     } catch (e) {
       _errorMessage = 'Erreur lors de la déconnexion';
@@ -216,7 +243,10 @@ class ProfileViewModel extends ChangeNotifier {
   /// Change le mot de passe
   /// @param currentPassword Mot de passe actuel
   /// @param newPassword Nouveau mot de passe
-  Future<bool> changePassword(String currentPassword, String newPassword) async {
+  Future<bool> changePassword(
+    String currentPassword,
+    String newPassword,
+  ) async {
     _setLoading(true);
     _errorMessage = null;
 
@@ -289,4 +319,3 @@ class ProfileViewModel extends ChangeNotifier {
     super.dispose();
   }
 }
-

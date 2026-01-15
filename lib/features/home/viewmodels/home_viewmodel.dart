@@ -19,6 +19,17 @@ class HomeViewModel extends ChangeNotifier {
   int get currentPageIndex => _currentPageIndex;
   String get searchQuery => _searchQuery;
 
+  // Filtre les factures selon la recherche
+  List<InvoiceModel> get filteredInvoices {
+    if (_searchQuery.isEmpty) {
+      return _recentInvoices;
+    }
+    return _recentInvoices.where((invoice) {
+      return invoice.clientName.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+             invoice.amount.toLowerCase().contains(_searchQuery.toLowerCase());
+    }).toList();
+  }
+
   Future<void> loadInitialData() async {
     _setLoading(true);
 
@@ -31,8 +42,12 @@ class HomeViewModel extends ChangeNotifier {
         final userData = await _authService.getUserData(currentUser.uid);
         
         if (userData != null) {
+          final firstName = userData['firstName'] ?? '';
+          final lastName = userData['lastName'] ?? '';
+          final fullName = '${firstName} ${lastName}'.trim();
+          
           _userProfile = UserProfileModel(
-            fullName: userData['companyName'] ?? currentUser.email ?? 'Utilisateur',
+            fullName: fullName.isNotEmpty ? fullName : (currentUser.email ?? 'Utilisateur'),
             avatarUrl: userData['avatarUrl'],
           );
         } else {

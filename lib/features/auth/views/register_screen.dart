@@ -17,8 +17,8 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
-  final TextEditingController _companyNameController = TextEditingController();
-  final TextEditingController _companyAddressController = TextEditingController();
+  final TextEditingController _firstNameController = TextEditingController();
+  final TextEditingController _lastNameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController = TextEditingController();
@@ -28,8 +28,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   void dispose() {
-    _companyNameController.dispose();
-    _companyAddressController.dispose();
+    _firstNameController.dispose();
+    _lastNameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
@@ -42,23 +42,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
     context.read<RegisterViewModel>().clearError();
 
     final success = await context.read<RegisterViewModel>().register(
-      companyName: _companyNameController.text,
-      companyAddress: _companyAddressController.text,
+      firstName: _firstNameController.text,
+      lastName: _lastNameController.text,
       email: _emailController.text,
       password: _passwordController.text,
       confirmPassword: _confirmPasswordController.text,
     );
 
     if (success && mounted) {
-      // Navigation vers l'écran principal après succès
-      // TODO: Remplacer par la route appropriée
-      Navigator.pushReplacementNamed(context, '/login');
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Inscription réussie !'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      // Navigation vers l'écran de configuration du PIN
+      Navigator.pushReplacementNamed(context, '/pin-setup');
     }
   }
 
@@ -112,23 +105,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               SizedBox(height: responsive.getAdaptiveSpacing(16)),
                             ],
 
-                            // Champ Nom de l'entreprise
+                            // Champ Prénom
                             CustomTextField(
-                              controller: _companyNameController,
-                              hintText: 'Nom de votre entreprise',
-                              prefixIcon: Icons.business_outlined,
+                              controller: _firstNameController,
+                              hintText: 'Prénom',
+                              prefixIcon: Icons.person_outline,
                               keyboardType: TextInputType.text,
                               onChanged: (_) => viewModel.clearError(),
                             ),
 
                             SizedBox(height: responsive.getAdaptiveSpacing(16)),
 
-                            // Champ Adresse de l'entreprise
+                            // Champ Nom
                             CustomTextField(
-                              controller: _companyAddressController,
-                              hintText: 'Adresse de votre entreprise',
-                              prefixIcon: Icons.location_on_outlined,
-                              keyboardType: TextInputType.streetAddress,
+                              controller: _lastNameController,
+                              hintText: 'Nom',
+                              prefixIcon: Icons.person_outline,
+                              keyboardType: TextInputType.text,
                               onChanged: (_) => viewModel.clearError(),
                             ),
 
@@ -137,7 +130,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             // Champ Email
                             CustomTextField(
                               controller: _emailController,
-                              hintText: 'Email de votre entreprise',
+                              hintText: 'Email',
                               prefixIcon: Icons.mail,
                               keyboardType: TextInputType.emailAddress,
                               onChanged: (_) => viewModel.clearError(),

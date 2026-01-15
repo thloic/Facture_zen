@@ -83,7 +83,9 @@ class _LoginScreenState extends State<LoginScreen> {
           builder: (context, constraints) {
             return SingleChildScrollView(
               child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                constraints: BoxConstraints(
+                  minHeight: constraints.maxHeight,
+                ),
                 child: IntrinsicHeight(
                   child: Padding(
                     padding: EdgeInsets.symmetric(
@@ -100,19 +102,17 @@ class _LoginScreenState extends State<LoginScreen> {
                               fontSize: responsive.getAdaptiveTextSize(28),
                             ),
 
-                            SizedBox(height: responsive.getAdaptiveSpacing(80)),
+                            SizedBox(height: responsive.getAdaptiveSpacing(60)),
 
                             // Message "Vous n'êtes pas encore connectés"
                             _buildWelcomeMessage(responsive),
 
-                            SizedBox(height: responsive.getAdaptiveSpacing(40)),
+                            SizedBox(height: responsive.getAdaptiveSpacing(32)),
 
                             // Affichage du message d'erreur si présent
                             if (viewModel.hasError) ...[
                               ErrorMessage(message: viewModel.errorMessage!),
-                              SizedBox(
-                                height: responsive.getAdaptiveSpacing(16),
-                              ),
+                              SizedBox(height: responsive.getAdaptiveSpacing(16)),
                             ],
 
                             // Champ email
@@ -174,14 +174,12 @@ class _LoginScreenState extends State<LoginScreen> {
                             // Bouton de connexion avec Google
                             _buildGoogleSignInButton(responsive, viewModel),
 
-                            SizedBox(height: responsive.getAdaptiveSpacing(24)),
+                            const Spacer(),
 
                             // Lien inscription
                             _buildSignupLink(responsive),
 
-                            // Espacement flexible pour pousser le contenu vers le haut sur grands écrans
-                            const Spacer(),
-                            SizedBox(height: responsive.getAdaptiveSpacing(20)),
+                            SizedBox(height: responsive.getAdaptiveSpacing(24)),
                           ],
                         );
                       },
@@ -341,12 +339,15 @@ class _LoginScreenState extends State<LoginScreen> {
               },
             ),
             SizedBox(width: responsive.getAdaptiveSpacing(12)),
-            Text(
-              'Continuer avec Google',
-              style: TextStyle(
-                fontSize: responsive.getAdaptiveTextSize(16),
-                fontWeight: FontWeight.w500,
-                color: const Color(0xFF1F2937),
+            Flexible(
+              child: Text(
+                'Continuer avec Google',
+                style: TextStyle(
+                  fontSize: responsive.getAdaptiveTextSize(16),
+                  fontWeight: FontWeight.w500,
+                  color: const Color(0xFF1F2937),
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],
