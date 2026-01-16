@@ -26,7 +26,7 @@ class HomeViewModel extends ChangeNotifier {
     }
     return _recentInvoices.where((invoice) {
       return invoice.clientName.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-             invoice.amount.toLowerCase().contains(_searchQuery.toLowerCase());
+             invoice.invoiceNumber.toLowerCase().contains(_searchQuery.toLowerCase());
     }).toList();
   }
 

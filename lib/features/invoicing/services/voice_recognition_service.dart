@@ -1,6 +1,18 @@
+<<<<<<< HEAD
 // ========================================
 // Fichier: lib/common/services/voice_recognition_service.dart
 // ========================================
+=======
+import 'dart:async';
+import 'dart:io';
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
+import 'package:record/record.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+>>>>>>> 971f1f1 (feat: Ajout clé API Groq depuis variables d'environnement (sécurisé))
 
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
@@ -32,7 +44,13 @@ class VoiceRecognitionService {
     try {
       debugPrint('🎙️ Vérification des permissions microphone...');
 
+<<<<<<< HEAD
       final status = await Permission.microphone.request();
+=======
+  // Configuration Groq API (GRATUIT)
+  static String get _groqApiKey => dotenv.env['GROQ_API_KEY'] ?? '';
+  static const String _whisperEndpoint = 'https://api.groq.com/openai/v1/audio/transcriptions';
+>>>>>>> 971f1f1 (feat: Ajout clé API Groq depuis variables d'environnement (sécurisé))
 
       if (status.isGranted) {
         debugPrint('✅ Permission microphone accordée');

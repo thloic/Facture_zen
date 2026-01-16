@@ -1,5 +1,11 @@
 
 import 'package:flutter/material.dart';
+<<<<<<< HEAD
+=======
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+>>>>>>> 971f1f1 (feat: Ajout clé API Groq depuis variables d'environnement (sécurisé))
 import '../../../common/widgets/primary_button.dart';
 import '../../../common/utils/responsive_utils.dart';
 import 'invoice_preview_screen.dart';
@@ -16,6 +22,21 @@ class TextPreviewScreen extends StatelessWidget {
   }) : super(key: key);
 
   @override
+<<<<<<< HEAD
+=======
+  State<TextPreviewScreen> createState() => _TextPreviewScreenState();
+}
+
+class _TextPreviewScreenState extends State<TextPreviewScreen> {
+  bool _isGenerating = false;
+  String? _errorMessage;
+
+  // Configuration Groq API (GRATUIT)
+  static String get _groqApiKey => dotenv.env['GROQ_API_KEY'] ?? '';
+  static const String _groqEndpoint = 'https://api.groq.com/openai/v1/chat/completions';
+
+  @override
+>>>>>>> 971f1f1 (feat: Ajout clé API Groq depuis variables d'environnement (sécurisé))
   Widget build(BuildContext context) {
     final responsive = ResponsiveUtils(context);
 
