@@ -1,19 +1,14 @@
-
 import 'package:flutter/material.dart';
-<<<<<<< HEAD
-=======
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
->>>>>>> 971f1f1 (feat: Ajout clé API Groq depuis variables d'environnement (sécurisé))
 import '../../../common/widgets/primary_button.dart';
 import '../../../common/utils/responsive_utils.dart';
 import 'invoice_preview_screen.dart';
 
 /// TextPreviewScreen
-/// Écran d'aperçu du texte généré après transcription vocale
-/// Permet de voir le résultat avant de générer la facture
-class TextPreviewScreen extends StatelessWidget {
+/// Écran d'aperçu du texte transcrit + génération de facture par GPT
+class TextPreviewScreen extends StatefulWidget {
   final String transcribedText;
 
   const TextPreviewScreen({
@@ -22,8 +17,6 @@ class TextPreviewScreen extends StatelessWidget {
   }) : super(key: key);
 
   @override
-<<<<<<< HEAD
-=======
   State<TextPreviewScreen> createState() => _TextPreviewScreenState();
 }
 
@@ -36,7 +29,6 @@ class _TextPreviewScreenState extends State<TextPreviewScreen> {
   static const String _groqEndpoint = 'https://api.groq.com/openai/v1/chat/completions';
 
   @override
->>>>>>> 971f1f1 (feat: Ajout clé API Groq depuis variables d'environnement (sécurisé))
   Widget build(BuildContext context) {
     final responsive = ResponsiveUtils(context);
 
@@ -77,7 +69,7 @@ class _TextPreviewScreenState extends State<TextPreviewScreen> {
                   ),
                   child: SingleChildScrollView(
                     child: Text(
-                      transcribedText,
+                      widget.transcribedText,
                       style: TextStyle(
                         fontSize: responsive.getAdaptiveTextSize(15),
                         color: const Color(0xFF1F2937),
@@ -92,11 +84,8 @@ class _TextPreviewScreenState extends State<TextPreviewScreen> {
 
               // Bouton "Générer la facture"
               PrimaryButton(
-                text: 'Générer la facture',
-                onPressed: () {
-                  // TODO: Navigation vers l'écran de génération de facture
-                  _generateInvoice(context);
-                },
+                text: _isGenerating ? 'Génération...' : 'Générer la facture',
+                onPressed: _isGenerating ? null : _generateInvoiceWithGroq,
                 height: responsive.getAdaptiveHeight(56),
               ),
 
@@ -108,7 +97,135 @@ class _TextPreviewScreenState extends State<TextPreviewScreen> {
     );
   }
 
-  /// Génère la facture à partir du texte transcrit
+  /// Génère la facture via Groq API (LLaMA)
+  Future<void> _generateInvoiceWithGroq() async {
+    setState(() {
+      _isGenerating = true;
+      _errorMessage = null;
+    });
+
+    try {
+      debugPrint('🤖 Génération facture avec Groq...');
+
+      final prompt = '''
+Tu es un assistant qui analyse des transcriptions vocales pour créer des factures.
+Analyse le texte suivant et extrais les informations pour générer une facture au format JSON.
+
+Texte: "${widget.transcribedText}"
+
+Retourne UNIQUEMENT un objet JSON avec cette structure exacte (pas de texte avant ou après):
+{
+  "clientName": "nom du client",
+  "clientAddress": "adresse complète du client",
+  "items": [
+    {
+      "description": "description de l'article",
+      "quantity": nombre,
+      "unitPrice": prix_unitaire
+    }
+  ]
+}
+
+Si certaines informations manquent, utilise des valeurs par défaut raisonnables.
+''';
+
+      final requestBody = json.encode({
+        'model': 'llama-3.3-70b-versatile',
+        'messages': [
+          {'role': 'user', 'content': prompt}
+        ],
+        'temperature': 0.1,
+        'max_tokens': 1000,
+      });
+
+      debugPrint('📤 Envoi à Groq API...');
+
+      final response = await http.post(
+        Uri.parse(_groqEndpoint),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $_groqApiKey',
+        },
+        body: requestBody,
+      );
+
+      debugPrint('📡 Réponse: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final jsonResponse = json.decode(response.body);
+        final groqContent = jsonResponse['choices'][0]['message']['content'] as String;
+
+        debugPrint('📄 Réponse Groq: $groqContent');
+
+        // Nettoyer et parser le JSON
+        String cleanedContent = groqContent.trim();
+        if (cleanedContent.startsWith('```json')) {
+          cleanedContent = cleanedContent.substring(7);
+        }
+        if (cleanedContent.endsWith('```')) {
+          cleanedContent = cleanedContent.substring(0, cleanedContent.length - 3);
+        }
+        cleanedContent = cleanedContent.trim();
+
+        final invoiceData = json.decode(cleanedContent);
+
+        debugPrint('✅ Facture générée avec succès');
+
+        // Navigation vers l'écran de prévisualisation
+        if (!mounted) return;
+
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => InvoicePreviewScreen(
+              invoiceData: invoiceData,
+            ),
+          ),
+        );
+
+      } else {
+        debugPrint('❌ Erreur API: ${response.statusCode}');
+        debugPrint('📄 Body: ${response.body}');
+
+        setState(() {
+          _errorMessage = 'Erreur lors de la génération (${response.statusCode})';
+        });
+
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(_errorMessage!),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+
+    } catch (e, stackTrace) {
+      debugPrint('❌ Erreur: $e');
+      debugPrint('📍 Stack: $stackTrace');
+
+      setState(() {
+        _errorMessage = 'Erreur: $e';
+      });
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Erreur lors de la génération de la facture'),
+          backgroundColor: Colors.red,
+        ),
+      );
+
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isGenerating = false;
+        });
+      }
+    }
+  }
+
+  /// ANCIENNE MÉTHODE (données mockées) - À SUPPRIMER
   void _generateInvoice(BuildContext context) {
     // TODO: Implémenter la logique de génération de facture
     // Pour l'instant, on affiche juste une confirmation
