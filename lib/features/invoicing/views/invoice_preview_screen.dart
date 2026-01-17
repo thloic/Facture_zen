@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import '../../../common/services/firebase_invoice_service.dart';
 import '../models/invoice_model.dart';
 import '../templates/invoice_template_base.dart';
 import 'template_selector_modal.dart';
 import '../../../common/utils/responsive_utils.dart';
 
-/// Écran de prévisualisation de la facture avec sélection de templates
+/// Écran de prévisualisation de la facture avec sélection de template
 class InvoicePreviewScreen extends StatefulWidget {
   final Map<String, dynamic> invoiceData;
 
@@ -20,14 +21,35 @@ class InvoicePreviewScreen extends StatefulWidget {
 class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
   InvoiceTemplateType _selectedTemplate = InvoiceTemplateType.classic;
   late InvoiceModel _invoice;
+  final FirebaseInvoiceService _invoiceService = FirebaseInvoiceService();
+  bool _isSaving = false;
 
   @override
   void initState() {
     super.initState();
     _invoice = InvoiceModel.fromMap(widget.invoiceData);
+
+    // 💾 Sauvegarder automatiquement dans Firebase
+    _saveToFirebase();
   }
 
-  /// Affiche le modal de sélection de templates
+  /// Sauvegarde automatique dans Firebase
+  Future<void> _saveToFirebase() async {
+    try {
+      final invoiceId = await _invoiceService.saveInvoice(_invoice);
+      if (invoiceId != null) {
+        debugPrint('✅ Facture sauvegardée dans Firebase: $invoiceId');
+      }
+    } catch (e) {
+      debugPrint('❌ Erreur sauvegarde Firebase: $e');
+      if (e.toString().contains('LIMIT_REACHED')) {
+        // La limite a déjà été vérifiée avant, mais au cas où
+        debugPrint('⚠️ Limite atteinte');
+      }
+    }
+  }
+
+  /// Affiche le modal de sélection de template
   void _showTemplateSelector() {
     showModalBottomSheet(
       context: context,
@@ -95,7 +117,7 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             offset: const Offset(0, 50),
             onSelected: (value) {
-              if (value == 'templates') {
+              if (value == 'template') {
                 _showTemplateSelector();
               } else if (value == 'share') {
                 _shareInvoice();
@@ -105,12 +127,12 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
             },
             itemBuilder: (context) => [
               PopupMenuItem(
-                value: 'templates',
+                value: 'template',
                 child: Row(
                   children: [
                     Icon(Icons.palette_outlined, color: template.primaryColor, size: 20),
                     const SizedBox(width: 12),
-                    const Text('Changer de templates'),
+                    const Text('Changer de template'),
                   ],
                 ),
               ),
