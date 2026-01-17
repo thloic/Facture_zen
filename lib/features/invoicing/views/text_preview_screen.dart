@@ -1,9 +1,11 @@
+import 'package:facture_zen/common/services/firebase_invoice_service.dart';
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../../../common/widgets/primary_button.dart';
 import '../../../common/utils/responsive_utils.dart';
 import 'invoice_preview_screen.dart';
+import 'subscription_screen.dart';
 
 /// TextPreviewScreen
 /// Écran d'aperçu du texte transcrit + génération de facture par GPT
@@ -22,6 +24,9 @@ class TextPreviewScreen extends StatefulWidget {
 class _TextPreviewScreenState extends State<TextPreviewScreen> {
   bool _isGenerating = false;
   String? _errorMessage;
+
+  // ✅ AJOUT : Instance du service Firebase
+  final FirebaseInvoiceService _invoiceService = FirebaseInvoiceService();
 
   // Configuration Groq API (GRATUIT)
   static const String _groqApiKey = '';
@@ -170,6 +175,25 @@ class _TextPreviewScreenState extends State<TextPreviewScreen> {
 
   /// Génère la facture via GPT (Groq ou OpenAI)
   Future<void> _generateInvoiceWithGPT() async {
+    // 🔒 VÉRIFIER LA LIMITE AVANT DE GÉNÉRER
+    final canCreate = await _invoiceService.canCreateInvoice();
+
+    if (!canCreate) {
+      // Afficher l'écran d'abonnement
+      if (mounted) {
+        final remaining = await _invoiceService.getRemainingInvoices();
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => SubscriptionScreen(
+              remainingInvoices: remaining,
+            ),
+          ),
+        );
+      }
+      return;
+    }
+
     setState(() {
       _isGenerating = true;
       _errorMessage = null;
