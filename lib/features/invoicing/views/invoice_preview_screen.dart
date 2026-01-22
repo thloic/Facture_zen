@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
-import '../../../common/widgets/primary_button.dart';
+import '../models/invoice_model.dart';
+import '../templates/invoice_template_base.dart';
+import 'template_selector_modal.dart';
 import '../../../common/utils/responsive_utils.dart';
-import 'invoice_final_screen.dart';
 
-/// InvoicePreviewScreen
-/// Écran d'aperçu de la facture extraite du texte
-/// Affiche les informations parsées (client, marchandises, montants)
-class InvoicePreviewScreen extends StatelessWidget {
+/// Écran de prévisualisation de la facture avec sélection de templates
+class InvoicePreviewScreen extends StatefulWidget {
   final Map<String, dynamic> invoiceData;
 
   const InvoicePreviewScreen({
@@ -15,12 +14,64 @@ class InvoicePreviewScreen extends StatelessWidget {
   }) : super(key: key);
 
   @override
+  State<InvoicePreviewScreen> createState() => _InvoicePreviewScreenState();
+}
+
+class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
+  InvoiceTemplateType _selectedTemplate = InvoiceTemplateType.classic;
+  late InvoiceModel _invoice;
+
+  @override
+  void initState() {
+    super.initState();
+    _invoice = InvoiceModel.fromMap(widget.invoiceData);
+  }
+
+  /// Affiche le modal de sélection de templates
+  void _showTemplateSelector() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => SizedBox(
+        height: MediaQuery.of(context).size.height * 0.85,
+        child: TemplateSelectorModal(
+          currentTemplate: _selectedTemplate,
+          onTemplateSelected: (template) {
+            setState(() {
+              _selectedTemplate = template;
+            });
+          },
+        ),
+      ),
+    );
+  }
+
+  void _shareInvoice() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Fonctionnalité de partage bientôt disponible'),
+        backgroundColor: Color(0xFF5B5FC7),
+      ),
+    );
+  }
+
+  void _downloadPDF() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Génération PDF bientôt disponible'),
+        backgroundColor: Color(0xFF5B5FC7),
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     final responsive = ResponsiveUtils(context);
-    final items = invoiceData['items'] as List<Map<String, dynamic>>? ?? [];
+    final template = InvoiceTemplateFactory.createTemplate(_selectedTemplate);
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -29,7 +80,7 @@ class InvoicePreviewScreen extends StatelessWidget {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          'Génération du texte',
+          'Facture',
           style: TextStyle(
             fontSize: responsive.getAdaptiveTextSize(18),
             fontWeight: FontWeight.w600,
@@ -37,293 +88,76 @@ class InvoicePreviewScreen extends StatelessWidget {
           ),
         ),
         centerTitle: true,
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                padding: EdgeInsets.all(responsive.horizontalPadding),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+        actions: [
+          // Menu 3 points
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert, color: Color(0xFF1F2937)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            offset: const Offset(0, 50),
+            onSelected: (value) {
+              if (value == 'templates') {
+                _showTemplateSelector();
+              } else if (value == 'share') {
+                _shareInvoice();
+              } else if (value == 'pdf') {
+                _downloadPDF();
+              }
+            },
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                value: 'templates',
+                child: Row(
                   children: [
-                    // Section Client
-                    _buildClientSection(responsive),
-
-                    SizedBox(height: responsive.getAdaptiveSpacing(32)),
-
-                    // En-tête du tableau
-                    _buildTableHeader(responsive),
-
-                    SizedBox(height: responsive.getAdaptiveSpacing(16)),
-
-                    // Liste des articles
-                    ...items.map((item) => _buildItemRow(item, responsive)),
+                    Icon(Icons.palette_outlined, color: template.primaryColor, size: 20),
+                    const SizedBox(width: 12),
+                    const Text('Changer de templates'),
                   ],
                 ),
               ),
-            ),
-
-            // Bouton "Générer la facture"
-            Padding(
-              padding: EdgeInsets.all(responsive.horizontalPadding),
-              child: PrimaryButton(
-                text: 'Générer la facture',
-                onPressed: () => _showCreationModalAndGenerate(context),
-                height: responsive.getAdaptiveHeight(56),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// Widget - Section informations client
-  Widget _buildClientSection(ResponsiveUtils responsive) {
-    final clientName = invoiceData['clientName'] ?? 'Client inconnu';
-    final clientAddress = invoiceData['clientAddress'] ?? '';
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Client',
-          style: TextStyle(
-            fontSize: responsive.getAdaptiveTextSize(14),
-            color: const Color(0xFF6B7280),
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        SizedBox(height: responsive.getAdaptiveSpacing(8)),
-        Text(
-          clientName,
-          style: TextStyle(
-            fontSize: responsive.getAdaptiveTextSize(16),
-            fontWeight: FontWeight.w600,
-            color: const Color(0xFF5B5FC7),
-          ),
-        ),
-        if (clientAddress.isNotEmpty) ...[
-          SizedBox(height: responsive.getAdaptiveSpacing(4)),
-          Text(
-            clientAddress,
-            style: TextStyle(
-              fontSize: responsive.getAdaptiveTextSize(14),
-              color: const Color(0xFF5B5FC7),
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-
-  /// Widget - En-tête du tableau des marchandises
-  Widget _buildTableHeader(ResponsiveUtils responsive) {
-    return Row(
-      children: [
-        Expanded(
-          flex: 3,
-          child: Text(
-            'Marchandises',
-            style: TextStyle(
-              fontSize: responsive.getAdaptiveTextSize(14),
-              color: const Color(0xFF9CA3AF),
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ),
-        SizedBox(
-          width: 60,
-          child: Text(
-            'Qté',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: responsive.getAdaptiveTextSize(14),
-              color: const Color(0xFF9CA3AF),
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ),
-        SizedBox(
-          width: 80,
-          child: Text(
-            'Prix Unit. (€)',
-            textAlign: TextAlign.right,
-            style: TextStyle(
-              fontSize: responsive.getAdaptiveTextSize(14),
-              color: const Color(0xFF9CA3AF),
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  /// Widget - Ligne d'article
-  Widget _buildItemRow(Map<String, dynamic> item, ResponsiveUtils responsive) {
-    final description = item['description'] ?? '';
-    final quantity = item['quantity']?.toString() ?? '0';
-    final unitPrice = item['unitPrice']?.toStringAsFixed(2) ?? '0.00';
-
-    return Padding(
-      padding: EdgeInsets.symmetric(
-        vertical: responsive.getAdaptiveSpacing(12),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Description
-          Expanded(
-            flex: 3,
-            child: Text(
-              description,
-              style: TextStyle(
-                fontSize: responsive.getAdaptiveTextSize(15),
-                color: const Color(0xFF1F2937),
-              ),
-            ),
-          ),
-
-          // Quantité
-          SizedBox(
-            width: 60,
-            child: Text(
-              quantity,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: responsive.getAdaptiveTextSize(15),
-                color: const Color(0xFF1F2937),
-              ),
-            ),
-          ),
-
-          // Prix unitaire
-          SizedBox(
-            width: 80,
-            child: Text(
-              unitPrice,
-              textAlign: TextAlign.right,
-              style: TextStyle(
-                fontSize: responsive.getAdaptiveTextSize(15),
-                color: const Color(0xFF5B5FC7),
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Affiche le modal de création puis navigue vers la facture finale
-  Future<void> _showCreationModalAndGenerate(BuildContext context) async {
-    // Afficher le modal
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const InvoiceCreationModal(),
-    );
-
-    // Simuler la création du PDF (3 secondes)
-    await Future.delayed(const Duration(seconds: 3));
-
-    // Fermer le modal
-    if (context.mounted) {
-      Navigator.of(context).pop();
-
-      // Naviguer vers l'aperçu final de la facture
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => InvoiceFinalScreen(
-            invoiceData: invoiceData,
-          ),
-        ),
-      );
-    }
-  }
-}
-
-/// InvoiceCreationModal
-/// Modal de création de la facture PDF
-class InvoiceCreationModal extends StatelessWidget {
-  const InvoiceCreationModal({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    final responsive = ResponsiveUtils(context);
-
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      child: Container(
-        margin: EdgeInsets.symmetric(
-          horizontal: responsive.horizontalPadding,
-        ),
-        padding: EdgeInsets.all(responsive.getAdaptiveSpacing(32)),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Icône des ondes sonores (animation)
-            Container(
-              width: 60,
-              height: 60,
-              decoration: BoxDecoration(
-                color: const Color(0xFF5B5FC7).withOpacity(0.1),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.graphic_eq,
-                color: Color(0xFF5B5FC7),
-                size: 32,
-              ),
-            ),
-
-            SizedBox(height: responsive.getAdaptiveSpacing(24)),
-
-            // Titre
-            Text(
-              'Création de la facture',
-              style: TextStyle(
-                fontSize: responsive.getAdaptiveTextSize(18),
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF1F2937),
-              ),
-            ),
-
-            SizedBox(height: responsive.getAdaptiveSpacing(12)),
-
-            // Description
-            Text(
-              'Patientez pendant que nous mettons votre\nfacture en format PDF',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: responsive.getAdaptiveTextSize(14),
-                color: const Color(0xFF6B7280),
-                height: 1.5,
-              ),
-            ),
-
-            SizedBox(height: responsive.getAdaptiveSpacing(24)),
-
-            // Bouton Annuler
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text(
-                'Annuler',
-                style: TextStyle(
-                  fontSize: responsive.getAdaptiveTextSize(16),
-                  color: const Color(0xFF6B7280),
-                  fontWeight: FontWeight.w600,
+              const PopupMenuItem(
+                value: 'share',
+                child: Row(
+                  children: [
+                    Icon(Icons.share_outlined, color: Color(0xFF5B5FC7), size: 20),
+                    SizedBox(width: 12),
+                    Text('Partager'),
+                  ],
                 ),
               ),
+              const PopupMenuItem(
+                value: 'pdf',
+                child: Row(
+                  children: [
+                    Icon(Icons.download_outlined, color: Color(0xFF5B5FC7), size: 20),
+                    SizedBox(width: 12),
+                    Text('Télécharger PDF'),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.08),
+                  blurRadius: 20,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
-          ],
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: template.buildInvoice(context, _invoice),
+            ),
+          ),
         ),
       ),
     );

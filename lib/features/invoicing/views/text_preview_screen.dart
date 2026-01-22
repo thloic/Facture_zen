@@ -42,7 +42,7 @@ class _TextPreviewScreenState extends State<TextPreviewScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          'Génération du texte',
+          'Texte transcrit',
           style: TextStyle(
             fontSize: responsive.getAdaptiveTextSize(18),
             fontWeight: FontWeight.w600,
@@ -52,237 +52,282 @@ class _TextPreviewScreenState extends State<TextPreviewScreen> {
         centerTitle: true,
       ),
       body: SafeArea(
-        child: Padding(
-          padding: EdgeInsets.all(responsive.horizontalPadding),
-          child: Column(
-            children: [
-              SizedBox(height: responsive.getAdaptiveSpacing(20)),
+        child: Stack(
+          children: [
+            Padding(
+              padding: EdgeInsets.all(responsive.horizontalPadding),
+              child: Column(
+                children: [
+                  SizedBox(height: responsive.getAdaptiveSpacing(20)),
 
-              // Zone de texte transcrit
-              Expanded(
-                child: Container(
-                  width: double.infinity,
-                  padding: EdgeInsets.all(responsive.getAdaptiveSpacing(20)),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF3F4F6),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: SingleChildScrollView(
-                    child: Text(
-                      widget.transcribedText,
-                      style: TextStyle(
-                        fontSize: responsive.getAdaptiveTextSize(15),
-                        color: const Color(0xFF1F2937),
-                        height: 1.6,
+                  // Zone de texte transcrit
+                  Expanded(
+                    child: Container(
+                      width: double.infinity,
+                      padding: EdgeInsets.all(responsive.getAdaptiveSpacing(20)),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF3F4F6),
+                        borderRadius: BorderRadius.circular(16),
                       ),
+                      child: SingleChildScrollView(
+                        child: Text(
+                          widget.transcribedText,
+                          style: TextStyle(
+                            fontSize: responsive.getAdaptiveTextSize(15),
+                            color: const Color(0xFF1F2937),
+                            height: 1.6,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  if (_errorMessage != null) ...[
+                    SizedBox(height: responsive.getAdaptiveSpacing(16)),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.error_outline, color: Colors.red),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              _errorMessage!,
+                              style: const TextStyle(color: Colors.red),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+
+                  SizedBox(height: responsive.getAdaptiveSpacing(24)),
+
+                  // Bouton "Générer la facture"
+                  PrimaryButton(
+                    text: 'Générer la facture',
+                    onPressed: _isGenerating ? null : _generateInvoiceWithGPT,
+                    height: responsive.getAdaptiveHeight(56),
+                  ),
+
+                  SizedBox(height: responsive.getAdaptiveSpacing(16)),
+                ],
+              ),
+            ),
+
+            // Modal de chargement
+            if (_isGenerating)
+              Container(
+                color: Colors.black.withOpacity(0.5),
+                child: Center(
+                  child: Container(
+                    margin: EdgeInsets.symmetric(
+                      horizontal: responsive.horizontalPadding * 2,
+                    ),
+                    padding: EdgeInsets.all(responsive.getAdaptiveSpacing(32)),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const CircularProgressIndicator(
+                          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF5B5FC7)),
+                        ),
+                        SizedBox(height: responsive.getAdaptiveSpacing(20)),
+                        Text(
+                          'Génération de la facture',
+                          style: TextStyle(
+                            fontSize: responsive.getAdaptiveTextSize(18),
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF1F2937),
+                          ),
+                        ),
+                        SizedBox(height: responsive.getAdaptiveSpacing(12)),
+                        Text(
+                          'L\'IA analyse votre texte...',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: responsive.getAdaptiveTextSize(14),
+                            color: const Color(0xFF6B7280),
+                            height: 1.5,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
               ),
-
-              SizedBox(height: responsive.getAdaptiveSpacing(24)),
-
-              // Bouton "Générer la facture"
-              PrimaryButton(
-                text: _isGenerating ? 'Génération...' : 'Générer la facture',
-                onPressed: _isGenerating ? null : _generateInvoiceWithGroq,
-                height: responsive.getAdaptiveHeight(56),
-              ),
-
-              SizedBox(height: responsive.getAdaptiveSpacing(16)),
-            ],
-          ),
+          ],
         ),
       ),
     );
   }
 
-  /// Génère la facture via Groq API (LLaMA)
-  Future<void> _generateInvoiceWithGroq() async {
+  /// Génère la facture via GPT (Groq ou OpenAI)
+  Future<void> _generateInvoiceWithGPT() async {
     setState(() {
       _isGenerating = true;
       _errorMessage = null;
     });
 
     try {
-      debugPrint('🤖 Génération facture avec Groq...');
+      debugPrint('🤖 Génération facture avec GPT...');
 
-      final prompt = '''
-Tu es un assistant qui analyse des transcriptions vocales pour créer des factures.
-Analyse le texte suivant et extrais les informations pour générer une facture au format JSON.
+      // Prompt système pour structurer la facture
+      final systemPrompt = '''
+Tu es un assistant spécialisé dans la génération de factures professionnelles.
+À partir d'une transcription vocale en français, tu dois extraire et structurer les informations de facture.
 
-Texte: "${widget.transcribedText}"
+RÈGLES STRICTES:
+1. Retourne UNIQUEMENT un JSON valide, sans texte avant ou après
+2. Format JSON exact: {"clientName": "...", "clientAddress": "...", "items": [...], "taxRate": null, "discountRate": null}
+3. Chaque item doit avoir: description (string), quantity (number), unitPrice (number)
+4. Les prix doivent être en nombres décimaux (ex: 7.80 pas "7,80€")
 
-Retourne UNIQUEMENT un objet JSON avec cette structure exacte (pas de texte avant ou après):
+RÈGLES TVA ET RÉDUCTIONS (TRÈS IMPORTANT):
+- "taxRate": SEULEMENT si l'utilisateur mentionne explicitement "TVA", "taxe", "avec TVA 20%", etc.
+- Si TVA mentionnée: "taxRate": 20.0 (ou le taux indiqué)
+- Si AUCUNE mention de TVA: "taxRate": null
+- "discountRate": SEULEMENT si l'utilisateur mentionne "remise", "réduction", "rabais", "promotion"
+- "discountLabel": texte de la réduction (ex: "Remise fidélité 10%")
+- Si aucune réduction: "discountRate": null, "discountLabel": null
+
+EXEMPLES:
+1. SANS TVA (défaut):
 {
-  "clientName": "nom du client",
-  "clientAddress": "adresse complète du client",
-  "items": [
-    {
-      "description": "description de l'article",
-      "quantity": nombre,
-      "unitPrice": prix_unitaire
-    }
-  ]
+  "clientName": "M. Dupont",
+  "clientAddress": "123 Rue de Paris, 75001 Paris",
+  "items": [{"description": "Réparation", "quantity": 1, "unitPrice": 150.00}],
+  "taxRate": null,
+  "discountRate": null
 }
 
-Si certaines informations manquent, utilise des valeurs par défaut raisonnables.
+2. AVEC TVA explicite:
+{
+  "clientName": "M. Martin",
+  "clientAddress": "456 Avenue de Lyon, 69000 Lyon",
+  "items": [{"description": "Installation", "quantity": 2, "unitPrice": 200.00}],
+  "taxRate": 20.0,
+  "discountRate": null
+}
+
+3. AVEC RÉDUCTION:
+{
+  "clientName": "Mme Durand",
+  "clientAddress": "789 Boulevard Marseille, 13000 Marseille",
+  "items": [{"description": "Service", "quantity": 1, "unitPrice": 500.00}],
+  "taxRate": null,
+  "discountRate": 10.0,
+  "discountLabel": "Remise client fidèle 10%"
+}
 ''';
 
-      final requestBody = json.encode({
-        'model': 'llama-3.3-70b-versatile',
-        'messages': [
-          {'role': 'user', 'content': prompt}
-        ],
-        'temperature': 0.1,
-        'max_tokens': 1000,
-      });
+      final userPrompt = '''
+Voici la transcription vocale d'un artisan pour créer une facture:
 
-      debugPrint('📤 Envoi à Groq API...');
+"${widget.transcribedText}"
 
+Génère le JSON de la facture selon le format spécifié.
+''';
+
+      // Requête API
       final response = await http.post(
         Uri.parse(_groqEndpoint),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $_groqApiKey',
         },
-        body: requestBody,
+        body: json.encode({
+          'model': 'llama-3.3-70b-versatile',
+          'messages': [
+            {'role': 'system', 'content': systemPrompt},
+            {'role': 'user', 'content': userPrompt},
+          ],
+          'temperature': 0.1,
+          'max_tokens': 1000,
+        }),
       );
-
-      debugPrint('📡 Réponse: ${response.statusCode}');
 
       if (response.statusCode == 200) {
         final jsonResponse = json.decode(response.body);
-        final groqContent = jsonResponse['choices'][0]['message']['content'] as String;
+        final gptContent = jsonResponse['choices'][0]['message']['content'] as String;
 
-        debugPrint('📄 Réponse Groq: $groqContent');
+        debugPrint('📄 Réponse GPT: $gptContent');
 
-        // Nettoyer et parser le JSON
-        String cleanedContent = groqContent.trim();
+        // Parser le JSON (enlever les backticks Markdown si présents)
+        String cleanedContent = gptContent.trim();
         if (cleanedContent.startsWith('```json')) {
-          cleanedContent = cleanedContent.substring(7);
+          cleanedContent = cleanedContent
+              .replaceFirst('```json', '')
+              .replaceFirst('```', '')
+              .trim();
+        } else if (cleanedContent.startsWith('```')) {
+          cleanedContent = cleanedContent
+              .replaceFirst('```', '')
+              .replaceFirst('```', '')
+              .trim();
         }
-        if (cleanedContent.endsWith('```')) {
-          cleanedContent = cleanedContent.substring(0, cleanedContent.length - 3);
-        }
-        cleanedContent = cleanedContent.trim();
 
-        final invoiceData = json.decode(cleanedContent);
+        final rawData = json.decode(cleanedContent);
 
-        debugPrint('✅ Facture générée avec succès');
+        // ✅ CORRECTION : Convertir explicitement les types pour éviter List<dynamic>
+        final invoiceData = <String, dynamic>{
+          'clientName': rawData['clientName'] as String? ?? 'Client inconnu',
+          'clientAddress': rawData['clientAddress'] as String? ?? '',
+          'items': (rawData['items'] as List<dynamic>?)
+              ?.map((item) => <String, dynamic>{
+            'description': item['description'] as String? ?? '',
+            'quantity': (item['quantity'] as num?)?.toInt() ?? 1,
+            'unitPrice': (item['unitPrice'] as num?)?.toDouble() ?? 0.0,
+          })
+              .toList() ?? <Map<String, dynamic>>[],
+        };
 
-        // Navigation vers l'écran de prévisualisation
-        if (!mounted) return;
+        debugPrint('✅ Facture générée: $invoiceData');
 
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => InvoicePreviewScreen(
-              invoiceData: invoiceData,
+        // Navigation vers InvoicePreviewScreen
+        if (mounted) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => InvoicePreviewScreen(
+                invoiceData: invoiceData,
+              ),
             ),
-          ),
-        );
+          );
+        }
 
       } else {
-        debugPrint('❌ Erreur API: ${response.statusCode}');
-        debugPrint('📄 Body: ${response.body}');
-
-        setState(() {
-          _errorMessage = 'Erreur lors de la génération (${response.statusCode})';
-        });
-
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(_errorMessage!),
-            backgroundColor: Colors.red,
-          ),
-        );
+        throw Exception('Erreur API: ${response.statusCode} - ${response.body}');
       }
 
     } catch (e, stackTrace) {
-      debugPrint('❌ Erreur: $e');
-      debugPrint('📍 Stack: $stackTrace');
+      debugPrint('❌ Erreur génération facture: $e');
+      debugPrint('📍 StackTrace: $stackTrace');
 
       setState(() {
-        _errorMessage = 'Erreur: $e';
+        _errorMessage = 'Impossible de générer la facture. Vérifiez votre clé API Groq.';
       });
 
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Erreur lors de la génération de la facture'),
-          backgroundColor: Colors.red,
-        ),
-      );
-
-    } finally {
       if (mounted) {
-        setState(() {
-          _isGenerating = false;
-        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+          ),
+        );
       }
+    } finally {
+      setState(() {
+        _isGenerating = false;
+      });
     }
-  }
-
-  /// ANCIENNE MÉTHODE (données mockées) - À SUPPRIMER
-  void _generateInvoice(BuildContext context) {
-    // TODO: Implémenter la logique de génération de facture
-    // Pour l'instant, on affiche juste une confirmation
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Génération de la facture en cours...'),
-        backgroundColor: Color(0xFF5B5FC7),
-      ),
-    );
-
-    final invoiceData = {
-      'clientName': 'Roger Holmes',
-      'clientAddress': '139 Bedford Lane\nBrooklyn, NY 11201',
-      'items': [
-        {
-          'description': 'Sacs de ciment 50 kg',
-          'quantity': 42,
-          'unitPrice': 7.80,
-        },
-        {
-          'description': 'Barres de fer Ø12 mm',
-          'quantity': 85,
-          'unitPrice': 9.50,
-        },
-        {
-          'description': 'Carreaux céramiques 40×40',
-          'quantity': 520,
-          'unitPrice': 0.45,
-        },
-        {
-          'description': 'Planche de bois 4 m',
-          'quantity': 190,
-          'unitPrice': 6.20,
-        },
-        {
-          'description': 'Sable (m³)',
-          'quantity': 35,
-          'unitPrice': 12.90,
-        },
-      ],
-    };
-
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => InvoicePreviewScreen(
-          invoiceData: invoiceData,
-        ),
-      ),
-    );
-
-    // TODO: Navigation vers InvoicePreviewScreen
-    // Navigator.push(
-    //   context,
-    //   MaterialPageRoute(
-    //     builder: (context) => InvoicePreviewScreen(invoiceData: parsedData),
-    //   ),
-    // );
   }
 }

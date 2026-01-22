@@ -3,9 +3,9 @@ import 'package:provider/provider.dart';
 import '../viewmodels/login_viewmodel.dart';
 import '../../../common/widgets/primary_button.dart';
 import '../../../common/widgets/custom_text_field.dart';
-import '../../../common/widgets/error_message.dart';
 import '../../../common/widgets/app_logo.dart';
 import '../../../common/utils/responsive_utils.dart';
+import '../../../common/utils/toast_utils.dart';
 import 'forgot_password_screen.dart';
 
 /// LoginScreen
@@ -42,15 +42,14 @@ class _LoginScreenState extends State<LoginScreen> {
       _passwordController.text,
     );
 
-    if (success && mounted) {
-      // Navigation vers l'écran principal après succès
+    if (!mounted) return;
+
+    if (success) {
+      ToastUtils.show(context, message: 'Connexion réussie !', isError: false);
       Navigator.pushReplacementNamed(context, '/home');
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Connexion réussie !'),
-          backgroundColor: Colors.green,
-        ),
-      );
+    } else {
+      final error = context.read<LoginViewModel>().errorMessage ?? 'Erreur de connexion';
+      ToastUtils.show(context, message: error, isError: true);
     }
   }
 
@@ -60,14 +59,14 @@ class _LoginScreenState extends State<LoginScreen> {
 
     final success = await context.read<LoginViewModel>().signInWithGoogle();
 
-    if (success && mounted) {
+    if (!mounted) return;
+
+    if (success) {
+      ToastUtils.show(context, message: 'Connexion avec Google réussie !', isError: false);
       Navigator.pushReplacementNamed(context, '/home');
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Connexion avec Google réussie !'),
-          backgroundColor: Colors.green,
-        ),
-      );
+    } else {
+      final error = context.read<LoginViewModel>().errorMessage ?? 'Erreur de connexion Google';
+      ToastUtils.show(context, message: error, isError: true);
     }
   }
 
@@ -108,12 +107,6 @@ class _LoginScreenState extends State<LoginScreen> {
                             _buildWelcomeMessage(responsive),
 
                             SizedBox(height: responsive.getAdaptiveSpacing(32)),
-
-                            // Affichage du message d'erreur si présent
-                            if (viewModel.hasError) ...[
-                              ErrorMessage(message: viewModel.errorMessage!),
-                              SizedBox(height: responsive.getAdaptiveSpacing(16)),
-                            ],
 
                             // Champ email
                             CustomTextField(
@@ -301,56 +294,21 @@ class _LoginScreenState extends State<LoginScreen> {
     ResponsiveUtils responsive,
     LoginViewModel viewModel,
   ) {
-    return SizedBox(
-      width: double.infinity,
-      height: responsive.getAdaptiveHeight(56),
-      child: OutlinedButton(
-        onPressed: viewModel.isLoading ? null : _handleGoogleSignIn,
-        style: OutlinedButton.styleFrom(
-          side: const BorderSide(color: Color(0xFFE5E7EB), width: 1.5),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+    return Center(
+      child: GestureDetector(
+        onTap: viewModel.isLoading ? null : _handleGoogleSignIn,
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            border: Border.all(color: const Color(0xFFE5E7EB), width: 1.5),
+            shape: BoxShape.circle,
+            color: Colors.white,
           ),
-          backgroundColor: Colors.white,
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Logo Google
-            Image.asset(
-              'assets/images/google_logo.png',
-              height: 24,
-              width: 24,
-              errorBuilder: (context, error, stackTrace) {
-                // Fallback si l'image n'existe pas
-                return Container(
-                  height: 24,
-                  width: 24,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.red.shade50,
-                  ),
-                  child: const Icon(
-                    Icons.g_mobiledata,
-                    color: Colors.red,
-                    size: 20,
-                  ),
-                );
-              },
-            ),
-            SizedBox(width: responsive.getAdaptiveSpacing(12)),
-            Flexible(
-              child: Text(
-                'Continuer avec Google',
-                style: TextStyle(
-                  fontSize: responsive.getAdaptiveTextSize(16),
-                  fontWeight: FontWeight.w500,
-                  color: const Color(0xFF1F2937),
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
+          child: Image.asset(
+            'assets/images/icons8-google-48.png',
+            height: 32,
+            width: 32,
+          ),
         ),
       ),
     );

@@ -578,18 +578,6 @@ class SettingsScreen extends StatelessWidget {
                 },
                 responsive: responsive,
               ),
-
-              SizedBox(height: responsive.getAdaptiveSpacing(12)),
-
-              _buildSettingsMenuItem(
-                icon: Icons.logout,
-                label: 'Déconnexion',
-                iconColor: const Color(0xFFEF4444),
-                iconBgColor: const Color(0xFFFFE5E5),
-                onTap: () => _confirmLogout(context, viewModel),
-                responsive: responsive,
-                isDestructive: true,
-              ),
             ],
           );
         },

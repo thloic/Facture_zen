@@ -156,6 +156,7 @@ class VoiceRecognitionService {
   Future<String?> transcribeAudio(String audioPath) async {
     try {
       debugPrint('🎯 Début transcription avec Groq Whisper...');
+      debugPrint('🔑 Clé API: ${_groqApiKey.isEmpty ? "VIDE ❌" : "OK ✅ (${_groqApiKey.substring(0, 10)}...)"}');
 
       final audioFile = File(audioPath);
 
@@ -199,13 +200,14 @@ class VoiceRecognitionService {
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
 
-      debugPrint('📡 Réponse API: ${response.statusCode}');
+      debugPrint('📥 Réponse API: ${response.statusCode}');
 
       if (response.statusCode == 200) {
         final jsonResponse = json.decode(response.body);
         final transcription = jsonResponse['text'] as String?;
 
         if (transcription != null && transcription.isNotEmpty) {
+          // ✅ CORRECTION : Afficher seulement les 50 premiers caractères SI le texte est assez long
           final preview = transcription.length > 50
               ? '${transcription.substring(0, 50)}...'
               : transcription;
@@ -220,10 +222,13 @@ class VoiceRecognitionService {
         debugPrint('❌ Erreur API Whisper: ${response.statusCode}');
         debugPrint('📄 Response body: ${response.body}');
 
+        // Analyser l'erreur pour donner un message utile
         try {
           final errorJson = json.decode(response.body);
-          debugPrint('🔍 Message d\'erreur: ${errorJson['error']}');
-        } catch (_) {}
+          debugPrint('💬 Message d\'erreur: ${errorJson['error']}');
+        } catch (_) {
+          // Pas de JSON dans l'erreur
+        }
 
         return null;
       }

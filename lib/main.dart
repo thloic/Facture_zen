@@ -7,6 +7,7 @@ import 'package:facture_zen/features/notifications/views/notifications_screen.da
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'common/services/auth_service.dart';
 import 'common/services/pin_service.dart';
@@ -27,7 +28,12 @@ import 'firebase_options.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  // Charger les variables d'environnement (.env)
+  await dotenv.load(fileName: ".env");
+
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   runApp(const MyApp());
 }
 

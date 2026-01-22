@@ -7,10 +7,6 @@ import '../../../common/utils/responsive_utils.dart';
 import 'text_preview_screen.dart';
 import 'dart:math' as math;
 
-/// VoiceRecordingScreen
-/// Écran principal de création de facture par dictée vocale
-/// Permet d'enregistrer, mettre en pause et valider l'enregistrement
-/// Respecte l'architecture MVVM - cette classe est la View
 class VoiceRecordingScreen extends StatefulWidget {
   const VoiceRecordingScreen({Key? key}) : super(key: key);
 
@@ -21,14 +17,15 @@ class VoiceRecordingScreen extends StatefulWidget {
 class _VoiceRecordingScreenState extends State<VoiceRecordingScreen>
     with TickerProviderStateMixin {
   late AnimationController _pulseController;
-  late AnimationController _waveController;
   late Animation<double> _pulseAnimation;
+
+  // Historique des amplitudes pour l'effet circulaire
+  final List<double> _amplitudeHistory = List.generate(60, (_) => 0.0);
 
   @override
   void initState() {
     super.initState();
 
-    // Animation du pulse quand on enregistre
     _pulseController = AnimationController(
       duration: const Duration(milliseconds: 1500),
       vsync: this,
@@ -37,22 +34,14 @@ class _VoiceRecordingScreenState extends State<VoiceRecordingScreen>
     _pulseAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
-
-    // Animation des ondes sonores
-    _waveController = AnimationController(
-      duration: const Duration(milliseconds: 800),
-      vsync: this,
-    )..repeat();
   }
 
   @override
   void dispose() {
     _pulseController.dispose();
-    _waveController.dispose();
     super.dispose();
   }
 
-  /// Démarre ou arrête l'animation selon l'état d'enregistrement
   void _updateAnimations(bool isRecording) {
     if (isRecording) {
       _pulseController.repeat(reverse: true);
@@ -62,12 +51,10 @@ class _VoiceRecordingScreenState extends State<VoiceRecordingScreen>
     }
   }
 
-  /// Gère la validation et la navigation
   Future<void> _handleValidation(VoiceRecordingViewModel viewModel) async {
     final transcribedText = await viewModel.validate();
 
     if (transcribedText != null && mounted) {
-      // Navigation vers l'écran de prévisualisation
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -88,7 +75,6 @@ class _VoiceRecordingScreenState extends State<VoiceRecordingScreen>
       body: SafeArea(
         child: Consumer<VoiceRecordingViewModel>(
           builder: (context, viewModel, child) {
-            // Met à jour les animations selon l'état
             WidgetsBinding.instance.addPostFrameCallback((_) {
               _updateAnimations(viewModel.isRecording);
             });
@@ -97,19 +83,21 @@ class _VoiceRecordingScreenState extends State<VoiceRecordingScreen>
               children: [
                 SizedBox(height: responsive.getAdaptiveSpacing(32)),
 
-                // Logo
                 AppLogo(fontSize: responsive.getAdaptiveTextSize(28)),
 
-                // Zone centrale avec le timer et les contrôles
                 Expanded(
                   child: Stack(
                     children: [
-                      // Timer central
                       Center(
-                        child: _buildTimerCircle(viewModel, responsive),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            // Timer circulaire avec effet audio autour
+                            _buildTimerWithAudioEffect(viewModel, responsive),
+                          ],
+                        ),
                       ),
 
-                      // Boutons de contrôle
                       Positioned(
                         bottom: responsive.getAdaptiveSpacing(120),
                         left: 0,
@@ -117,7 +105,6 @@ class _VoiceRecordingScreenState extends State<VoiceRecordingScreen>
                         child: _buildControlButtons(viewModel, responsive),
                       ),
 
-                      // Modal de génération (si visible)
                       if (viewModel.isGenerating)
                         _buildGeneratingModal(responsive),
                     ],
@@ -128,92 +115,108 @@ class _VoiceRecordingScreenState extends State<VoiceRecordingScreen>
           },
         ),
       ),
-      bottomNavigationBar: const CurvedBottomNav(
-        currentIndex: 1, // Index 1 = Facture
-      ),
+      bottomNavigationBar: const CurvedBottomNav(currentIndex: 1),
     );
   }
 
-  /// Widget - Timer circulaire central avec animations
-  Widget _buildTimerCircle(VoiceRecordingViewModel viewModel, ResponsiveUtils responsive) {
-    return AnimatedBuilder(
-      animation: _pulseAnimation,
-      builder: (context, child) {
-        return Stack(
-          alignment: Alignment.center,
-          children: [
-            // Cercle de pulse externe (quand on enregistre)
-            if (viewModel.isRecording)
-              Container(
-                width: 280 + (_pulseAnimation.value * 40),
-                height: 280 + (_pulseAnimation.value * 40),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: const Color(0xFF9C9FE8).withOpacity(
-                    0.2 * (1 - _pulseAnimation.value),
-                  ),
-                ),
-              ),
+  /// Widget - Timer avec effet audio circulaire
+  Widget _buildTimerWithAudioEffect(VoiceRecordingViewModel viewModel, ResponsiveUtils responsive) {
+    return StreamBuilder<double>(
+      stream: viewModel.amplitudeStream,
+      builder: (context, snapshot) {
+        // Mettre à jour l'historique des amplitudes
+        if (snapshot.hasData && snapshot.data != null) {
+          _amplitudeHistory.removeAt(0);
+          _amplitudeHistory.add(snapshot.data!);
+        }
 
-            // Cercle intermédiaire (quand on enregistre)
-            if (viewModel.isRecording)
-              Container(
-                width: 260 + (_pulseAnimation.value * 20),
-                height: 260 + (_pulseAnimation.value * 20),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: const Color(0xFF9C9FE8).withOpacity(
-                    0.3 * (1 - _pulseAnimation.value),
+        return AnimatedBuilder(
+          animation: _pulseAnimation,
+          builder: (context, child) {
+            return Stack(
+              alignment: Alignment.center,
+              children: [
+                // Effet audio circulaire autour du cercle
+                if (viewModel.isRecording)
+                  SizedBox(
+                    width: 320,
+                    height: 320,
+                    child: CustomPaint(
+                      painter: CircularWaveformPainter(
+                        amplitudes: _amplitudeHistory,
+                        isRecording: viewModel.isRecording,
+                      ),
+                    ),
                   ),
-                ),
-              ),
 
-            // Cercle principal
-            Container(
-              width: 220,
-              height: 220,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Color(0xFF6B6FC7),
-                    Color(0xFF494D9F),
-                  ],
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF5B5FC7).withOpacity(0.3),
-                    blurRadius: 30,
-                    offset: const Offset(0, 10),
+                // Pulse d'arrière-plan
+                if (viewModel.isRecording)
+                  Container(
+                    width: 280 + (_pulseAnimation.value * 40),
+                    height: 280 + (_pulseAnimation.value * 40),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: const Color(0xFF9C9FE8).withOpacity(
+                        0.15 * (1 - _pulseAnimation.value),
+                      ),
+                    ),
                   ),
-                ],
-              ),
-              child: Center(
-                child: Text(
-                  viewModel.formattedDuration,
-                  style: TextStyle(
-                    fontSize: responsive.getAdaptiveTextSize(32),
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                    letterSpacing: 2,
+
+                if (viewModel.isRecording)
+                  Container(
+                    width: 260 + (_pulseAnimation.value * 20),
+                    height: 260 + (_pulseAnimation.value * 20),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: const Color(0xFF9C9FE8).withOpacity(
+                        0.25 * (1 - _pulseAnimation.value),
+                      ),
+                    ),
+                  ),
+
+                // Cercle principal avec timer
+                Container(
+                  width: 220,
+                  height: 220,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [Color(0xFF6B6FC7), Color(0xFF494D9F)],
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF5B5FC7).withOpacity(0.3),
+                        blurRadius: 30,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: Text(
+                      viewModel.formattedDuration,
+                      style: TextStyle(
+                        fontSize: responsive.getAdaptiveTextSize(32),
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                        letterSpacing: 2,
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ),
-          ],
+              ],
+            );
+          },
         );
       },
     );
   }
 
-  /// Widget - Boutons de contrôle (refresh, record/pause, validate)
   Widget _buildControlButtons(VoiceRecordingViewModel viewModel, ResponsiveUtils responsive) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        // Bouton Refresh/Recommencer
         _buildActionButton(
           icon: Icons.refresh,
           size: 56,
@@ -224,7 +227,6 @@ class _VoiceRecordingScreenState extends State<VoiceRecordingScreen>
 
         SizedBox(width: responsive.getAdaptiveSpacing(40)),
 
-        // Bouton central Record/Pause
         _buildActionButton(
           icon: viewModel.isRecording ? Icons.pause : Icons.mic,
           size: 80,
@@ -236,7 +238,6 @@ class _VoiceRecordingScreenState extends State<VoiceRecordingScreen>
 
         SizedBox(width: responsive.getAdaptiveSpacing(40)),
 
-        // Bouton Validate/Terminer
         _buildActionButton(
           icon: Icons.check,
           size: 56,
@@ -250,7 +251,6 @@ class _VoiceRecordingScreenState extends State<VoiceRecordingScreen>
     );
   }
 
-  /// Widget - Bouton d'action circulaire
   Widget _buildActionButton({
     required IconData icon,
     required double size,
@@ -294,7 +294,6 @@ class _VoiceRecordingScreenState extends State<VoiceRecordingScreen>
     );
   }
 
-  /// Widget - Modal de génération de texte
   Widget _buildGeneratingModal(ResponsiveUtils responsive) {
     return Container(
       color: Colors.black.withOpacity(0.5),
@@ -311,23 +310,14 @@ class _VoiceRecordingScreenState extends State<VoiceRecordingScreen>
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Animation des ondes sonores
-              AnimatedBuilder(
-                animation: _waveController,
-                builder: (context, child) {
-                  return CustomPaint(
-                    size: const Size(60, 40),
-                    painter: SoundWavePainter(
-                      animationValue: _waveController.value,
-                    ),
-                  );
-                },
+              const CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF5B5FC7)),
               ),
 
               SizedBox(height: responsive.getAdaptiveSpacing(20)),
 
               Text(
-                'Génération du texte',
+                'Transcription en cours',
                 style: TextStyle(
                   fontSize: responsive.getAdaptiveTextSize(18),
                   fontWeight: FontWeight.w600,
@@ -338,7 +328,7 @@ class _VoiceRecordingScreenState extends State<VoiceRecordingScreen>
               SizedBox(height: responsive.getAdaptiveSpacing(12)),
 
               Text(
-                'Patientez pendant que nous convertissons\nvotre audio en texte',
+                'Groq Whisper analyse votre audio...',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: responsive.getAdaptiveTextSize(14),
@@ -349,7 +339,6 @@ class _VoiceRecordingScreenState extends State<VoiceRecordingScreen>
 
               SizedBox(height: responsive.getAdaptiveSpacing(24)),
 
-              // Bouton Annuler
               TextButton(
                 onPressed: () {
                   context.read<VoiceRecordingViewModel>().cancelGeneration();
@@ -371,38 +360,67 @@ class _VoiceRecordingScreenState extends State<VoiceRecordingScreen>
   }
 }
 
-/// CustomPainter pour les ondes sonores animées
-class SoundWavePainter extends CustomPainter {
-  final double animationValue;
+/// CustomPainter pour la visualisation circulaire autour du timer (effet Siri)
+class CircularWaveformPainter extends CustomPainter {
+  final List<double> amplitudes;
+  final bool isRecording;
 
-  SoundWavePainter({required this.animationValue});
+  CircularWaveformPainter({
+    required this.amplitudes,
+    required this.isRecording,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final baseRadius = size.width / 2.3;
+
     final paint = Paint()
-      ..color = const Color(0xFF5B5FC7)
-      ..strokeWidth = 3
-      ..strokeCap = StrokeCap.round;
+      ..strokeWidth = 3.5
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
 
-    final centerY = size.height / 2;
-    final spacing = size.width / 6;
+    final int barCount = amplitudes.length;
+    final double angleStep = (2 * math.pi) / barCount;
 
-    // Dessine 5 barres avec des hauteurs animées
-    for (int i = 0; i < 5; i++) {
-      final x = spacing * (i + 1);
-      final progress = (animationValue + (i * 0.2)) % 1.0;
-      final height = size.height * 0.3 * (0.5 + 0.5 * math.sin(progress * math.pi * 2));
+    for (int i = 0; i < barCount; i++) {
+      final angle = i * angleStep - math.pi / 2; // Commencer en haut
+      final amplitude = amplitudes[i];
 
+      // Longueur de la barre basée sur l'amplitude (entre 8 et 45)
+      final barLength = 8 + (amplitude * 37);
+
+      // Point de départ (sur le cercle de base)
+      final startX = center.dx + baseRadius * math.cos(angle);
+      final startY = center.dy + baseRadius * math.sin(angle);
+
+      // Point d'arrivée (vers l'extérieur)
+      final endRadius = baseRadius + barLength;
+      final endX = center.dx + endRadius * math.cos(angle);
+      final endY = center.dy + endRadius * math.sin(angle);
+
+      // Couleur avec gradient basé sur l'amplitude
+      final opacity = isRecording ? (0.6 + amplitude * 0.4) : 0.2;
+      final color = Color.lerp(
+        const Color(0xFF9C9FE8),
+        const Color(0xFF5B5FC7),
+        amplitude * 0.7,
+      )!.withOpacity(opacity);
+
+      paint.color = color;
+
+      // Dessiner la barre radiale
       canvas.drawLine(
-        Offset(x, centerY - height),
-        Offset(x, centerY + height),
+        Offset(startX, startY),
+        Offset(endX, endY),
         paint,
       );
     }
   }
 
   @override
-  bool shouldRepaint(SoundWavePainter oldDelegate) {
-    return oldDelegate.animationValue != animationValue;
+  bool shouldRepaint(CircularWaveformPainter oldDelegate) {
+    return oldDelegate.amplitudes != amplitudes ||
+        oldDelegate.isRecording != isRecording;
   }
 }

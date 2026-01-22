@@ -4,7 +4,7 @@ import '../../../common/utils/responsive_utils.dart';
 
 /// InvoiceFinalScreen
 /// Écran d'aperçu final de la facture au format PDF
-/// Permet de télécharger ou changer de template
+/// Permet de télécharger ou changer de templates
 class InvoiceFinalScreen extends StatelessWidget {
   final Map<String, dynamic> invoiceData;
 
@@ -517,7 +517,7 @@ class InvoiceFinalScreen extends StatelessWidget {
     );
   }
 
-  /// Affiche les options de template
+  /// Affiche les options de templates
   void _showTemplateOptions(BuildContext context) {
     showModalBottomSheet(
       context: context,

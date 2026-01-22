@@ -1,13 +1,11 @@
 import 'package:flutter/foundation.dart';
 import 'dart:async';
-import '../../../common/services/voice_recognition_service.dart';
 import '../services/voice_recognition_service.dart';
 
 /// VoiceRecordingViewModel
-/// Gère l'état et la logique de l'enregistrement vocal
-/// Respecte l'architecture MVVM - cette classe est le ViewModel
+/// Gère l'état et la logique de l'enregistrement vocal avec transcription Whisper
+/// Architecture MVVM
 class VoiceRecordingViewModel extends ChangeNotifier {
-  // Services injectés
   final VoiceRecognitionService _voiceService;
 
   // État de l'enregistrement
@@ -18,20 +16,21 @@ class VoiceRecordingViewModel extends ChangeNotifier {
   String? _audioPath;
   Timer? _timer;
 
-  // Getters pour exposer l'état à la View
+  // Stream d'amplitude pour la visualisation audio
+  Stream<double>? _amplitudeStream;
+  StreamSubscription<double>? _amplitudeSubscription;
+
+  // Getters
   bool get isRecording => _isRecording;
   bool get isGenerating => _isGenerating;
   int get durationInSeconds => _durationInSeconds;
   String? get transcribedText => _transcribedText;
   String? get audioPath => _audioPath;
+  Stream<double>? get amplitudeStream => _amplitudeStream;
 
-  /// Retourne true si on peut réinitialiser (durée > 0 et pas en enregistrement)
   bool get canReset => _durationInSeconds > 0 && !_isRecording;
-
-  /// Retourne true si on peut valider (durée > 0 et pas en enregistrement)
   bool get canValidate => _durationInSeconds > 0 && !_isRecording;
 
-  /// Formate la durée en MM:SS
   String get formattedDuration {
     final minutes = (_durationInSeconds ~/ 60).toString().padLeft(2, '0');
     final seconds = (_durationInSeconds % 60).toString().padLeft(2, '0');
@@ -40,7 +39,10 @@ class VoiceRecordingViewModel extends ChangeNotifier {
 
   /// Constructeur avec injection du service
   VoiceRecordingViewModel({VoiceRecognitionService? voiceService})
-      : _voiceService = voiceService ?? VoiceRecognitionService();
+      : _voiceService = voiceService ?? VoiceRecognitionService() {
+    // Initialiser le stream d'amplitude
+    _amplitudeStream = _voiceService.amplitudeStream;
+  }
 
   /// Démarre ou met en pause l'enregistrement
   Future<void> toggleRecording() async {
@@ -56,7 +58,6 @@ class VoiceRecordingViewModel extends ChangeNotifier {
     try {
       debugPrint('🎙️ Tentative de démarrage enregistrement...');
 
-      // Démarrer l'enregistrement audio réel
       final started = await _voiceService.startRecording();
 
       if (started) {
@@ -72,8 +73,6 @@ class VoiceRecordingViewModel extends ChangeNotifier {
       _isRecording = false;
       notifyListeners();
       debugPrint('❌ Erreur démarrage enregistrement: $e');
-
-      // Afficher un message d'erreur à l'utilisateur
       rethrow;
     }
   }
@@ -83,7 +82,6 @@ class VoiceRecordingViewModel extends ChangeNotifier {
     try {
       debugPrint('⏸️ Mise en pause...');
 
-      // Mettre en pause l'enregistrement audio réel
       await _voiceService.pauseRecording();
 
       _isRecording = false;
@@ -104,8 +102,6 @@ class VoiceRecordingViewModel extends ChangeNotifier {
       debugPrint('🔄 Réinitialisation...');
 
       _stopTimer();
-
-      // Supprimer l'enregistrement audio
       await _voiceService.deleteRecording();
 
       _durationInSeconds = 0;
@@ -121,7 +117,7 @@ class VoiceRecordingViewModel extends ChangeNotifier {
     }
   }
 
-  /// Valide et traite l'enregistrement
+  /// Valide et transcrit l'enregistrement avec Whisper
   /// Retourne le texte transcrit
   Future<String?> validate() async {
     if (!canValidate) return null;
@@ -140,19 +136,29 @@ class VoiceRecordingViewModel extends ChangeNotifier {
       if (_audioPath != null) {
         debugPrint('📁 Fichier audio sauvegardé: $_audioPath');
 
-        // TODO: Envoyer l'audio pour transcription avec une API de Speech-to-Text
-        // Par exemple: Google Cloud Speech-to-Text, OpenAI Whisper, etc.
-        // final transcription = await _transcribeAudio(_audioPath!);
+        // 🎯 TRANSCRIPTION AVEC GROQ WHISPER (GRATUIT)
+        debugPrint('🔑 Vérification clé API...');
+        debugPrint('🌐 Début appel transcribeAudio...');
+        _transcribedText = await _voiceService.transcribeAudio(_audioPath!);
+        debugPrint('📝 Résultat transcription: ${_transcribedText ?? "NULL"}');
 
-        // Simulation du traitement (3 secondes)
-        await Future.delayed(const Duration(seconds: 3));
+        if (_transcribedText != null && _transcribedText!.isNotEmpty) {
+          // ✅ CORRECTION : Limiter la longueur du substring
+          final preview = _transcribedText!.length > 50
+              ? _transcribedText!.substring(0, 50)
+              : _transcribedText!;
+          debugPrint('✅ Transcription réussie: $preview...');
+        } else {
+          debugPrint('⚠️ Transcription vide ou échouée');
+          _transcribedText = 'Erreur: Impossible de transcrire l\'audio. Veuillez réessayer.';
+        }
 
-        // Texte de test (Lorem ipsum long)
-        _transcribedText = '''
-exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
-''';
+        // Supprimer le fichier audio après transcription (optionnel)
+        // await _voiceService.deleteRecording();
+
       } else {
         debugPrint('⚠️ Aucun fichier audio sauvegardé');
+        _transcribedText = 'Erreur: Aucun fichier audio enregistré.';
       }
 
       _isGenerating = false;
@@ -160,11 +166,13 @@ exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute 
 
       return _transcribedText;
 
-    } catch (e) {
+    } catch (e, stackTrace) {
       _isGenerating = false;
+      _transcribedText = 'Erreur technique: $e';
       notifyListeners();
       debugPrint('❌ Erreur validation: $e');
-      return null;
+      debugPrint('📍 StackTrace: $stackTrace');
+      return _transcribedText;
     }
   }
 
@@ -189,10 +197,10 @@ exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute 
     _timer = null;
   }
 
-  /// Nettoyage lors de la destruction du ViewModel
   @override
   void dispose() {
     _stopTimer();
+    _amplitudeSubscription?.cancel();
     _voiceService.dispose();
     super.dispose();
   }
