@@ -1,4 +1,4 @@
-package com.example.facture_zen
+package com.facturezen.app
 
 import io.flutter.embedding.android.FlutterActivity
 
