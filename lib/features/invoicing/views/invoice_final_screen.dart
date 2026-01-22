@@ -10,7 +10,7 @@ class InvoiceFinalScreen extends StatelessWidget {
 
   const InvoiceFinalScreen({
     Key? key,
-    required this.invoiceData,
+    required this.invoiceData, required String invoiceId,
   }) : super(key: key);
 
   @override

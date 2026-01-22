@@ -24,6 +24,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '664151721016', // ⬅️ À TROUVER
     projectId: 'facturezen',
     databaseURL: 'https://facturezen-558b0-default-rtdb.firebaseio.com',
+    storageBucket: 'gs://facturezen-558b0.firebasestorage.app'
   );
 
   // Configuration iOS
