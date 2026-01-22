@@ -23,10 +23,24 @@ class TextPreviewScreen extends StatefulWidget {
 class _TextPreviewScreenState extends State<TextPreviewScreen> {
   bool _isGenerating = false;
   String? _errorMessage;
+  late TextEditingController _textController;
+  bool _isEditing = false;
 
   // Configuration Groq API (GRATUIT)
   static String get _groqApiKey => dotenv.env['GROQ_API_KEY'] ?? '';
   static const String _groqEndpoint = 'https://api.groq.com/openai/v1/chat/completions';
+
+  @override
+  void initState() {
+    super.initState();
+    _textController = TextEditingController(text: widget.transcribedText);
+  }
+
+  @override
+  void dispose() {
+    _textController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -50,6 +64,20 @@ class _TextPreviewScreenState extends State<TextPreviewScreen> {
           ),
         ),
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: Icon(
+              _isEditing ? Icons.check : Icons.edit,
+              color: const Color(0xFF5B5FC7),
+            ),
+            onPressed: () {
+              setState(() {
+                _isEditing = !_isEditing;
+              });
+            },
+            tooltip: _isEditing ? 'Terminer' : 'Modifier',
+          ),
+        ],
       ),
       body: SafeArea(
         child: Stack(
@@ -60,7 +88,7 @@ class _TextPreviewScreenState extends State<TextPreviewScreen> {
                 children: [
                   SizedBox(height: responsive.getAdaptiveSpacing(20)),
 
-                  // Zone de texte transcrit
+                  // Zone de texte transcrit (éditable)
                   Expanded(
                     child: Container(
                       width: double.infinity,
@@ -68,17 +96,36 @@ class _TextPreviewScreenState extends State<TextPreviewScreen> {
                       decoration: BoxDecoration(
                         color: const Color(0xFFF3F4F6),
                         borderRadius: BorderRadius.circular(16),
+                        border: _isEditing
+                            ? Border.all(color: const Color(0xFF5B5FC7), width: 2)
+                            : null,
                       ),
-                      child: SingleChildScrollView(
-                        child: Text(
-                          widget.transcribedText,
-                          style: TextStyle(
-                            fontSize: responsive.getAdaptiveTextSize(15),
-                            color: const Color(0xFF1F2937),
-                            height: 1.6,
-                          ),
-                        ),
-                      ),
+                      child: _isEditing
+                          ? TextField(
+                              controller: _textController,
+                              maxLines: null,
+                              expands: true,
+                              textAlignVertical: TextAlignVertical.top,
+                              style: TextStyle(
+                                fontSize: responsive.getAdaptiveTextSize(15),
+                                color: const Color(0xFF1F2937),
+                                height: 1.6,
+                              ),
+                              decoration: const InputDecoration(
+                                border: InputBorder.none,
+                                hintText: 'Modifiez le texte transcrit...',
+                              ),
+                            )
+                          : SingleChildScrollView(
+                              child: Text(
+                                _textController.text,
+                                style: TextStyle(
+                                  fontSize: responsive.getAdaptiveTextSize(15),
+                                  color: const Color(0xFF1F2937),
+                                  height: 1.6,
+                                ),
+                              ),
+                            ),
                     ),
                   ),
 
@@ -231,7 +278,7 @@ EXEMPLES:
       final userPrompt = '''
 Voici la transcription vocale d'un artisan pour créer une facture:
 
-"${widget.transcribedText}"
+"${_textController.text}"
 
 Génère le JSON de la facture selon le format spécifié.
 ''';

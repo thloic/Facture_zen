@@ -37,8 +37,79 @@ void main() async {
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
+  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
+  bool _isAppInBackground = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+
+    // Détecter quand l'app passe en arrière-plan
+    if (state == AppLifecycleState.paused) {
+      _isAppInBackground = true;
+    }
+
+    // Détecter quand l'app revient au premier plan
+    if (state == AppLifecycleState.resumed && _isAppInBackground) {
+      _isAppInBackground = false;
+      _checkPinOnResume();
+    }
+  }
+
+  /// Vérifie si un PIN est configuré et force la navigation vers l'écran de PIN
+  /// SEULEMENT si l'utilisateur est toujours connecté
+  Future<void> _checkPinOnResume() async {
+    // Attendre un peu pour que le widget tree soit stable
+    await Future.delayed(const Duration(milliseconds: 300));
+
+    final authService = AuthService();
+    final pinService = PinService();
+
+    // 1. Vérifier si l'utilisateur est TOUJOURS connecté (pas déconnecté)
+    final isAuthenticated = authService.isAuthenticated;
+    debugPrint('🔐 Resume - isAuthenticated: $isAuthenticated');
+    
+    // 2. Si déconnecté, ne rien faire (l'app reste sur l'écran de login)
+    if (!isAuthenticated) {
+      debugPrint('🔐 Resume - Utilisateur non authentifié, pas de PIN demandé');
+      return;
+    }
+
+    // 3. Si connecté ET a un PIN configuré → demander le PIN
+    final hasPin = await pinService.hasPin();
+    debugPrint('🔐 Resume - hasPin: $hasPin');
+    
+    if (hasPin) {
+      debugPrint('🔐 Resume - Navigation forcée vers /pin-login');
+      // Forcer la navigation vers l'écran de PIN en supprimant tout l'historique
+      _navigatorKey.currentState?.pushNamedAndRemoveUntil(
+        '/pin-login',
+        (route) => false, // Supprimer toutes les routes précédentes
+      );
+    } else {
+      debugPrint('🔐 Resume - Pas de PIN configuré, pas de redirection');
+    }
+  }
 
   // This widget is the root of your application.
   @override
@@ -65,6 +136,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ProfileViewModel()),
       ],
       child: MaterialApp(
+        navigatorKey: _navigatorKey,
         title: 'FactureZen',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
@@ -139,20 +211,25 @@ class AppInitializer extends StatelessWidget {
 
     // Vérifier si l'utilisateur est connecté à Firebase
     final isAuthenticated = authService.isAuthenticated;
+    debugPrint('🔐 AppInitializer - isAuthenticated: $isAuthenticated');
 
     if (isAuthenticated) {
       // Utilisateur connecté - vérifier si un PIN est configuré
       final hasPin = await pinService.hasPin();
+      debugPrint('🔐 AppInitializer - hasPin: $hasPin');
       
       if (hasPin) {
         // PIN configuré - aller à l'écran de connexion par PIN
+        debugPrint('🔐 AppInitializer - Navigation vers /pin-login');
         return '/pin-login';
       } else {
         // Pas de PIN - aller directement à l'accueil
+        debugPrint('🔐 AppInitializer - Navigation vers /home (pas de PIN)');
         return '/home';
       }
     } else {
       // Utilisateur non connecté - aller à l'écran de login
+      debugPrint('🔐 AppInitializer - Navigation vers /login (non authentifié)');
       return '/login';
     }
   }

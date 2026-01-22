@@ -368,14 +368,20 @@ class ProfileScreen extends StatelessWidget {
                           height: 50,
                           child: ElevatedButton(
                             onPressed: () async {
-                              Navigator.pop(context);
+                              // Sauvegarder le navigator avant async
+                              final navigator = Navigator.of(context);
+                              
+                              // Fermer le dialog
+                              navigator.pop();
+                              
+                              // Effectuer la déconnexion
                               await viewModel.logout();
-                              if (context.mounted) {
-                                Navigator.of(context).pushAndRemoveUntil(
-                                  MaterialPageRoute(builder: (context) => const LoginScreen()),
-                                  (route) => false,
-                                );
-                              }
+                              
+                              // Navigation vers login (sans vérifier context.mounted car on utilise le navigator sauvegardé)
+                              navigator.pushAndRemoveUntil(
+                                MaterialPageRoute(builder: (context) => const LoginScreen()),
+                                (route) => false,
+                              );
                             },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFFEF4444),

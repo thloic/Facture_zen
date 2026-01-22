@@ -87,17 +87,23 @@ class PinService {
     try {
       final prefs = await SharedPreferences.getInstance();
       final hasPinConfigured = prefs.getBool(_hasPinKey) ?? false;
+      debugPrint('🔐 PinService.hasPin() - SharedPreferences has_pin_configured: $hasPinConfigured');
       
       // Double vérification : aussi vérifier dans secure storage
-      if (hasPinConfigured) {
-        final storedPin = await _secureStorage.read(
-          key: _pinKey,
-          aOptions: _getAndroidOptions(),
-        );
-        return storedPin != null;
+      final storedPin = await _secureStorage.read(
+        key: _pinKey,
+        aOptions: _getAndroidOptions(),
+      );
+      debugPrint('🔐 PinService.hasPin() - SecureStorage PIN exists: ${storedPin != null}');
+      
+      // Si le PIN existe dans secure storage, mettre à jour SharedPreferences
+      if (storedPin != null && !hasPinConfigured) {
+        debugPrint('🔐 Réparation: PIN existe dans SecureStorage mais pas dans SharedPreferences');
+        await prefs.setBool(_hasPinKey, true);
+        return true;
       }
       
-      return false;
+      return storedPin != null;
     } catch (e) {
       debugPrint('❌ Erreur lors de la vérification de l\'existence du PIN : $e');
       return false;

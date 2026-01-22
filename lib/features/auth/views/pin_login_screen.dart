@@ -81,8 +81,8 @@ class _PinLoginScreenState extends State<PinLoginScreen> {
         
         // Vérifier que l'utilisateur est toujours connecté à Firebase
         if (_authService.isAuthenticated && mounted) {
-          // Rediriger vers l'accueil
-          Navigator.pushReplacementNamed(context, '/home');
+          // Rediriger vers l'accueil en supprimant tout l'historique
+          Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
         } else {
           // Session Firebase expirée, rediriger vers login
           setState(() {
@@ -93,7 +93,7 @@ class _PinLoginScreenState extends State<PinLoginScreen> {
           
           Future.delayed(const Duration(seconds: 2), () {
             if (mounted) {
-              Navigator.pushReplacementNamed(context, '/login');
+              Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
             }
           });
         }

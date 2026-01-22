@@ -6,6 +6,7 @@ import '../../../common/widgets/custom_text_field.dart';
 import '../../../common/widgets/app_logo.dart';
 import '../../../common/utils/responsive_utils.dart';
 import '../../../common/utils/toast_utils.dart';
+import '../../../common/services/pin_service.dart';
 import 'forgot_password_screen.dart';
 
 /// LoginScreen
@@ -63,7 +64,19 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (success) {
       ToastUtils.show(context, message: 'Connexion avec Google réussie !', isError: false);
-      Navigator.pushReplacementNamed(context, '/home');
+      
+      // Vérifier si un PIN est configuré
+      final pinService = PinService();
+      final hasPin = await pinService.hasPin();
+      
+      if (hasPin) {
+        // PIN déjà configuré, aller à l'accueil
+        Navigator.pushReplacementNamed(context, '/home');
+      } else {
+        // Première connexion Google, configurer le PIN
+        debugPrint('🔐 Première connexion Google - Redirection vers configuration PIN');
+        Navigator.pushReplacementNamed(context, '/pin-setup');
+      }
     } else {
       final error = context.read<LoginViewModel>().errorMessage ?? 'Erreur de connexion Google';
       ToastUtils.show(context, message: error, isError: true);
