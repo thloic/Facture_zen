@@ -2,15 +2,21 @@ import 'package:flutter/foundation.dart';
 import '../../invoicing/models/invoice_model.dart';
 import '../models/user_profile_model.dart';
 import '../../../common/services/auth_service.dart';
+import '../../../common/services/firebase_invoice_service.dart';
 
 class HomeViewModel extends ChangeNotifier {
   final AuthService _authService = AuthService();
+  final FirebaseInvoiceService _invoiceService;
+  
   UserProfileModel? _userProfile;
   List<InvoiceModel> _recentInvoices = [];
   bool _isLoading = false;
   String? _errorMessage;
   int _currentPageIndex = 0;
   String _searchQuery = '';
+
+  HomeViewModel({FirebaseInvoiceService? invoiceService})
+      : _invoiceService = invoiceService ?? FirebaseInvoiceService();
 
   UserProfileModel? get userProfile => _userProfile;
   List<InvoiceModel> get recentInvoices => _recentInvoices;
@@ -63,62 +69,11 @@ class HomeViewModel extends ChangeNotifier {
         );
       }
 
-      _recentInvoices = [
-        InvoiceModel(
-          id: '1',
-          invoiceNumber: 'FACT-2025-001',
-          invoiceDate: DateTime(2025, 10, 28, 17, 8),
-          clientName: 'Medha & Co',
-          clientAddress: '123 Rue Example\n75001 Paris',
-          items: [
-            InvoiceItem(
-              description: 'Service de consultation',
-              quantity: 1,
-              unitPrice: 450.0,
-            ),
-          ],
-          companyName: 'Mon Entreprise',
-          companyAddress: '456 Avenue Test\n75002 Paris',
-          companyPhone: '+33 1 23 45 67 89',
-          companyEmail: 'contact@entreprise.fr',
-          taxRate: 20.0, // Avec TVA
-        ),
-        InvoiceModel(
-          id: '2',
-          invoiceNumber: 'FACT-2025-002',
-          invoiceDate: DateTime(2025, 10, 28, 17, 8),
-          clientName: 'Medha & Co',
-          clientAddress: '123 Rue Example\n75001 Paris',
-          items: [
-            InvoiceItem(
-              description: 'Maintenance système',
-              quantity: 2,
-              unitPrice: 225.0,
-            ),
-          ],
-          companyName: 'Mon Entreprise',
-          companyAddress: '456 Avenue Test\n75002 Paris',
-          taxRate: null, // Sans TVA
-        ),
-        InvoiceModel(
-          id: '3',
-          invoiceNumber: 'FACT-2025-003',
-          invoiceDate: DateTime(2025, 10, 28, 17, 8),
-          clientName: 'Medha & Co',
-          clientAddress: '123 Rue Example\n75001 Paris',
-          items: [
-            InvoiceItem(
-              description: 'Formation équipe',
-              quantity: 1,
-              unitPrice: 450.0,
-            ),
-          ],
-          companyName: 'Mon Entreprise',
-          companyAddress: '456 Avenue Test\n75002 Paris',
-          discountRate: 10.0, // Avec réduction
-          discountLabel: 'Remise client fidèle',
-        ),
-      ];
+      // Récupérer les factures récentes depuis Firebase
+      debugPrint('📋 Chargement des factures récentes...');
+      final allInvoices = await _invoiceService.getUserInvoices();
+      _recentInvoices = allInvoices.take(5).toList(); // Les 5 plus récentes
+      debugPrint('✅ ${_recentInvoices.length} facture(s) récente(s) chargée(s)');
 
       _setLoading(false);
     } catch (e) {

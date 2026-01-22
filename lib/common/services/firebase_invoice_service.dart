@@ -5,12 +5,14 @@ import 'package:flutter/foundation.dart';
 import 'dart:io';
 
 import '../../features/invoicing/models/invoice_model.dart';
+import '../../features/invoicing/services/pdf_generator_service.dart';
 
 /// Service Firebase pour la gestion des factures
 /// Utilise Realtime Database + Storage pour les PDFs
 class FirebaseInvoiceService {
   final FirebaseDatabase _database = FirebaseDatabase.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final PdfGeneratorService _pdfGenerator = PdfGeneratorService();
 
   // Storage optionnel (peut être null si non configuré)
   FirebaseStorage? _storage;
@@ -260,6 +262,76 @@ class FirebaseInvoiceService {
     }
   }
 
+  /// Sauvegarde une facture avec génération automatique du PDF
+  /// Cette méthode génère le PDF, l'uploade sur Firebase Storage,
+  /// puis sauvegarde les métadonnées dans Realtime Database
+  Future<String?> saveInvoiceWithPdf(InvoiceModel invoice) async {
+    File? pdfFile;
+    
+    try {
+      debugPrint('🚀 saveInvoiceWithPdf - Début du processus');
+      debugPrint('   Facture: ${invoice.invoiceNumber}');
+      debugPrint('   Client: ${invoice.clientName}');
+
+      // 1. Générer le PDF
+      debugPrint('📄 Étape 1/3: Génération du PDF...');
+      pdfFile = await _pdfGenerator.generateInvoicePdf(invoice);
+      debugPrint('✅ PDF généré: ${pdfFile.path}');
+
+      // Vérifier que le fichier existe et n'est pas vide
+      if (!await pdfFile.exists()) {
+        throw Exception('Le fichier PDF généré n\'existe pas');
+      }
+
+      final fileSize = await pdfFile.length();
+      if (fileSize == 0) {
+        throw Exception('Le fichier PDF généré est vide');
+      }
+
+      debugPrint('   Taille du PDF: $fileSize bytes');
+
+      // 2. Sauvegarder la facture avec le PDF
+      debugPrint('💾 Étape 2/3: Sauvegarde dans Firebase...');
+      final invoiceId = await saveInvoice(invoice, pdfFile: pdfFile);
+
+      if (invoiceId == null) {
+        throw Exception('Échec de la sauvegarde de la facture');
+      }
+
+      debugPrint('✅ Facture sauvegardée avec succès: $invoiceId');
+
+      // 3. Nettoyer le fichier temporaire
+      debugPrint('🧹 Étape 3/3: Nettoyage du fichier temporaire...');
+      try {
+        await pdfFile.delete();
+        debugPrint('✅ Fichier temporaire supprimé');
+      } catch (e) {
+        debugPrint('⚠️ Impossible de supprimer le fichier temporaire: $e');
+      }
+
+      debugPrint('🎉 Processus terminé avec succès!');
+      return invoiceId;
+
+    } catch (e, stackTrace) {
+      debugPrint('❌ Erreur saveInvoiceWithPdf: $e');
+      debugPrint('📍 StackTrace: $stackTrace');
+
+      // Nettoyer le fichier temporaire en cas d'erreur
+      if (pdfFile != null) {
+        try {
+          if (await pdfFile.exists()) {
+            await pdfFile.delete();
+            debugPrint('🧹 Fichier temporaire nettoyé après erreur');
+          }
+        } catch (cleanupError) {
+          debugPrint('⚠️ Erreur lors du nettoyage: $cleanupError');
+        }
+      }
+
+      rethrow;
+    }
+  }
+
   /// Upload le PDF sur Firebase Storage
   Future<String?> _uploadPDF(String userId, String invoiceId, File pdfFile) async {
     try {
@@ -402,6 +474,51 @@ class FirebaseInvoiceService {
 
     } catch (e) {
       debugPrint('❌ Erreur getInvoicePdfUrl: $e');
+      return null;
+    }
+  }
+
+  /// Télécharge le PDF d'une facture et retourne le fichier local
+  /// Utile pour ouvrir le PDF avec une app externe
+  Future<File?> downloadInvoicePdf(String invoiceId, String invoiceNumber) async {
+    try {
+      debugPrint('📥 Téléchargement du PDF pour la facture: $invoiceNumber');
+
+      final userId = currentUser?.uid;
+      if (userId == null) {
+        debugPrint('❌ Utilisateur non connecté');
+        return null;
+      }
+
+      // Vérifier Storage
+      final isAvailable = await _ensureStorageIsAvailable();
+      if (!isAvailable) {
+        debugPrint('❌ Firebase Storage non disponible');
+        return null;
+      }
+
+      // Référence du fichier dans Storage
+      final storagePath = 'invoices/$userId/$invoiceId.pdf';
+      final storageRef = _storage!.ref().child(storagePath);
+
+      // Créer un fichier local temporaire
+      final tempDir = await Directory.systemTemp.createTemp('invoice_pdf_');
+      final localFile = File('${tempDir.path}/$invoiceNumber.pdf');
+
+      debugPrint('📥 Téléchargement depuis: $storagePath');
+      debugPrint('💾 Sauvegarde locale: ${localFile.path}');
+
+      // Télécharger le fichier
+      await storageRef.writeToFile(localFile);
+
+      final fileSize = await localFile.length();
+      debugPrint('✅ PDF téléchargé avec succès ($fileSize bytes)');
+
+      return localFile;
+
+    } catch (e, stackTrace) {
+      debugPrint('❌ Erreur downloadInvoicePdf: $e');
+      debugPrint('📍 StackTrace: $stackTrace');
       return null;
     }
   }

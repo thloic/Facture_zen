@@ -3,6 +3,10 @@ import 'package:provider/provider.dart';
 import '../../../common/widgets/curved_bottom_nav.dart';
 import '../viewmodels/invoice_history_viewmodel.dart';
 import '../../../common/utils/responsive_utils.dart';
+import '../models/invoice_model.dart';
+import '../../../common/services/firebase_invoice_service.dart';
+import 'pdf_viewer_screen.dart';
+import 'dart:io';
 
 
 class InvoiceHistoryScreen extends StatefulWidget {
@@ -14,6 +18,7 @@ class InvoiceHistoryScreen extends StatefulWidget {
 
 class _InvoiceHistoryScreenState extends State<InvoiceHistoryScreen> {
   final TextEditingController _searchController = TextEditingController();
+  bool _isRetrying = false;
 
   @override
   void initState() {
@@ -39,7 +44,8 @@ class _InvoiceHistoryScreenState extends State<InvoiceHistoryScreen> {
       appBar: _buildAppBar(responsive),
       body: Consumer<InvoiceHistoryViewModel>(
         builder: (context, viewModel, child) {
-          if (viewModel.isLoading) {
+          // Afficher le loader uniquement si ce n'est pas un retry
+          if (viewModel.isLoading && !_isRetrying) {
             return const Center(
               child: CircularProgressIndicator(
                 color: Color(0xFF5B5FC7),
@@ -223,7 +229,7 @@ class _InvoiceHistoryScreenState extends State<InvoiceHistoryScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        invoice['clientName'] ?? 'Sans nom',
+                        invoice.clientName,
                         style: TextStyle(
                           fontSize: responsive.getAdaptiveTextSize(16),
                           fontWeight: FontWeight.w600,
@@ -232,7 +238,7 @@ class _InvoiceHistoryScreenState extends State<InvoiceHistoryScreen> {
                       ),
                       SizedBox(height: responsive.getAdaptiveSpacing(4)),
                       Text(
-                        '${invoice['date']} | ${invoice['size']}',
+                        '${invoice.formattedDate} | ${invoice.total.toStringAsFixed(2)} €',
                         style: TextStyle(
                           fontSize: responsive.getAdaptiveTextSize(13),
                           color: const Color(0xFF9CA3AF),
@@ -331,20 +337,52 @@ class _InvoiceHistoryScreenState extends State<InvoiceHistoryScreen> {
             ),
             SizedBox(height: responsive.getAdaptiveSpacing(24)),
             ElevatedButton(
-              onPressed: () {
-                context.read<InvoiceHistoryViewModel>().loadInvoices();
-              },
+              onPressed: _isRetrying
+                  ? null
+                  : () async {
+                      debugPrint('🔄 Bouton Réessayer cliqué');
+                      setState(() {
+                        _isRetrying = true;
+                        debugPrint('🔄 _isRetrying = true');
+                      });
+                      
+                      await context.read<InvoiceHistoryViewModel>().loadInvoices();
+                      
+                      if (mounted) {
+                        setState(() {
+                          _isRetrying = false;
+                          debugPrint('🔄 _isRetrying = false');
+                        });
+                      }
+                    },
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF5B5FC7),
+                foregroundColor: Colors.white,
+                disabledBackgroundColor: const Color(0xFF5B5FC7).withOpacity(0.6),
                 padding: const EdgeInsets.symmetric(
                   horizontal: 32,
                   vertical: 12,
                 ),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(14),
                 ),
               ),
-              child: const Text('Réessayer'),
+              child: _isRetrying
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : const Text(
+                      'Réessayer',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
             ),
           ],
         ),
@@ -426,7 +464,7 @@ class _InvoiceHistoryScreenState extends State<InvoiceHistoryScreen> {
   }
 
   /// Affiche le menu d'options d'une facture
-  void _showInvoiceOptions(BuildContext context, dynamic invoice) {
+  void _showInvoiceOptions(BuildContext context, InvoiceModel invoice) {
     final responsive = ResponsiveUtils(context);
     showModalBottomSheet(
       context: context,
@@ -471,10 +509,10 @@ class _InvoiceHistoryScreenState extends State<InvoiceHistoryScreen> {
               ),
               _buildMenuOption(
                 icon: Icons.download_outlined,
-                label: 'Télécharger',
+                label: 'Télécharger PDF',
                 onTap: () {
                   Navigator.pop(context);
-                  // TODO: Télécharger la facture
+                  _downloadAndViewPdf(invoice);
                 },
                 responsive: responsive,
               ),
@@ -533,7 +571,7 @@ class _InvoiceHistoryScreenState extends State<InvoiceHistoryScreen> {
   }
 
   /// Ouvre le détail d'une facture
-  void _openInvoiceDetail(dynamic invoice) {
+  void _openInvoiceDetail(InvoiceModel invoice) {
     // TODO: Navigation vers l'écran de détail
     // NavigationHelper.navigateWithArguments(
     //   context,
@@ -543,7 +581,7 @@ class _InvoiceHistoryScreenState extends State<InvoiceHistoryScreen> {
   }
 
   /// Confirme la suppression d'une facture
-  void _confirmDelete(BuildContext context, dynamic invoice) {
+  void _confirmDelete(BuildContext context, InvoiceModel invoice) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -561,7 +599,7 @@ class _InvoiceHistoryScreenState extends State<InvoiceHistoryScreen> {
               Navigator.pop(context);
               context
                   .read<InvoiceHistoryViewModel>()
-                  .deleteInvoice(invoice['id']);
+                  .deleteInvoice(invoice.id);
             },
             style: TextButton.styleFrom(
               foregroundColor: Colors.red,
@@ -569,6 +607,99 @@ class _InvoiceHistoryScreenState extends State<InvoiceHistoryScreen> {
             child: const Text('Supprimer'),
           ),
         ],
+      ),
+    );
+  }
+
+  /// Télécharge et affiche le PDF d'une facture
+  Future<void> _downloadAndViewPdf(InvoiceModel invoice) async {
+    // Afficher un loader
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF5B5FC7)),
+        ),
+      ),
+    );
+
+    try {
+      final invoiceService = context.read<FirebaseInvoiceService>();
+      
+      // Télécharger le PDF
+      final pdfFile = await invoiceService.downloadInvoicePdf(
+        invoice.id,
+        invoice.invoiceNumber,
+      );
+
+      // Fermer le loader
+      if (mounted) Navigator.pop(context);
+
+      if (pdfFile == null) {
+        // Erreur : PDF non trouvé
+        if (mounted) {
+          _showErrorSnackBar('PDF non disponible pour cette facture');
+        }
+        return;
+      }
+
+      // Vérifier que le fichier existe
+      if (!await pdfFile.exists()) {
+        if (mounted) {
+          _showErrorSnackBar('Erreur : fichier PDF introuvable');
+        }
+        return;
+      }
+
+      // Ouvrir le PDF dans le viewer
+      if (mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => PdfViewerScreen(
+              pdfFile: pdfFile,
+              title: invoice.invoiceNumber,
+            ),
+          ),
+        );
+      }
+
+    } catch (e) {
+      // Fermer le loader
+      if (mounted) Navigator.pop(context);
+      
+      // Afficher l'erreur
+      if (mounted) {
+        _showErrorSnackBar('Erreur lors du téléchargement : $e');
+      }
+    }
+  }
+
+  /// Affiche un message d'erreur
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+      ),
+    );
+  }
+
+  /// Affiche un message de succès
+  void _showSuccessSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.green,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
       ),
     );
   }

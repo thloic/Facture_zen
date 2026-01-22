@@ -3,6 +3,11 @@ import '../models/invoice_model.dart';
 import '../templates/invoice_template_base.dart';
 import 'template_selector_modal.dart';
 import '../../../common/utils/responsive_utils.dart';
+import '../services/pdf_generator_service.dart';
+import 'pdf_viewer_screen.dart';
+import 'package:printing/printing.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
 
 /// Écran de prévisualisation de la facture avec sélection de templates
 class InvoicePreviewScreen extends StatefulWidget {
@@ -47,22 +52,174 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
     );
   }
 
-  void _shareInvoice() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Fonctionnalité de partage bientôt disponible'),
-        backgroundColor: Color(0xFF5B5FC7),
+  Future<void> _shareInvoice() async {
+    // Afficher un loader
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF5B5FC7)),
+            ),
+            SizedBox(height: 16),
+            Text(
+              'Préparation du partage...',
+              style: TextStyle(color: Colors.white, fontSize: 16),
+            ),
+          ],
+        ),
       ),
     );
+
+    try {
+      // Générer le PDF
+      final pdfGenerator = PdfGeneratorService();
+      final pdfFile = await pdfGenerator.generateInvoicePdf(_invoice);
+      final pdfBytes = await pdfFile.readAsBytes();
+
+      // Fermer le loader
+      if (mounted) Navigator.pop(context);
+
+      // Partager le PDF avec printing
+      await Printing.sharePdf(
+        bytes: pdfBytes,
+        filename: '${_invoice.invoiceNumber}.pdf',
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('PDF partagé avec succès !'),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      // Fermer le loader
+      if (mounted) Navigator.pop(context);
+
+      // Afficher l'erreur
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur lors du partage : $e'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
   }
 
-  void _downloadPDF() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Génération PDF bientôt disponible'),
-        backgroundColor: Color(0xFF5B5FC7),
+  Future<void> _downloadPDF() async {
+    // Afficher un loader
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF5B5FC7)),
+            ),
+            SizedBox(height: 16),
+            Text(
+              'Génération du PDF...',
+              style: TextStyle(color: Colors.white, fontSize: 16),
+            ),
+          ],
+        ),
       ),
     );
+
+    try {
+      // Générer le PDF
+      final pdfGenerator = PdfGeneratorService();
+      final pdfFile = await pdfGenerator.generateInvoicePdf(_invoice);
+
+      // Sauvegarder le PDF dans un dossier permanent
+      final directory = await getApplicationDocumentsDirectory();
+      final permanentPath = '${directory.path}/${_invoice.invoiceNumber}.pdf';
+      final permanentFile = await pdfFile.copy(permanentPath);
+
+      // Fermer le loader
+      if (mounted) Navigator.pop(context);
+
+      // Afficher un dialogue avec options
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('PDF généré !'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Le PDF a été enregistré dans :\n$permanentPath'),
+                const SizedBox(height: 16),
+                const Text('Que souhaitez-vous faire ?'),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Fermer'),
+              ),
+              TextButton(
+                onPressed: () async {
+                  Navigator.pop(context);
+                  // Partager le PDF
+                  final pdfBytes = await permanentFile.readAsBytes();
+                  await Printing.sharePdf(
+                    bytes: pdfBytes,
+                    filename: '${_invoice.invoiceNumber}.pdf',
+                  );
+                },
+                child: const Text('Partager'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  // Ouvrir le viewer
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => PdfViewerScreen(
+                        pdfFile: permanentFile,
+                        title: _invoice.invoiceNumber,
+                      ),
+                    ),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF5B5FC7),
+                ),
+                child: const Text('Ouvrir'),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      // Fermer le loader
+      if (mounted) Navigator.pop(context);
+
+      // Afficher l'erreur
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur lors de la génération : $e'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
   }
 
   @override

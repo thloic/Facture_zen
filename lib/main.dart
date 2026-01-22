@@ -11,6 +11,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'common/services/auth_service.dart';
 import 'common/services/pin_service.dart';
+import 'common/services/firebase_invoice_service.dart';
 import 'features/auth/viewmodels/login_viewmodel.dart';
 import 'features/auth/viewmodels/register_viewmodel.dart';
 import 'features/auth/viewmodels/forgot_password_viewmodel.dart';
@@ -115,9 +116,12 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     final authService = AuthService();
+    final invoiceService = FirebaseInvoiceService();
+    
     return MultiProvider(
       providers: [
         Provider<AuthService>.value(value: authService),
+        Provider<FirebaseInvoiceService>.value(value: invoiceService),
         ChangeNotifierProvider(
           create: (_) => ProfileViewModel(authService: authService),
         ),
@@ -130,9 +134,13 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         ChangeNotifierProvider(
           create: (_) => ForgotPasswordViewModel(authService: authService),
         ),
-        ChangeNotifierProvider(create: (_) => HomeViewModel()),
+        ChangeNotifierProvider(
+          create: (_) => HomeViewModel(invoiceService: invoiceService),
+        ),
         ChangeNotifierProvider(create: (_) => VoiceRecordingViewModel()),
-        ChangeNotifierProvider(create: (_) => InvoiceHistoryViewModel()),
+        ChangeNotifierProvider(
+          create: (_) => InvoiceHistoryViewModel(invoiceService: invoiceService),
+        ),
         ChangeNotifierProvider(create: (_) => ProfileViewModel()),
       ],
       child: MaterialApp(
