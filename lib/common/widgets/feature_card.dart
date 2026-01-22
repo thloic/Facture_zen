@@ -23,26 +23,25 @@ class FeatureCard extends StatelessWidget {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
 
-    // Calcul responsive de la largeur (60% de l'écran)
-    final cardWidth = screenWidth * 0.60;
+    // Calcul responsive de la largeur (65% de l'écran pour plus d'espace)
+    final cardWidth = screenWidth * 0.65;
     // Hauteur fixe proportionnelle
-    final cardHeight = screenHeight * 0.20;
+    final cardHeight = screenHeight * 0.22;
 
     return Container(
       width: cardWidth,
       height: cardHeight,
-      padding: EdgeInsets.all(screenWidth * 0.045), // Padding proportionnel
+      padding: EdgeInsets.all(screenWidth * 0.04),
       decoration: BoxDecoration(
         color: backgroundColor,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
         children: [
           // Icône avec fond semi-transparent
           Container(
-            padding: EdgeInsets.all(screenWidth * 0.028),
+            padding: EdgeInsets.all(screenWidth * 0.025),
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.25),
               borderRadius: BorderRadius.circular(10),
@@ -50,28 +49,28 @@ class FeatureCard extends StatelessWidget {
             child: Icon(
               icon,
               color: Colors.white,
-              size: screenWidth * 0.065,
+              size: screenWidth * 0.06,
             ),
           ),
 
-          SizedBox(height: cardHeight * 0.08),
+          SizedBox(height: screenHeight * 0.012),
 
-          // Titre avec hauteur flexible
-          Flexible(
+          // Titre avec hauteur flexible - GARANTIT L'AFFICHAGE COMPLET
+          Expanded(
             child: Text(
               title,
               style: TextStyle(
                 color: Colors.white,
-                fontSize: screenWidth * 0.037,
+                fontSize: screenWidth * 0.036,
                 fontWeight: FontWeight.w600,
-                height: 1.25,
+                height: 1.3,
               ),
               maxLines: 3,
-              overflow: TextOverflow.ellipsis,
+              overflow: TextOverflow.visible,
             ),
           ),
 
-          const Spacer(),
+          SizedBox(height: screenHeight * 0.008),
 
           // Bouton d'action
           GestureDetector(
@@ -79,7 +78,7 @@ class FeatureCard extends StatelessWidget {
             child: Container(
               padding: EdgeInsets.symmetric(
                 horizontal: screenWidth * 0.035,
-                vertical: screenHeight * 0.008,
+                vertical: screenHeight * 0.01,
               ),
               decoration: BoxDecoration(
                 color: Colors.white,
@@ -89,7 +88,7 @@ class FeatureCard extends StatelessWidget {
                 buttonText,
                 style: TextStyle(
                   color: backgroundColor,
-                  fontSize: screenWidth * 0.032,
+                  fontSize: screenWidth * 0.033,
                   fontWeight: FontWeight.w600,
                 ),
               ),

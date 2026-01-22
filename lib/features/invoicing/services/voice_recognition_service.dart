@@ -6,6 +6,7 @@ import 'package:record/record.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 /// Service de reconnaissance vocale avec intégration Groq Whisper
 /// Gère l'enregistrement, la transcription et la visualisation audio
@@ -23,7 +24,7 @@ class VoiceRecognitionService {
   Timer? _amplitudeTimer;
 
   // Configuration Groq API (GRATUIT)
-  static const String _groqApiKey = '';
+  static String get _groqApiKey => dotenv.env['GROQ_API_KEY'] ?? '';
   static const String _whisperEndpoint = 'https://api.groq.com/openai/v1/audio/transcriptions';
 
   VoiceRecognitionService();
@@ -155,6 +156,7 @@ class VoiceRecognitionService {
   Future<String?> transcribeAudio(String audioPath) async {
     try {
       debugPrint('🎯 Début transcription avec Groq Whisper...');
+      debugPrint('🔑 Clé API: ${_groqApiKey.isEmpty ? "VIDE ❌" : "OK ✅ (${_groqApiKey.substring(0, 10)}...)"}');
 
       final audioFile = File(audioPath);
 

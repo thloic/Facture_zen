@@ -1,11 +1,10 @@
-import 'package:facture_zen/common/services/firebase_invoice_service.dart';
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../../../common/widgets/primary_button.dart';
 import '../../../common/utils/responsive_utils.dart';
 import 'invoice_preview_screen.dart';
-import 'subscription_screen.dart';
 
 /// TextPreviewScreen
 /// Écran d'aperçu du texte transcrit + génération de facture par GPT
@@ -24,30 +23,10 @@ class TextPreviewScreen extends StatefulWidget {
 class _TextPreviewScreenState extends State<TextPreviewScreen> {
   bool _isGenerating = false;
   String? _errorMessage;
-  bool _isEditing = false;
-
-  // ✅ AJOUT : Contrôleur pour éditer le texte
-  late TextEditingController _textController;
-
-  // ✅ AJOUT : Instance du service Firebase
-  final FirebaseInvoiceService _invoiceService = FirebaseInvoiceService();
 
   // Configuration Groq API (GRATUIT)
-  static const String _groqApiKey = '';
+  static String get _groqApiKey => dotenv.env['GROQ_API_KEY'] ?? '';
   static const String _groqEndpoint = 'https://api.groq.com/openai/v1/chat/completions';
-
-  @override
-  void initState() {
-    super.initState();
-    // Initialiser le contrôleur avec le texte transcrit
-    _textController = TextEditingController(text: widget.transcribedText);
-  }
-
-  @override
-  void dispose() {
-    _textController.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -71,21 +50,6 @@ class _TextPreviewScreenState extends State<TextPreviewScreen> {
           ),
         ),
         centerTitle: true,
-        actions: [
-          // ✅ AJOUT : Bouton pour basculer entre lecture et édition
-          IconButton(
-            icon: Icon(
-              _isEditing ? Icons.check : Icons.edit,
-              color: const Color(0xFF5B5FC7),
-            ),
-            onPressed: () {
-              setState(() {
-                _isEditing = !_isEditing;
-              });
-            },
-            tooltip: _isEditing ? 'Valider' : 'Modifier',
-          ),
-        ],
       ),
       body: SafeArea(
         child: Stack(
@@ -96,7 +60,7 @@ class _TextPreviewScreenState extends State<TextPreviewScreen> {
                 children: [
                   SizedBox(height: responsive.getAdaptiveSpacing(20)),
 
-                  // ✅ MODIFIÉ : Zone de texte avec possibilité d'édition
+                  // Zone de texte transcrit
                   Expanded(
                     child: Container(
                       width: double.infinity,
@@ -104,28 +68,10 @@ class _TextPreviewScreenState extends State<TextPreviewScreen> {
                       decoration: BoxDecoration(
                         color: const Color(0xFFF3F4F6),
                         borderRadius: BorderRadius.circular(16),
-                        border: _isEditing
-                            ? Border.all(color: const Color(0xFF5B5FC7), width: 2)
-                            : null,
                       ),
-                      child: _isEditing
-                          ? TextField(
-                        controller: _textController,
-                        maxLines: null,
-                        expands: true,
-                        style: TextStyle(
-                          fontSize: responsive.getAdaptiveTextSize(15),
-                          color: const Color(0xFF1F2937),
-                          height: 1.6,
-                        ),
-                        decoration: const InputDecoration(
-                          border: InputBorder.none,
-                          hintText: 'Modifiez le texte transcrit...',
-                        ),
-                      )
-                          : SingleChildScrollView(
+                      child: SingleChildScrollView(
                         child: Text(
-                          _textController.text,
+                          widget.transcribedText,
                           style: TextStyle(
                             fontSize: responsive.getAdaptiveTextSize(15),
                             color: const Color(0xFF1F2937),
@@ -135,36 +81,6 @@ class _TextPreviewScreenState extends State<TextPreviewScreen> {
                       ),
                     ),
                   ),
-
-                  // ✅ AJOUT : Indication du mode édition
-                  if (_isEditing) ...[
-                    SizedBox(height: responsive.getAdaptiveSpacing(12)),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF5B5FC7).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.info_outline,
-                            size: 16,
-                            color: Color(0xFF5B5FC7),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Mode édition activé - Appuyez sur ✓ pour valider',
-                            style: TextStyle(
-                              fontSize: responsive.getAdaptiveTextSize(12),
-                              color: const Color(0xFF5B5FC7),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
 
                   if (_errorMessage != null) ...[
                     SizedBox(height: responsive.getAdaptiveSpacing(16)),
@@ -255,39 +171,9 @@ class _TextPreviewScreenState extends State<TextPreviewScreen> {
 
   /// Génère la facture via GPT (Groq ou OpenAI)
   Future<void> _generateInvoiceWithGPT() async {
-    // ✅ MODIFIÉ : Utiliser le texte du contrôleur (qui peut avoir été modifié)
-    final textToProcess = _textController.text.trim();
-
-    if (textToProcess.isEmpty) {
-      setState(() {
-        _errorMessage = 'Le texte ne peut pas être vide';
-      });
-      return;
-    }
-
-    // 🔒 VÉRIFIER LA LIMITE AVANT DE GÉNÉRER
-    final canCreate = await _invoiceService.canCreateInvoice();
-
-    if (!canCreate) {
-      // Afficher l'écran d'abonnement
-      if (mounted) {
-        final remaining = await _invoiceService.getRemainingInvoices();
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => SubscriptionScreen(
-              remainingInvoices: remaining,
-            ),
-          ),
-        );
-      }
-      return;
-    }
-
     setState(() {
       _isGenerating = true;
       _errorMessage = null;
-      _isEditing = false; // Désactiver le mode édition pendant la génération
     });
 
     try {
@@ -345,7 +231,7 @@ EXEMPLES:
       final userPrompt = '''
 Voici la transcription vocale d'un artisan pour créer une facture:
 
-"$textToProcess"
+"${widget.transcribedText}"
 
 Génère le JSON de la facture selon le format spécifié.
 ''';

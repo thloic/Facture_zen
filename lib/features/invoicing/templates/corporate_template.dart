@@ -46,41 +46,48 @@ class CorporateTemplate implements InvoiceTemplate {
     return build(context, invoice);
   }
 
+  @override
   Widget build(BuildContext context, InvoiceModel invoice) {
-    return SingleChildScrollView(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Bande latérale
-          Container(
-            width: 12,
-            color: primaryColor,
-            height: MediaQuery.of(context).size.height,
-          ),
-
-          // Contenu
-          Expanded(
-            child: Container(
-              color: Colors.white,
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _buildHeader(invoice),
-                  const SizedBox(height: 32),
-                  _buildParties(invoice),
-                  const SizedBox(height: 32),
-                  _buildItems(invoice),
-                  const SizedBox(height: 24),
-                  _buildTotals(invoice),
-                  const SizedBox(height: 24),
+                  // Bande latérale
+                  Container(
+                    width: 12,
+                    color: primaryColor,
+                  ),
+
+                  // Contenu
+                  Expanded(
+                    child: Container(
+                      color: Colors.white,
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildHeader(invoice),
+                          const SizedBox(height: 32),
+                          _buildParties(invoice),
+                          const SizedBox(height: 32),
+                          _buildItems(invoice),
+                          const SizedBox(height: 24),
+                          _buildTotals(invoice),
+                        ],
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -146,7 +153,6 @@ class CorporateTemplate implements InvoiceTemplate {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
         children: [
           Text(
             label,
@@ -173,7 +179,6 @@ class CorporateTemplate implements InvoiceTemplate {
 
   Widget _buildItems(InvoiceModel invoice) {
     return Column(
-      mainAxisSize: MainAxisSize.min,
       children: [
         // En-tête
         Container(
@@ -268,7 +273,6 @@ class CorporateTemplate implements InvoiceTemplate {
 
   Widget _buildTotals(InvoiceModel invoice) {
     return Column(
-      mainAxisSize: MainAxisSize.min,
       children: [
         _buildTotalRow('Sous-total', invoice.subtotal, false),
         if (invoice.hasDiscount) ...[

@@ -3,6 +3,8 @@ class UserModel {
   final String email;
   final String companyName;
   final String companyAddress;
+  final String? firstName;
+  final String? lastName;
   final DateTime createdAt;
   final DateTime? lastLoginAt;
   final String? avatarUrl;
@@ -13,6 +15,8 @@ class UserModel {
     required this.email,
     required this.companyName,
     required this.companyAddress,
+    this.firstName,
+    this.lastName,
     required this.createdAt,
     this.lastLoginAt,
     this.avatarUrl,
@@ -28,6 +32,8 @@ class UserModel {
       email: json['email'] ?? '',
       companyName: json['companyName'] ?? '',
       companyAddress: json['companyAddress'] ?? '',
+      firstName: json['firstName'],
+      lastName: json['lastName'],
       createdAt: _parseTimestamp(json['createdAt']),
       lastLoginAt: _parseTimestamp(json['lastLoginAt']),
       avatarUrl: json['avatarUrl'],
@@ -59,6 +65,8 @@ class UserModel {
       'email': email,
       'companyName': companyName,
       'companyAddress': companyAddress,
+      if (firstName != null) 'firstName': firstName,
+      if (lastName != null) 'lastName': lastName,
       'createdAt': createdAt.millisecondsSinceEpoch,
       'lastLoginAt': lastLoginAt?.millisecondsSinceEpoch,
       if (avatarUrl != null) 'avatarUrl': avatarUrl,
@@ -72,6 +80,8 @@ class UserModel {
     String? email,
     String? companyName,
     String? companyAddress,
+    String? firstName,
+    String? lastName,
     DateTime? lastLoginAt,
     String? avatarUrl,
     String? phoneNumber,
@@ -81,6 +91,8 @@ class UserModel {
       email: email ?? this.email,
       companyName: companyName ?? this.companyName,
       companyAddress: companyAddress ?? this.companyAddress,
+      firstName: firstName ?? this.firstName,
+      lastName: lastName ?? this.lastName,
       createdAt: createdAt,
       lastLoginAt: lastLoginAt ?? this.lastLoginAt,
       avatarUrl: avatarUrl ?? this.avatarUrl,
@@ -108,7 +120,8 @@ class UserModel {
       return words[0].substring(0, 1).toUpperCase();
     }
 
-    return '${words[0].substring(0, 1)}${words[1].substring(0, 1)}'.toUpperCase();
+    return '${words[0].substring(0, 1)}${words[1].substring(0, 1)}'
+        .toUpperCase();
   }
 
   /// Formate la date de création
@@ -180,8 +193,8 @@ class UserModel {
   @override
   int get hashCode {
     return uid.hashCode ^
-    email.hashCode ^
-    companyName.hashCode ^
-    companyAddress.hashCode;
+        email.hashCode ^
+        companyName.hashCode ^
+        companyAddress.hashCode;
   }
 }

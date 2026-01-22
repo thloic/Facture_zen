@@ -1,8 +1,10 @@
 import 'package:flutter/foundation.dart';
 import '../../invoicing/models/invoice_model.dart';
 import '../models/user_profile_model.dart';
+import '../../../common/services/auth_service.dart';
 
 class HomeViewModel extends ChangeNotifier {
+  final AuthService _authService = AuthService();
   UserProfileModel? _userProfile;
   List<InvoiceModel> _recentInvoices = [];
   bool _isLoading = false;
@@ -17,15 +19,49 @@ class HomeViewModel extends ChangeNotifier {
   int get currentPageIndex => _currentPageIndex;
   String get searchQuery => _searchQuery;
 
+  // Filtre les factures selon la recherche
+  List<InvoiceModel> get filteredInvoices {
+    if (_searchQuery.isEmpty) {
+      return _recentInvoices;
+    }
+    return _recentInvoices.where((invoice) {
+      return invoice.clientName.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+             invoice.id.toLowerCase().contains(_searchQuery.toLowerCase());
+    }).toList();
+  }
+
   Future<void> loadInitialData() async {
     _setLoading(true);
 
     try {
-      await Future.delayed(const Duration(milliseconds: 500));
-
-      _userProfile = UserProfileModel(
-        fullName: 'Maxime Watson',
-      );
+      // Récupérer l'utilisateur connecté
+      final currentUser = _authService.currentUser;
+      
+      if (currentUser != null) {
+        // Récupérer les données de l'utilisateur depuis la base de données
+        final userData = await _authService.getUserData(currentUser.uid);
+        
+        if (userData != null) {
+          final firstName = userData['firstName'] ?? '';
+          final lastName = userData['lastName'] ?? '';
+          final fullName = '${firstName} ${lastName}'.trim();
+          
+          _userProfile = UserProfileModel(
+            fullName: fullName.isNotEmpty ? fullName : (currentUser.email ?? 'Utilisateur'),
+            avatarUrl: userData['avatarUrl'],
+          );
+        } else {
+          // Si pas de données dans la DB, utiliser l'email
+          _userProfile = UserProfileModel(
+            fullName: currentUser.email ?? 'Utilisateur',
+          );
+        }
+      } else {
+        // Aucun utilisateur connecté
+        _userProfile = UserProfileModel(
+          fullName: 'Invité',
+        );
+      }
 
       _recentInvoices = [
         InvoiceModel(

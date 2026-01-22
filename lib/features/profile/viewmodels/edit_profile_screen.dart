@@ -16,6 +16,8 @@ class EditProfileScreen extends StatefulWidget {
 }
 
 class _EditProfileScreenState extends State<EditProfileScreen> {
+  final TextEditingController _firstNameController = TextEditingController();
+  final TextEditingController _lastNameController = TextEditingController();
   final TextEditingController _companyNameController = TextEditingController();
   final TextEditingController _companyAddressController = TextEditingController();
 
@@ -26,6 +28,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     // Remplir les champs avec les données actuelles
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final viewModel = context.read<ProfileViewModel>();
+      _firstNameController.text = viewModel.firstName ?? '';
+      _lastNameController.text = viewModel.lastName ?? '';
       _companyNameController.text = viewModel.userCompanyName ?? '';
       _companyAddressController.text = viewModel.userCompanyAddress ?? '';
     });
@@ -33,6 +37,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   @override
   void dispose() {
+    _firstNameController.dispose();
+    _lastNameController.dispose();
     _companyNameController.dispose();
     _companyAddressController.dispose();
     super.dispose();
@@ -43,6 +49,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final viewModel = context.read<ProfileViewModel>();
 
     final success = await viewModel.updateProfile(
+      firstName: _firstNameController.text,
+      lastName: _lastNameController.text,
       companyName: _companyNameController.text,
       companyAddress: _companyAddressController.text,
     );
@@ -100,6 +108,26 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   _buildInfoRow('Email', viewModel.userEmail ?? '', responsive),
 
                   SizedBox(height: responsive.getAdaptiveSpacing(24)),
+
+                  // Prénom
+                  CustomTextField(
+                    controller: _firstNameController,
+                    hintText: 'Prénom',
+                    prefixIcon: Icons.person_outline,
+                    onChanged: (_) => viewModel.clearError(),
+                  ),
+
+                  SizedBox(height: responsive.getAdaptiveSpacing(16)),
+
+                  // Nom
+                  CustomTextField(
+                    controller: _lastNameController,
+                    hintText: 'Nom',
+                    prefixIcon: Icons.person_outline,
+                    onChanged: (_) => viewModel.clearError(),
+                  ),
+
+                  SizedBox(height: responsive.getAdaptiveSpacing(16)),
 
                   // Nom de l'entreprise
                   CustomTextField(

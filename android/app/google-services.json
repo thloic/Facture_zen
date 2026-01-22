@@ -42,35 +42,6 @@
           ]
         }
       }
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:664151721016:android:61dafa30d34783ce4152cd",
-        "android_client_info": {
-          "package_name": "com.facturezen.app"
-        }
-      },
-      "oauth_client": [
-        {
-          "client_id": "664151721016-qd4nkndn7jt3v48fhks98gc0jn803vji.apps.googleusercontent.com",
-          "client_type": 3
-        }
-      ],
-      "api_key": [
-        {
-          "current_key": "AIzaSyDOU72PP_rlXxP-6YTAG5RQBce3zf91nEY"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": [
-            {
-              "client_id": "664151721016-qd4nkndn7jt3v48fhks98gc0jn803vji.apps.googleusercontent.com",
-              "client_type": 3
-            }
-          ]
-        }
-      }
     }
   ],
   "configuration_version": "1"

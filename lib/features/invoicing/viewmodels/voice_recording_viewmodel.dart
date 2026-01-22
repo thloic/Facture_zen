@@ -137,7 +137,10 @@ class VoiceRecordingViewModel extends ChangeNotifier {
         debugPrint('📁 Fichier audio sauvegardé: $_audioPath');
 
         // 🎯 TRANSCRIPTION AVEC GROQ WHISPER (GRATUIT)
+        debugPrint('🔑 Vérification clé API...');
+        debugPrint('🌐 Début appel transcribeAudio...');
         _transcribedText = await _voiceService.transcribeAudio(_audioPath!);
+        debugPrint('📝 Résultat transcription: ${_transcribedText ?? "NULL"}');
 
         if (_transcribedText != null && _transcribedText!.isNotEmpty) {
           // ✅ CORRECTION : Limiter la longueur du substring

@@ -14,7 +14,7 @@ class AppLogo extends StatelessWidget {
       text: TextSpan(
         children: [
           TextSpan(
-            text: 'Facture',
+            text: 'Vox',
             style: TextStyle(
               fontSize: fontSize,
               fontWeight: FontWeight.bold,
@@ -23,7 +23,7 @@ class AppLogo extends StatelessWidget {
             ),
           ),
           TextSpan(
-            text: 'Zen',
+            text: 'In',
             style: TextStyle(
               fontSize: fontSize,
               fontWeight: FontWeight.w400,

@@ -12,7 +12,7 @@ class LoginViewModel extends ChangeNotifier {
   bool get hasError => _errorMessage != null;
 
   LoginViewModel({AuthService? authService})
-      : _authService = authService ?? AuthService();
+    : _authService = authService ?? AuthService();
 
   Future<bool> login(String email, String password) async {
     _errorMessage = null;
@@ -23,10 +23,7 @@ class LoginViewModel extends ChangeNotifier {
         return false;
       }
 
-      final user = await _authService.signIn(
-        email: email,
-        password: password,
-      );
+      final user = await _authService.signIn(email: email, password: password);
 
       if (user != null) {
         _setLoading(false);
@@ -81,6 +78,29 @@ class LoginViewModel extends ChangeNotifier {
     if (_errorMessage != null) {
       _errorMessage = null;
       notifyListeners();
+    }
+  }
+
+  /// Connexion avec Google
+  Future<bool> signInWithGoogle() async {
+    _errorMessage = null;
+    _setLoading(true);
+
+    try {
+      final user = await _authService.signInWithGoogle();
+
+      if (user != null) {
+        _setLoading(false);
+        return true;
+      } else {
+        _errorMessage = 'Connexion Google annulée';
+        _setLoading(false);
+        return false;
+      }
+    } catch (e) {
+      _errorMessage = e.toString();
+      _setLoading(false);
+      return false;
     }
   }
 }

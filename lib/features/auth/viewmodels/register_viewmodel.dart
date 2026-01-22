@@ -24,15 +24,15 @@ class RegisterViewModel extends ChangeNotifier {
 
   /// Tente d'inscrire l'utilisateur avec ses informations
   /// Gère la logique métier de validation et d'enregistrement
-  /// @param companyName Le nom de l'entreprise
-  /// @param companyAddress L'adresse de l'entreprise
+  /// @param firstName Le prénom de l'utilisateur
+  /// @param lastName Le nom de l'utilisateur
   /// @param email L'adresse email de l'utilisateur
   /// @param password Le mot de passe de l'utilisateur
   /// @param confirmPassword La confirmation du mot de passe
   /// @return true si l'inscription réussit, false sinon
   Future<bool> register({
-    required String companyName,
-    required String companyAddress,
+    required String firstName,
+    required String lastName,
     required String email,
     required String password,
     required String confirmPassword,
@@ -44,8 +44,8 @@ class RegisterViewModel extends ChangeNotifier {
     try {
       // Validation côté client
       if (!_validateInputs(
-        companyName: companyName,
-        companyAddress: companyAddress,
+        firstName: firstName,
+        lastName: lastName,
         email: email,
         password: password,
         confirmPassword: confirmPassword,
@@ -57,8 +57,8 @@ class RegisterViewModel extends ChangeNotifier {
       final user = await _authService.signUp(
         email: email,
         password: password,
-        companyName: companyName,
-        companyAddress: companyAddress,
+        firstName: firstName,
+        lastName: lastName,
       );
 
       if (user != null) {
@@ -82,34 +82,34 @@ class RegisterViewModel extends ChangeNotifier {
   /// Valide toutes les entrées utilisateur
   /// @return true si toutes les entrées sont valides, false sinon
   bool _validateInputs({
-    required String companyName,
-    required String companyAddress,
+    required String firstName,
+    required String lastName,
     required String email,
     required String password,
     required String confirmPassword,
   }) {
-    // Validation du nom de l'entreprise
-    if (companyName.trim().isEmpty) {
-      _errorMessage = 'Veuillez entrer le nom de votre entreprise';
+    // Validation du prénom
+    if (firstName.trim().isEmpty) {
+      _errorMessage = 'Veuillez entrer votre prénom';
       _setLoading(false);
       return false;
     }
 
-    if (companyName.trim().length < 2) {
-      _errorMessage = 'Le nom de l\'entreprise doit contenir au moins 2 caractères';
+    if (firstName.trim().length < 2) {
+      _errorMessage = 'Le prénom doit contenir au moins 2 caractères';
       _setLoading(false);
       return false;
     }
 
-    // Validation de l'adresse de l'entreprise
-    if (companyAddress.trim().isEmpty) {
-      _errorMessage = 'Veuillez entrer l\'adresse de votre entreprise';
+    // Validation du nom
+    if (lastName.trim().isEmpty) {
+      _errorMessage = 'Veuillez entrer votre nom';
       _setLoading(false);
       return false;
     }
 
-    if (companyAddress.trim().length < 5) {
-      _errorMessage = 'L\'adresse doit être plus détaillée';
+    if (lastName.trim().length < 2) {
+      _errorMessage = 'Le nom doit contenir au moins 2 caractères';
       _setLoading(false);
       return false;
     }

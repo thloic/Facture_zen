@@ -4,6 +4,7 @@ import '../viewmodels/home_viewmodel.dart';
 import '../../../common/widgets/feature_card.dart';
 import '../../../common/widgets/invoice_card.dart';
 import '../../../common/widgets/curved_bottom_nav.dart';
+import '../widgets/company_setup_banner.dart';
 
 /// HomeScreen - 100% Fidèle au Design
 /// Responsive et adaptatif à tous les écrans
@@ -54,6 +55,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
                         SizedBox(height: screenHeight * 0.025),
 
+                        // Banner de configuration entreprise
+                        const CompanySetupBanner(),
+
+                        SizedBox(height: screenHeight * 0.025),
+
                         _buildSearchBar(viewModel, screenWidth),
 
                         SizedBox(height: screenHeight * 0.025),
@@ -92,10 +98,11 @@ class _HomeScreenState extends State<HomeScreen> {
               color: const Color(0xFFFFE8E8),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(
-              Icons.person,
-              color: const Color(0xFFEF4444),
-              size: screenWidth * 0.07,
+            child: Center(
+              child: Text(
+                '👤',
+                style: TextStyle(fontSize: screenWidth * 0.07),
+              ),
             ),
           ),
 
@@ -129,7 +136,9 @@ class _HomeScreenState extends State<HomeScreen> {
           Stack(
             children: [
               IconButton(
-                onPressed: () {},
+                onPressed: () {
+                  Navigator.pushNamed(context, '/notifications');
+                },
                 icon: Icon(
                   Icons.notifications_outlined,
                   color: const Color(0xFF1F2937),
@@ -137,14 +146,27 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               Positioned(
-                right: screenWidth * 0.025,
-                top: screenWidth * 0.025,
+                right: screenWidth * 0.02,
+                top: screenWidth * 0.02,
                 child: Container(
-                  width: screenWidth * 0.02,
-                  height: screenWidth * 0.02,
+                  padding: const EdgeInsets.all(4),
                   decoration: const BoxDecoration(
                     color: Color(0xFFEF4444),
                     shape: BoxShape.circle,
+                  ),
+                  constraints: BoxConstraints(
+                    minWidth: screenWidth * 0.045,
+                    minHeight: screenWidth * 0.045,
+                  ),
+                  child: Center(
+                    child: Text(
+                      '3',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: screenWidth * 0.025,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -214,23 +236,25 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildFeatureCards(double screenHeight) {
     return SizedBox(
-      height: screenHeight * 0.20,
+      height: screenHeight * 0.22,
       child: ListView(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 20),
         children: [
           FeatureCard(
-            title: 'Faites facilement vos factures et devis juste en parlant',
+            title: 'Créez vos factures par voix',
             buttonText: 'Générer une facture',
             icon: Icons.description_outlined,
             backgroundColor: const Color(0xFF6B8AFF),
-            onTap: () {},
+            onTap: () {
+              Navigator.pushNamed(context, '/record');
+            },
           ),
 
           const SizedBox(width: 16),
 
           FeatureCard(
-            title: 'Créez des factures en illimité en vous abonnant',
+            title: 'Factures illimitées',
             buttonText: 'Abonnement',
             icon: Icons.workspace_premium_outlined,
             backgroundColor: const Color(0xFFFF9F66),
@@ -240,7 +264,7 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(width: 16),
 
           FeatureCard(
-            title: 'Devis',
+            title: 'Créer un devis professionnel',
             buttonText: 'Créer un devis',
             icon: Icons.request_quote_outlined,
             backgroundColor: const Color(0xFF6B8AFF),
@@ -268,7 +292,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               TextButton(
-                onPressed: () {},
+                onPressed: () {
+                  Navigator.pushNamed(context, '/historiqueInvoicing');
+                },
                 style: TextButton.styleFrom(
                   padding: EdgeInsets.zero,
                   minimumSize: Size.zero,
@@ -298,12 +324,37 @@ class _HomeScreenState extends State<HomeScreen> {
 
           SizedBox(height: screenWidth * 0.04),
 
-          ...viewModel.recentInvoices.map((invoice) {
+          ...viewModel.filteredInvoices.map((invoice) {
             return InvoiceCard(
               invoice: invoice,
               onTap: () {},
             );
           }).toList(),
+
+          if (viewModel.filteredInvoices.isEmpty && viewModel.searchQuery.isNotEmpty)
+            Padding(
+              padding: EdgeInsets.symmetric(vertical: screenWidth * 0.1),
+              child: Center(
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.search_off,
+                      size: screenWidth * 0.15,
+                      color: const Color(0xFF9CA3AF),
+                    ),
+                    SizedBox(height: screenWidth * 0.04),
+                    Text(
+                      'Aucune facture trouvée',
+                      style: TextStyle(
+                        fontSize: screenWidth * 0.04,
+                        color: const Color(0xFF6B7280),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
         ],
       ),
     );

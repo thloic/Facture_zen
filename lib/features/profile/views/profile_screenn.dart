@@ -3,8 +3,13 @@ import 'package:provider/provider.dart';
 import '../../../common/widgets/curved_bottom_nav.dart';
 import '../viewmodels/profile_viewmodel.dart';
 import '../../../common/utils/responsive_utils.dart';
+import '../../auth/views/login_screen.dart';
+import '../../settings/views/account_info_screen.dart';
+import '../../settings/views/help_screen.dart';
+import '../../settings/views/privacy_screen.dart';
+import '../../settings/views/about_screen.dart';
+import '../../notifications/views/notifications_screen.dart';
 import 'dart:math' as math;
-
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -68,7 +73,9 @@ class ProfileScreen extends StatelessWidget {
                                 onTap: () => _navigateToAccountInfo(context),
                                 responsive: responsive,
                               ),
-                              SizedBox(height: responsive.getAdaptiveSpacing(12)),
+                              SizedBox(
+                                height: responsive.getAdaptiveSpacing(12),
+                              ),
                               _buildMenuItem(
                                 icon: Icons.settings_outlined,
                                 label: 'Paramètres',
@@ -77,7 +84,9 @@ class ProfileScreen extends StatelessWidget {
                                 onTap: () => _navigateToSettings(context),
                                 responsive: responsive,
                               ),
-                              SizedBox(height: responsive.getAdaptiveSpacing(12)),
+                              SizedBox(
+                                height: responsive.getAdaptiveSpacing(12),
+                              ),
                               _buildMenuItem(
                                 icon: Icons.logout,
                                 label: 'Déconnexion',
@@ -113,10 +122,7 @@ class ProfileScreen extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF7B7FE8),
-            Color(0xFF5B5FC7),
-          ],
+          colors: [Color(0xFF7B7FE8), Color(0xFF5B5FC7)],
         ),
       ),
       child: CustomPaint(
@@ -127,7 +133,10 @@ class ProfileScreen extends StatelessWidget {
   }
 
   /// Widget - Avatar et nom de l'utilisateur
-  Widget _buildUserAvatar(ProfileViewModel viewModel, ResponsiveUtils responsive) {
+  Widget _buildUserAvatar(
+    ProfileViewModel viewModel,
+    ResponsiveUtils responsive,
+  ) {
     return Column(
       children: [
         // Avatar circulaire
@@ -147,18 +156,15 @@ class ProfileScreen extends StatelessWidget {
           ),
           child: ClipOval(
             child: viewModel.userAvatarUrl != null
-                ? Image.network(
-              viewModel.userAvatarUrl!,
-              fit: BoxFit.cover,
-            )
+                ? Image.network(viewModel.userAvatarUrl!, fit: BoxFit.cover)
                 : Container(
-              color: const Color(0xFF5B5FC7),
-              child: const Icon(
-                Icons.person,
-                size: 50,
-                color: Colors.white,
-              ),
-            ),
+                    color: const Color(0xFF5B5FC7),
+                    child: const Icon(
+                      Icons.person,
+                      size: 50,
+                      color: Colors.white,
+                    ),
+                  ),
           ),
         ),
 
@@ -200,10 +206,7 @@ class ProfileScreen extends StatelessWidget {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: const Color(0xFFE5E7EB),
-              width: 1,
-            ),
+            border: Border.all(color: const Color(0xFFE5E7EB), width: 1),
           ),
           child: Row(
             children: [
@@ -215,11 +218,7 @@ class ProfileScreen extends StatelessWidget {
                   color: iconBgColor,
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(
-                  icon,
-                  color: iconColor,
-                  size: 20,
-                ),
+                child: Icon(icon, color: iconColor, size: 20),
               ),
 
               SizedBox(width: responsive.getAdaptiveSpacing(16)),
@@ -253,48 +252,188 @@ class ProfileScreen extends StatelessWidget {
 
   /// Navigation vers les infos du compte
   void _navigateToAccountInfo(BuildContext context) {
-    // TODO: Navigation
-    // NavigationHelper.navigateTo(context, AppRoutes.accountInfo);
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const AccountInfoScreen()),
+    );
   }
 
   /// Navigation vers les paramètres
   void _navigateToSettings(BuildContext context) {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => const SettingsScreen(),
-      ),
+      MaterialPageRoute(builder: (context) => const SettingsScreen()),
     );
   }
 
-  /// Confirmation de déconnexion
+  /// Confirmation de déconnexion - Design Premium
   void _confirmLogout(BuildContext context, ProfileViewModel viewModel) {
+    final responsive = ResponsiveUtils(context);
+    
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Déconnexion'),
-        content: const Text('Êtes-vous sûr de vouloir vous déconnecter ?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Annuler'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              viewModel.logout();
-              // TODO: Navigation vers login
-              // NavigationHelper.navigateAndRemoveUntil(
-              //   context,
-              //   AppRoutes.login,
-              // );
-            },
-            style: TextButton.styleFrom(
-              foregroundColor: Colors.red,
+      barrierDismissible: true,
+      barrierColor: Colors.black.withOpacity(0.5),
+      builder: (context) => Center(
+        child: SingleChildScrollView(
+          child: Dialog(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            insetPadding: EdgeInsets.symmetric(horizontal: 24),
+            child: Container(
+              width: double.infinity,
+              constraints: const BoxConstraints(maxWidth: 380),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFFEF4444).withOpacity(0.15),
+                    blurRadius: 40,
+                    offset: const Offset(0, 10),
+                    spreadRadius: 0,
+                  ),
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 80,
+                    offset: const Offset(0, 20),
+                    spreadRadius: -10,
+                  ),
+                ],
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(28),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Icône de déconnexion avec cercle
+                    Container(
+                      width: 72,
+                      height: 72,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            const Color(0xFFEF4444).withOpacity(0.15),
+                            const Color(0xFFFCA5A5).withOpacity(0.05),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: const Color(0xFFEF4444).withOpacity(0.2),
+                          width: 2,
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons.logout_rounded,
+                        size: 36,
+                        color: Color(0xFFEF4444),
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 20),
+                    
+                    // Titre
+                    const Text(
+                      'Déconnexion',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF1F2937),
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 10),
+                    
+                    // Message
+                    const Text(
+                      'Êtes-vous sûr de vouloir vous déconnecter ?',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: Color(0xFF6B7280),
+                        height: 1.5,
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 28),
+                    
+                    // Boutons
+                    Column(
+                      children: [
+                        // Bouton Déconnexion
+                        SizedBox(
+                          width: double.infinity,
+                          height: 50,
+                          child: ElevatedButton(
+                            onPressed: () async {
+                              Navigator.pop(context);
+                              await viewModel.logout();
+                              if (context.mounted) {
+                                Navigator.of(context).pushAndRemoveUntil(
+                                  MaterialPageRoute(builder: (context) => const LoginScreen()),
+                                  (route) => false,
+                                );
+                              }
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFEF4444),
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              shadowColor: Colors.transparent,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: const Text(
+                              'Déconnexion',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 0.2,
+                              ),
+                            ),
+                          ),
+                        ),
+                        
+                        const SizedBox(height: 12),
+                        
+                        // Bouton Annuler
+                        SizedBox(
+                          width: double.infinity,
+                          height: 50,
+                          child: OutlinedButton(
+                            onPressed: () => Navigator.pop(context),
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(
+                                color: Color(0xFFE5E7EB),
+                                width: 1.5,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              backgroundColor: Colors.white,
+                            ),
+                            child: const Text(
+                              'Annuler',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF6B7280),
+                                letterSpacing: 0.2,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
             ),
-            child: const Text('Déconnexion'),
           ),
-        ],
+        ),
       ),
     );
   }
@@ -310,7 +449,9 @@ class ProfileBackgroundPainter extends CustomPainter {
       ..style = PaintingStyle.stroke;
 
     // Dessiner plusieurs lignes courbes aléatoires
-    final random = math.Random(42); // Seed fixe pour avoir toujours le même motif
+    final random = math.Random(
+      42,
+    ); // Seed fixe pour avoir toujours le même motif
 
     for (int i = 0; i < 8; i++) {
       final path = Path();
@@ -381,7 +522,12 @@ class SettingsScreen extends StatelessWidget {
                 label: 'Notifications',
                 iconColor: const Color(0xFF5B5FC7),
                 iconBgColor: const Color(0xFFE8E9F8),
-                onTap: () {},
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const NotificationsScreen()),
+                  );
+                },
                 responsive: responsive,
               ),
 
@@ -392,7 +538,12 @@ class SettingsScreen extends StatelessWidget {
                 label: 'Aide',
                 iconColor: const Color(0xFF5B5FC7),
                 iconBgColor: const Color(0xFFE8E9F8),
-                onTap: () {},
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const HelpScreen()),
+                  );
+                },
                 responsive: responsive,
               ),
 
@@ -403,7 +554,12 @@ class SettingsScreen extends StatelessWidget {
                 label: 'Confidentialité',
                 iconColor: const Color(0xFF5B5FC7),
                 iconBgColor: const Color(0xFFE8E9F8),
-                onTap: () {},
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const PrivacyScreen()),
+                  );
+                },
                 responsive: responsive,
               ),
 
@@ -414,20 +570,13 @@ class SettingsScreen extends StatelessWidget {
                 label: 'À propos',
                 iconColor: const Color(0xFF5B5FC7),
                 iconBgColor: const Color(0xFFE8E9F8),
-                onTap: () {},
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const AboutScreen()),
+                  );
+                },
                 responsive: responsive,
-              ),
-
-              SizedBox(height: responsive.getAdaptiveSpacing(12)),
-
-              _buildSettingsMenuItem(
-                icon: Icons.logout,
-                label: 'Déconnexion',
-                iconColor: const Color(0xFFEF4444),
-                iconBgColor: const Color(0xFFFFE5E5),
-                onTap: () => _confirmLogout(context, viewModel),
-                responsive: responsive,
-                isDestructive: true,
               ),
             ],
           );
@@ -437,7 +586,10 @@ class SettingsScreen extends StatelessWidget {
   }
 
   /// Widget - En-tête avec avatar et email
-  Widget _buildUserHeader(ProfileViewModel viewModel, ResponsiveUtils responsive) {
+  Widget _buildUserHeader(
+    ProfileViewModel viewModel,
+    ResponsiveUtils responsive,
+  ) {
     return Container(
       padding: EdgeInsets.all(responsive.getAdaptiveSpacing(16)),
       decoration: BoxDecoration(
@@ -456,15 +608,8 @@ class SettingsScreen extends StatelessWidget {
             ),
             child: ClipOval(
               child: viewModel.userAvatarUrl != null
-                  ? Image.network(
-                viewModel.userAvatarUrl!,
-                fit: BoxFit.cover,
-              )
-                  : const Icon(
-                Icons.person,
-                size: 25,
-                color: Colors.white,
-              ),
+                  ? Image.network(viewModel.userAvatarUrl!, fit: BoxFit.cover)
+                  : const Icon(Icons.person, size: 25, color: Colors.white),
             ),
           ),
 
@@ -533,11 +678,7 @@ class SettingsScreen extends StatelessWidget {
                   color: iconBgColor,
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(
-                  icon,
-                  color: iconColor,
-                  size: 20,
-                ),
+                child: Icon(icon, color: iconColor, size: 20),
               ),
 
               SizedBox(width: responsive.getAdaptiveSpacing(16)),
@@ -582,14 +723,21 @@ class SettingsScreen extends StatelessWidget {
             child: const Text('Annuler'),
           ),
           TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              viewModel.logout();
-              // TODO: Navigation vers login
+            onPressed: () async {
+              Navigator.pop(context); // Fermer la boîte de dialogue
+
+              // Effectuer la déconnexion
+              await viewModel.logout();
+
+              // Naviguer vers l'écran de login et supprimer toute la pile de navigation
+              if (context.mounted) {
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (context) => const LoginScreen()),
+                  (route) => false, // Supprime toutes les routes précédentes
+                );
+              }
             },
-            style: TextButton.styleFrom(
-              foregroundColor: Colors.red,
-            ),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
             child: const Text('Déconnexion'),
           ),
         ],
