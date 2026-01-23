@@ -193,7 +193,7 @@ class FirebaseInvoiceService {
 
         if (isAvailable) {
           debugPrint('✅ Storage disponible, démarrage upload...');
-          pdfUrl = await _uploadPDF(userId, invoiceId, pdfFile);
+          pdfUrl = await uploadPDF(userId, invoiceId, pdfFile);
 
           if (pdfUrl != null) {
             debugPrint('✅ PDF uploadé avec succès!');
@@ -261,7 +261,7 @@ class FirebaseInvoiceService {
   }
 
   /// Upload le PDF sur Firebase Storage
-  Future<String?> _uploadPDF(String userId, String invoiceId, File pdfFile) async {
+  Future<String?> uploadPDF(String userId, String invoiceId, File pdfFile) async {
     try {
       debugPrint('📤 _uploadPDF appelé');
       debugPrint('   UserId: $userId');
