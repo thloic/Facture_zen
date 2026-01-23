@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
+import 'dart:ui' as ui;
 import '../../../common/services/firebase_invoice_service.dart';
 import '../models/invoice_model.dart';
 import '../templates/invoice_template_base.dart';
@@ -13,7 +15,7 @@ import '../../../common/utils/responsive_utils.dart';
 /// Écran de prévisualisation de la facture avec sélection de templates
 class InvoicePreviewScreen extends StatefulWidget {
   final Map<String, dynamic> invoiceData;
-  final String? invoiceId; // Ajout de l'invoiceId
+  final String? invoiceId;
 
   const InvoicePreviewScreen({
     Key? key,
@@ -30,6 +32,9 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
   late InvoiceModel _invoice;
   final FirebaseInvoiceService _invoiceService = FirebaseInvoiceService();
   bool _isDownloading = false;
+
+  // Clé globale pour capturer le widget
+  final GlobalKey _invoiceKey = GlobalKey();
 
   @override
   void initState() {
@@ -77,8 +82,8 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
     try {
       debugPrint('🚀 Démarrage: Génération + Téléchargement + Upload');
 
-      // 1. Générer le PDF
-      final pdfFile = await _generatePdfFile(_invoice);
+      // 1. Capturer le rendu visuel du template et générer le PDF
+      final pdfFile = await _generatePdfFromTemplate();
 
       if (pdfFile == null) {
         throw Exception('Erreur lors de la génération du PDF');
@@ -92,7 +97,7 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
         bytes: pdfBytes,
         filename: 'Facture_${_invoice.invoiceNumber}.pdf',
       );
-      debugPrint('✅ PDF téléchargé sur l\'appareil $_invoice');
+      debugPrint('✅ PDF téléchargé sur l\'appareil');
 
       // 3. Upload sur Firebase Storage (seulement si on a un invoiceId)
       if (_invoice.id != null) {
@@ -102,7 +107,7 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
 
           final pdfUrl = await _invoiceService.uploadPDF(
             userId,
-            _invoice.id,
+            _invoice.id!,
             pdfFile,
           );
 
@@ -110,7 +115,7 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
             debugPrint('✅ PDF uploadé sur Storage: $pdfUrl');
 
             // 4. Mettre à jour l'URL dans la facture
-            await _invoiceService.updateInvoicePdfUrl(widget.invoiceId!, pdfUrl);
+            await _invoiceService.updateInvoicePdfUrl(_invoice.id!, pdfUrl);
             debugPrint('✅ URL du PDF mise à jour dans la facture');
 
             if (mounted) {
@@ -176,39 +181,40 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
     }
   }
 
-  /// Génère le fichier PDF
-  Future<File?> _generatePdfFile(InvoiceModel invoice) async {
+  /// Génère le PDF à partir du template visuel affiché
+  Future<File?> _generatePdfFromTemplate() async {
     try {
+      debugPrint('📸 Capture du rendu du template...');
+
+      // Attendre que le widget soit rendu
+      await Future.delayed(const Duration(milliseconds: 100));
+
+      // Récupérer le RenderRepaintBoundary
+      final RenderRepaintBoundary boundary =
+      _invoiceKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
+
+      // Capturer l'image
+      final ui.Image image = await boundary.toImage(pixelRatio: 3.0);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      final imageBytes = byteData!.buffer.asUint8List();
+
+      debugPrint('✅ Image capturée: ${imageBytes.length} bytes');
+
+      // Créer le PDF avec l'image capturée
       final pdf = pw.Document();
+
+      final pdfImage = pw.MemoryImage(imageBytes);
 
       pdf.addPage(
         pw.Page(
           pageFormat: PdfPageFormat.a4,
-          margin: const pw.EdgeInsets.all(40),
+          margin: pw.EdgeInsets.zero,
           build: (pw.Context context) {
-            return pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
-              children: [
-                // En-tête
-                _buildPdfHeader(invoice),
-                pw.SizedBox(height: 30),
-
-                // Infos facture et client
-                _buildPdfInvoiceInfo(invoice),
-                pw.SizedBox(height: 30),
-
-                // Tableau des articles
-                _buildPdfItemsTable(invoice),
-                pw.SizedBox(height: 20),
-
-                // Totaux
-                _buildPdfTotals(invoice),
-
-                pw.Spacer(),
-
-                // Footer
-                _buildPdfFooter(invoice),
-              ],
+            return pw.Center(
+              child: pw.Image(
+                pdfImage,
+                fit: pw.BoxFit.contain,
+              ),
             );
           },
         ),
@@ -217,173 +223,18 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
       // Sauvegarder dans un fichier temporaire
       final tempDir = await getTemporaryDirectory();
       final file = File(
-        '${tempDir.path}/invoice_${invoice.invoiceNumber}_${DateTime.now().millisecondsSinceEpoch}.pdf',
+        '${tempDir.path}/invoice_${_invoice.invoiceNumber}_${DateTime.now().millisecondsSinceEpoch}.pdf',
       );
       await file.writeAsBytes(await pdf.save());
 
+      debugPrint('✅ PDF créé à partir du template');
       return file;
-    } catch (e) {
-      debugPrint('❌ Erreur _generatePdfFile: $e');
+
+    } catch (e, stackTrace) {
+      debugPrint('❌ Erreur _generatePdfFromTemplate: $e');
+      debugPrint('📍 StackTrace: $stackTrace');
       return null;
     }
-  }
-
-  /// En-tête du PDF
-  pw.Widget _buildPdfHeader(InvoiceModel invoice) {
-    return pw.Row(
-      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-      children: [
-        pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: [
-            pw.Text(
-              invoice.companyName,
-              style: pw.TextStyle(
-                fontSize: 20,
-                fontWeight: pw.FontWeight.bold,
-              ),
-            ),
-            pw.SizedBox(height: 4),
-            pw.Text(invoice.companyAddress, style: const pw.TextStyle(fontSize: 10)),
-            if (invoice.companyPhone != null)
-              pw.Text('Tél: ${invoice.companyPhone}', style: const pw.TextStyle(fontSize: 10)),
-            if (invoice.companyEmail != null)
-              pw.Text('Email: ${invoice.companyEmail}', style: const pw.TextStyle(fontSize: 10)),
-          ],
-        ),
-        pw.Container(
-          padding: const pw.EdgeInsets.all(12),
-          decoration: pw.BoxDecoration(
-            color: PdfColors.blue900,
-            borderRadius: pw.BorderRadius.circular(8),
-          ),
-          child: pw.Text(
-            'FACTURE',
-            style: pw.TextStyle(
-              fontSize: 16,
-              fontWeight: pw.FontWeight.bold,
-              color: PdfColors.white,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  /// Infos facture et client
-  pw.Widget _buildPdfInvoiceInfo(InvoiceModel invoice) {
-    return pw.Row(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
-      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-      children: [
-        pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: [
-            pw.Text('N° Facture: ${invoice.invoiceNumber}',
-                style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-            pw.SizedBox(height: 4),
-            pw.Text(
-                'Date: ${invoice.invoiceDate.day}/${invoice.invoiceDate.month}/${invoice.invoiceDate.year}'),
-          ],
-        ),
-        pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.end,
-          children: [
-            pw.Text('Facturé à:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-            pw.Text(invoice.clientName),
-            if (invoice.clientAddress.isNotEmpty)
-              pw.Text(invoice.clientAddress, style: const pw.TextStyle(fontSize: 10)),
-          ],
-        ),
-      ],
-    );
-  }
-
-  /// Tableau des articles
-  pw.Widget _buildPdfItemsTable(InvoiceModel invoice) {
-    return pw.Table(
-      border: pw.TableBorder.all(color: PdfColors.grey300),
-      children: [
-        // En-tête
-        pw.TableRow(
-          decoration: const pw.BoxDecoration(color: PdfColors.grey200),
-          children: [
-            _buildPdfTableCell('Description', isHeader: true),
-            _buildPdfTableCell('Qté', isHeader: true),
-            _buildPdfTableCell('Prix Unit.', isHeader: true),
-            _buildPdfTableCell('Total', isHeader: true),
-          ],
-        ),
-        // Articles
-        ...invoice.items.map((item) => pw.TableRow(
-          children: [
-            _buildPdfTableCell(item.description),
-            _buildPdfTableCell(item.quantity.toString()),
-            _buildPdfTableCell('${item.unitPrice.toStringAsFixed(2)}€'),
-            _buildPdfTableCell(
-                '${(item.quantity * item.unitPrice).toStringAsFixed(2)}€'),
-          ],
-        )),
-      ],
-    );
-  }
-
-  pw.Widget _buildPdfTableCell(String text, {bool isHeader = false}) {
-    return pw.Padding(
-      padding: const pw.EdgeInsets.all(8),
-      child: pw.Text(
-        text,
-        style: pw.TextStyle(
-          fontSize: isHeader ? 12 : 10,
-          fontWeight: isHeader ? pw.FontWeight.bold : pw.FontWeight.normal,
-        ),
-      ),
-    );
-  }
-
-  /// Totaux
-  pw.Widget _buildPdfTotals(InvoiceModel invoice) {
-    return pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.end,
-      children: [
-        pw.Text('Sous-total: ${invoice.subtotal.toStringAsFixed(2)}€'),
-        if (invoice.taxAmount > 0)
-          pw.Text(
-              'TVA (${(invoice.taxRate! * 100).toStringAsFixed(0)}%): ${invoice.taxAmount.toStringAsFixed(2)}€'),
-        if (invoice.discountAmount > 0)
-          pw.Text('Remise: -${invoice.discountAmount.toStringAsFixed(2)}€'),
-        pw.SizedBox(height: 8),
-        pw.Container(
-          padding: const pw.EdgeInsets.all(8),
-          decoration: pw.BoxDecoration(
-            border: pw.Border.all(color: PdfColors.grey800, width: 2),
-          ),
-          child: pw.Text(
-            'TOTAL: ${invoice.total.toStringAsFixed(2)}€',
-            style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold),
-          ),
-        ),
-      ],
-    );
-  }
-
-  /// Footer
-  pw.Widget _buildPdfFooter(InvoiceModel invoice) {
-    return pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
-      children: [
-        if (invoice.notes != null && invoice.notes!.isNotEmpty) ...[
-          pw.Text('Notes:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-          pw.Text(invoice.notes!, style: const pw.TextStyle(fontSize: 10)),
-          pw.SizedBox(height: 10),
-        ],
-        pw.Divider(),
-        pw.Text(
-          'Merci pour votre confiance!',
-          style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey600),
-        ),
-      ],
-    );
   }
 
   @override
@@ -495,7 +346,11 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(16),
-              child: template.buildInvoice(context, _invoice),
+              // ✅ RepaintBoundary pour capturer le widget
+              child: RepaintBoundary(
+                key: _invoiceKey,
+                child: template.buildInvoice(context, _invoice),
+              ),
             ),
           ),
         ),
