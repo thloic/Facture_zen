@@ -1,11 +1,9 @@
+import 'package:facture_zen/features/invoicing/views/utils/PdfTemplateGenerators.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
-import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
-import 'dart:ui' as ui;
 import '../../../common/services/firebase_invoice_service.dart';
 import '../models/invoice_model.dart';
 import '../templates/invoice_template_base.dart';
@@ -32,9 +30,6 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
   late InvoiceModel _invoice;
   final FirebaseInvoiceService _invoiceService = FirebaseInvoiceService();
   bool _isDownloading = false;
-
-  // Clé globale pour capturer le widget
-  final GlobalKey _invoiceKey = GlobalKey();
 
   @override
   void initState() {
@@ -82,8 +77,8 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
     try {
       debugPrint('🚀 Démarrage: Génération + Téléchargement + Upload');
 
-      // 1. Capturer le rendu visuel du template et générer le PDF
-      final pdfFile = await _generatePdfFromTemplate();
+      // 1. Générer le PDF optimisé selon le template
+      final pdfFile = await _generateOptimizedPdf();
 
       if (pdfFile == null) {
         throw Exception('Erreur lors de la génération du PDF');
@@ -181,44 +176,34 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
     }
   }
 
-  /// Génère le PDF à partir du template visuel affiché
-  Future<File?> _generatePdfFromTemplate() async {
+  /// Génère un PDF optimisé selon le template sélectionné
+  Future<File?> _generateOptimizedPdf() async {
     try {
-      debugPrint('📸 Capture du rendu du template...');
+      debugPrint('📄 Génération du PDF pour le template: ${_selectedTemplate.name}');
 
-      // Attendre que le widget soit rendu
-      await Future.delayed(const Duration(milliseconds: 100));
-
-      // Récupérer le RenderRepaintBoundary
-      final RenderRepaintBoundary boundary =
-      _invoiceKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
-
-      // Capturer l'image
-      final ui.Image image = await boundary.toImage(pixelRatio: 3.0);
-      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-      final imageBytes = byteData!.buffer.asUint8List();
-
-      debugPrint('✅ Image capturée: ${imageBytes.length} bytes');
-
-      // Créer le PDF avec l'image capturée
       final pdf = pw.Document();
 
-      final pdfImage = pw.MemoryImage(imageBytes);
-
-      pdf.addPage(
-        pw.Page(
-          pageFormat: PdfPageFormat.a4,
-          margin: pw.EdgeInsets.zero,
-          build: (pw.Context context) {
-            return pw.Center(
-              child: pw.Image(
-                pdfImage,
-                fit: pw.BoxFit.contain,
-              ),
-            );
-          },
-        ),
-      );
+      // Génère le PDF selon le template choisi en utilisant PdfTemplateGenerators
+      switch (_selectedTemplate) {
+        case InvoiceTemplateType.classic:
+          pdf.addPage(PdfTemplateGenerators.generateClassicPdf(_invoice));
+          break;
+        case InvoiceTemplateType.corporate:
+          pdf.addPage(PdfTemplateGenerators.generateCorporatePdf(_invoice));
+          break;
+        case InvoiceTemplateType.modern:
+          pdf.addPage(PdfTemplateGenerators.generateClassicPdf(_invoice)); // Fallback pour l'instant
+          break;
+        case InvoiceTemplateType.minimal:
+          pdf.addPage(PdfTemplateGenerators.generateClassicPdf(_invoice)); // Fallback pour l'instant
+          break;
+        case InvoiceTemplateType.creative:
+          pdf.addPage(PdfTemplateGenerators.generateCreativePdf(_invoice)); // Fallback pour l'instant
+          break;
+        case InvoiceTemplateType.elegant:
+          pdf.addPage(PdfTemplateGenerators.generateClassicPdf(_invoice));
+          break;
+      }
 
       // Sauvegarder dans un fichier temporaire
       final tempDir = await getTemporaryDirectory();
@@ -227,11 +212,11 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
       );
       await file.writeAsBytes(await pdf.save());
 
-      debugPrint('✅ PDF créé à partir du template');
+      debugPrint('✅ PDF optimisé créé');
       return file;
 
     } catch (e, stackTrace) {
-      debugPrint('❌ Erreur _generatePdfFromTemplate: $e');
+      debugPrint('❌ Erreur _generateOptimizedPdf: $e');
       debugPrint('📍 StackTrace: $stackTrace');
       return null;
     }
@@ -346,11 +331,7 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(16),
-              // ✅ RepaintBoundary pour capturer le widget
-              child: RepaintBoundary(
-                key: _invoiceKey,
-                child: template.buildInvoice(context, _invoice),
-              ),
+              child: template.buildInvoice(context, _invoice),
             ),
           ),
         ),
