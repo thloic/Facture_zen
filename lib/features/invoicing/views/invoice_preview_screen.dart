@@ -1,4 +1,5 @@
 import 'package:facture_zen/features/invoicing/views/utils/PdfTemplateGenerators.dart';
+import 'package:facture_zen/features/invoicing/views/utils/pdf_template_factory.dart';
 import 'package:flutter/material.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
@@ -183,27 +184,8 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
 
       final pdf = pw.Document();
 
-      // Génère le PDF selon le template choisi en utilisant PdfTemplateGenerators
-      switch (_selectedTemplate) {
-        case InvoiceTemplateType.classic:
-          pdf.addPage(PdfTemplateGenerators.generateClassicPdf(_invoice));
-          break;
-        case InvoiceTemplateType.corporate:
-          pdf.addPage(PdfTemplateGenerators.generateCorporatePdf(_invoice));
-          break;
-        case InvoiceTemplateType.modern:
-          pdf.addPage(PdfTemplateGenerators.generateClassicPdf(_invoice)); // Fallback pour l'instant
-          break;
-        case InvoiceTemplateType.minimal:
-          pdf.addPage(PdfTemplateGenerators.generateClassicPdf(_invoice)); // Fallback pour l'instant
-          break;
-        case InvoiceTemplateType.creative:
-          pdf.addPage(PdfTemplateGenerators.generateCreativePdf(_invoice)); // Fallback pour l'instant
-          break;
-        case InvoiceTemplateType.elegant:
-          pdf.addPage(PdfTemplateGenerators.generateClassicPdf(_invoice));
-          break;
-      }
+      pdf.addPage(PdfTemplateFactory.generatePdf(_selectedTemplate, _invoice));
+
 
       // Sauvegarder dans un fichier temporaire
       final tempDir = await getTemporaryDirectory();
