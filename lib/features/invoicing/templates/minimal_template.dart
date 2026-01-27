@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/invoice_model.dart';
 import 'invoice_template_base.dart';
+import 'invoice_design_system.dart';
 /// Template Minimaliste : Style épuré et simple
 class MinimalTemplate implements InvoiceTemplate {
   @override
@@ -19,27 +20,26 @@ class MinimalTemplate implements InvoiceTemplate {
   Widget buildThumbnail(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: Colors.black12, width: 2),
-        borderRadius: BorderRadius.circular(8),
+        color: InvoiceDesignSystem.card,
+        borderRadius: InvoiceDesignSystem.borderRadius,
+        boxShadow: InvoiceDesignSystem.subtleShadow,
       ),
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            height: 1,
-            width: double.infinity,
-            color: Colors.black87,
+            height: 4,
+            width: 48,
+            decoration: BoxDecoration(
+              color: InvoiceDesignSystem.primary,
+              borderRadius: BorderRadius.circular(2),
+            ),
           ),
-          const SizedBox(height: 8),
-          Container(height: 3, width: 40, color: Colors.black87),
-          const SizedBox(height: 4),
-          Container(height: 2, width: 60, color: Colors.grey.shade400),
+          const SizedBox(height: 12),
+          Container(height: 2, width: 80, color: InvoiceDesignSystem.textSecondary.withOpacity(0.2)),
           const Spacer(),
-          Container(height: 2, width: 70, color: Colors.grey.shade300),
-          const SizedBox(height: 2),
-          Container(height: 2, width: 50, color: Colors.grey.shade300),
+          Container(height: 2, width: 60, color: InvoiceDesignSystem.textSecondary.withOpacity(0.1)),
         ],
       ),
     );
@@ -49,23 +49,94 @@ class MinimalTemplate implements InvoiceTemplate {
   Widget buildInvoice(BuildContext context, InvoiceModel invoice) {
     return SingleChildScrollView(
       child: Container(
-        color: Colors.white,
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildHeader(invoice),
-            const SizedBox(height: 48),
-            _buildPartiesInfo(invoice),
-            const SizedBox(height: 48),
-            _buildItemsList(invoice),
-            const SizedBox(height: 32),
-            _buildTotals(invoice),
-            if (invoice.notes != null) ...[
-              const SizedBox(height: 48),
-              _buildNotes(invoice.notes!),
-            ],
-          ],
+        color: InvoiceDesignSystem.background,
+        padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 8),
+        child: Center(
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 420),
+            decoration: BoxDecoration(
+              color: InvoiceDesignSystem.card,
+              borderRadius: InvoiceDesignSystem.borderRadius,
+              boxShadow: InvoiceDesignSystem.subtleShadow,
+            ),
+            padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Header centré
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Container(
+                      height: 4,
+                      width: 48,
+                      decoration: BoxDecoration(
+                        color: InvoiceDesignSystem.primary,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    Text('FACTURE', style: InvoiceDesignSystem.titleLarge.copyWith(fontSize: 32, letterSpacing: -1)),
+                    const SizedBox(height: 10),
+                    Text(invoice.invoiceNumber, style: InvoiceDesignSystem.label, textAlign: TextAlign.center),
+                    const SizedBox(height: 2),
+                    Text(_formatDate(invoice.invoiceDate), style: InvoiceDesignSystem.label, textAlign: TextAlign.center),
+                  ],
+                ),
+                const SizedBox(height: 32),
+                // Bloc parties
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('De', style: InvoiceDesignSystem.label),
+                          const SizedBox(height: 8),
+                          Text(invoice.companyName, style: InvoiceDesignSystem.titleMedium),
+                          if (invoice.companyPhone != null) ...[
+                            const SizedBox(height: 2),
+                            Text(invoice.companyPhone!, style: InvoiceDesignSystem.body),
+                          ],
+                          const SizedBox(height: 2),
+                          Text(invoice.companyAddress, style: InvoiceDesignSystem.body),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      width: 1,
+                      height: 56,
+                      margin: const EdgeInsets.symmetric(horizontal: 16),
+                      color: InvoiceDesignSystem.border,
+                    ),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Pour', style: InvoiceDesignSystem.label),
+                          const SizedBox(height: 8),
+                          Text(invoice.clientName, style: InvoiceDesignSystem.titleMedium),
+                          const SizedBox(height: 2),
+                          Text(invoice.clientAddress, style: InvoiceDesignSystem.body),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 32),
+                // Tableau items
+                _buildItemsList(invoice),
+                const SizedBox(height: 24),
+                // Totaux
+                _buildTotals(invoice),
+                if (invoice.notes != null) ...[
+                  const SizedBox(height: 32),
+                  _buildNotes(invoice.notes!),
+                ],
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -76,41 +147,37 @@ class MinimalTemplate implements InvoiceTemplate {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
-          height: 2,
-          width: 60,
-          color: primaryColor,
-        ),
-        const SizedBox(height: 16),
-        const Text(
-          'INVOICE',
-          style: TextStyle(
-            fontSize: 36,
-            fontWeight: FontWeight.w300,
-            letterSpacing: 4,
+          height: 4,
+          width: 64,
+          decoration: BoxDecoration(
+            color: InvoiceDesignSystem.primary,
+            borderRadius: BorderRadius.circular(2),
           ),
         ),
-        const SizedBox(height: 8),
-        Row(
+        const SizedBox(height: 18),
+        Text(
+          'FACTURE',
+          style: InvoiceDesignSystem.titleLarge.copyWith(
+            fontSize: 32,
+            letterSpacing: -1,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 16,
+          crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             Text(
               invoice.invoiceNumber,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-              ),
+              style: InvoiceDesignSystem.label,
             ),
-            const SizedBox(width: 16),
             Text(
               '•',
-              style: TextStyle(color: Colors.grey.shade400),
+              style: InvoiceDesignSystem.label,
             ),
-            const SizedBox(width: 16),
             Text(
               _formatDate(invoice.invoiceDate),
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey.shade600,
-              ),
+              style: InvoiceDesignSystem.label,
             ),
           ],
         ),
@@ -126,41 +193,14 @@ class MinimalTemplate implements InvoiceTemplate {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'From',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.grey.shade500,
-                  letterSpacing: 1,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                invoice.companyName,
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+              Text('De', style: InvoiceDesignSystem.label),
+              const SizedBox(height: 10),
+              Text(invoice.companyName, style: InvoiceDesignSystem.titleMedium),
               const SizedBox(height: 4),
-              Text(
-                invoice.companyAddress,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Colors.grey.shade700,
-                  height: 1.5,
-                ),
-              ),
+              Text(invoice.companyAddress, style: InvoiceDesignSystem.body),
               if (invoice.companyPhone != null) ...[
                 const SizedBox(height: 2),
-                Text(
-                  invoice.companyPhone!,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.grey.shade700,
-                  ),
-                ),
+                Text(invoice.companyPhone!, style: InvoiceDesignSystem.body),
               ],
             ],
           ),
@@ -170,32 +210,11 @@ class MinimalTemplate implements InvoiceTemplate {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'To',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.grey.shade500,
-                  letterSpacing: 1,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                invoice.clientName,
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+              Text('Pour', style: InvoiceDesignSystem.label),
+              const SizedBox(height: 10),
+              Text(invoice.clientName, style: InvoiceDesignSystem.titleMedium),
               const SizedBox(height: 4),
-              Text(
-                invoice.clientAddress,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Colors.grey.shade700,
-                  height: 1.5,
-                ),
-              ),
+              Text(invoice.clientAddress, style: InvoiceDesignSystem.body),
             ],
           ),
         ),
@@ -205,115 +224,81 @@ class MinimalTemplate implements InvoiceTemplate {
 
   Widget _buildItemsList(InvoiceModel invoice) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         // En-tête
-        Padding(
-          padding: const EdgeInsets.only(bottom: 16),
+        Container(
+          padding: const EdgeInsets.symmetric(vertical: 8),
           child: Row(
             children: [
-              const Expanded(
-                flex: 3,
-                child: Text(
-                  'Description',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 1,
-                  ),
-                ),
+              Expanded(
+                flex: 4,
+                child: Text('Description', style: InvoiceDesignSystem.label, textAlign: TextAlign.left),
               ),
-              const Expanded(
-                child: Text(
-                  'Qty',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 1,
-                  ),
-                ),
+              Expanded(
+                flex: 2,
+                child: Text('Qté', style: InvoiceDesignSystem.label, textAlign: TextAlign.center),
               ),
-              const Expanded(
-                child: Text(
-                  'Price',
-                  textAlign: TextAlign.right,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 1,
-                  ),
-                ),
+              Expanded(
+                flex: 2,
+                child: Text('Prix', style: InvoiceDesignSystem.label, textAlign: TextAlign.right),
               ),
-              const SizedBox(width: 16),
-              SizedBox(
-                width: 80,
-                child: Text(
-                  'Total',
-                  textAlign: TextAlign.right,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 1,
-                  ),
-                ),
+              Expanded(
+                flex: 2,
+                child: Text('Total', style: InvoiceDesignSystem.label, textAlign: TextAlign.right),
               ),
             ],
           ),
         ),
-
-        Container(
-          height: 1,
-          color: Colors.grey.shade300,
-        ),
-
+        Container(height: 1, color: InvoiceDesignSystem.border),
         // Items
         ...invoice.items.map((item) {
           return Container(
-            padding: const EdgeInsets.symmetric(vertical: 16),
+            padding: const EdgeInsets.symmetric(vertical: 12),
             decoration: BoxDecoration(
               border: Border(
-                bottom: BorderSide(color: Colors.grey.shade200),
+                bottom: BorderSide(color: InvoiceDesignSystem.border.withOpacity(0.5)),
               ),
             ),
             child: Row(
               children: [
                 Expanded(
-                  flex: 3,
+                  flex: 4,
                   child: Text(
                     item.description,
-                    style: const TextStyle(fontSize: 14),
+                    style: InvoiceDesignSystem.body,
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
                   ),
                 ),
                 Expanded(
+                  flex: 2,
                   child: Text(
                     '${item.quantity}',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey.shade700,
-                    ),
+                    style: InvoiceDesignSystem.body,
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
                   ),
                 ),
                 Expanded(
+                  flex: 2,
                   child: Text(
                     '€${item.unitPrice.toStringAsFixed(2)}',
                     textAlign: TextAlign.right,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey.shade700,
-                    ),
+                    style: InvoiceDesignSystem.body,
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
                   ),
                 ),
-                const SizedBox(width: 16),
-                SizedBox(
-                  width: 80,
+                Expanded(
+                  flex: 2,
                   child: Text(
                     '€${item.total.toStringAsFixed(2)}',
                     textAlign: TextAlign.right,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: InvoiceDesignSystem.amount,
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
                   ),
                 ),
               ],
@@ -327,13 +312,13 @@ class MinimalTemplate implements InvoiceTemplate {
   Widget _buildTotals(InvoiceModel invoice) {
     return Column(
       children: [
-        _buildTotalRow('Subtotal', invoice.subtotal, false),
+        _buildTotalRow('Sous-total', invoice.subtotal, false),
         const SizedBox(height: 8),
-        _buildTotalRow('Tax (20%)', invoice.taxAmount, false),
+        _buildTotalRow('TVA (20%)', invoice.taxAmount, false),
         const SizedBox(height: 16),
         Container(
           height: 2,
-          color: primaryColor,
+          color: InvoiceDesignSystem.primary,
           margin: const EdgeInsets.only(bottom: 16),
         ),
         _buildTotalRow('Total', invoice.total, true),
@@ -345,27 +330,25 @@ class MinimalTemplate implements InvoiceTemplate {
     return Row(
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
-        SizedBox(
-          width: 120,
+        Expanded(
+          flex: 2,
           child: Text(
             label,
             textAlign: TextAlign.right,
-            style: TextStyle(
-              fontSize: isTotal ? 16 : 14,
-              fontWeight: isTotal ? FontWeight.w600 : FontWeight.normal,
-            ),
+            style: isTotal ? InvoiceDesignSystem.titleMedium : InvoiceDesignSystem.body,
+            overflow: TextOverflow.ellipsis,
+            maxLines: 1,
           ),
         ),
-        const SizedBox(width: 32),
-        SizedBox(
-          width: 100,
+        const SizedBox(width: 16),
+        Expanded(
+          flex: 1,
           child: Text(
             '€${amount.toStringAsFixed(2)}',
             textAlign: TextAlign.right,
-            style: TextStyle(
-              fontSize: isTotal ? 20 : 14,
-              fontWeight: isTotal ? FontWeight.bold : FontWeight.w600,
-            ),
+            style: isTotal ? InvoiceDesignSystem.amountTotal : InvoiceDesignSystem.amount,
+            overflow: TextOverflow.ellipsis,
+            maxLines: 1,
           ),
         ),
       ],
@@ -376,24 +359,9 @@ class MinimalTemplate implements InvoiceTemplate {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Notes',
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
-            color: Colors.grey.shade500,
-            letterSpacing: 1,
-          ),
-        ),
+        Text('Notes', style: InvoiceDesignSystem.label),
         const SizedBox(height: 12),
-        Text(
-          notes,
-          style: TextStyle(
-            fontSize: 13,
-            color: Colors.grey.shade700,
-            height: 1.6,
-          ),
-        ),
+        Text(notes, style: InvoiceDesignSystem.body.copyWith(height: 1.6)),
       ],
     );
   }

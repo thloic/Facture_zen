@@ -3,6 +3,7 @@ import '../../../common/services/firebase_invoice_service.dart';
 import '../../../common/services/firebase_notification_service.dart';
 import '../../notifications/models/notification_model.dart';
 import '../models/invoice_model.dart';
+import '../../../common/utils/toast_utils.dart';
 
 /// Helper pour créer des factures avec gestion automatique des messages utilisateur
 class InvoiceCreationHelper {
@@ -37,10 +38,16 @@ class InvoiceCreationHelper {
       if (!canCreate) {
         _hideLoader(loaderOverlay);
         if (context.mounted) {
-          _showErrorToast(
+          ToastUtils.showError(
             context,
             'Limite de factures atteinte (3 max en version gratuite)',
           );
+          // Rediriger vers la home après 2 secondes (toast centré)
+          Future.delayed(const Duration(seconds: 2), () {
+            if (Navigator.of(context).canPop()) {
+              Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
+            }
+          });
         }
         return null;
       }
@@ -64,7 +71,7 @@ class InvoiceCreationHelper {
 
       // 6. Afficher le résultat
       if (invoiceId != null && context.mounted) {
-        _showSuccessToast(context, '✅ Facture créée avec succès !');
+        ToastUtils.showSuccess(context, '✅ Facture créée avec succès !');
         debugPrint('✅ Facture créée : $invoiceId');
         return invoiceId;
       } else {
@@ -83,10 +90,15 @@ class InvoiceCreationHelper {
       // Afficher l'erreur
       if (context.mounted) {
         if (e.toString().contains('LIMIT_REACHED')) {
-          _showErrorToast(
+          ToastUtils.showError(
             context,
             'Limite de factures atteinte. Passez à Premium !',
           );
+          Future.delayed(const Duration(seconds: 2), () {
+            if (Navigator.of(context).canPop()) {
+              Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
+            }
+          });
         } else {
           _showErrorToast(context, 'Erreur : ${e.toString()}');
         }

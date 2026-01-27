@@ -3,8 +3,8 @@ import 'package:flutter/foundation.dart';
 /// Modèle de profil utilisateur contenant les informations de l'entreprise
 class UserProfile {
   final String userId;
-  final String companyName;
-  final String companyAddress;
+  final String? companyName;
+  final String? companyAddress;
   final String? companyPhone;
   final String? companyEmail;
   final String? companySiret;
@@ -14,8 +14,8 @@ class UserProfile {
 
   UserProfile({
     required this.userId,
-    required this.companyName,
-    required this.companyAddress,
+    this.companyName,
+    this.companyAddress,
     this.companyPhone,
     this.companyEmail,
     this.companySiret,
@@ -28,8 +28,8 @@ class UserProfile {
   factory UserProfile.fromMap(Map<dynamic, dynamic> map, String userId) {
     return UserProfile(
       userId: userId,
-      companyName: map['companyName'] as String? ?? '',
-      companyAddress: map['companyAddress'] as String? ?? '',
+      companyName: map['companyName'] as String?,
+      companyAddress: map['companyAddress'] as String?,
       companyPhone: map['companyPhone'] as String?,
       companyEmail: map['companyEmail'] as String?,
       companySiret: map['companySiret'] as String?,
@@ -57,9 +57,13 @@ class UserProfile {
     };
   }
 
-  /// Valide que le profil est complet (champs obligatoires)
-  bool get isValid {
-    return companyName.isNotEmpty && companyAddress.isNotEmpty;
+  /// Vérifie si le profil contient au moins une information
+  bool get hasData {
+    return (companyName?.isNotEmpty ?? false) ||
+           (companyAddress?.isNotEmpty ?? false) ||
+           (companyPhone?.isNotEmpty ?? false) ||
+           (companyEmail?.isNotEmpty ?? false) ||
+           (companySiret?.isNotEmpty ?? false);
   }
 
   /// Crée une copie du profil avec des modifications

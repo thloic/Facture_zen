@@ -12,6 +12,7 @@ import 'dart:io';
 import '../../../common/services/firebase_invoice_service.dart';
 import '../utils/invoice_creation_helper.dart';
 import '../viewmodels/invoice_history_viewmodel.dart';
+import '../../profile/services/firebase_profile_service.dart';
 
 /// Écran de prévisualisation de la facture avec sélection de templates
 class InvoicePreviewScreen extends StatefulWidget {
@@ -27,12 +28,64 @@ class InvoicePreviewScreen extends StatefulWidget {
 class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
   InvoiceTemplateType _selectedTemplate = InvoiceTemplateType.classic;
   late InvoiceModel _invoice;
+  final FirebaseProfileService _profileService = FirebaseProfileService();
+  bool _isLoadingProfile = true;
 
   @override
   void initState() {
     super.initState();
     _invoice = InvoiceModel.fromMap(widget.invoiceData);
     _selectedTemplate = _invoice.templateType;
+    _loadProfileAndEnrichInvoice();
+  }
+
+  /// Charge le profil utilisateur et enrichit la facture pour l'affichage
+  Future<void> _loadProfileAndEnrichInvoice() async {
+    try {
+      debugPrint('📊 [PREVIEW] Chargement du profil pour prévisualisation...');
+      final profile = await _profileService.getUserProfile();
+      
+      if (profile != null && mounted) {
+        debugPrint('✅ [PREVIEW] Profil trouvé: ${profile.companyName ?? "Sans nom"}');
+        setState(() {
+          _invoice = InvoiceModel(
+            id: _invoice.id,
+            invoiceNumber: _invoice.invoiceNumber,
+            invoiceDate: _invoice.invoiceDate,
+            clientName: _invoice.clientName,
+            clientAddress: _invoice.clientAddress,
+            items: _invoice.items,
+            notes: _invoice.notes,
+            templateType: _invoice.templateType,
+            companyName: profile.companyName ?? '',
+            companyAddress: profile.companyAddress ?? '',
+            companyPhone: profile.companyPhone ?? '',
+            companyEmail: profile.companyEmail ?? '',
+            companySiret: profile.companySiret ?? '',
+            companyLogo: profile.companyLogo,
+            taxRate: _invoice.taxRate,
+            discountRate: _invoice.discountRate,
+            discountLabel: _invoice.discountLabel,
+          );
+          _isLoadingProfile = false;
+        });
+        debugPrint('✅ [PREVIEW] Facture enrichie pour affichage');
+      } else {
+        debugPrint('⚠️ [PREVIEW] Aucun profil trouvé');
+        if (mounted) {
+          setState(() {
+            _isLoadingProfile = false;
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('❌ [PREVIEW] Erreur chargement profil: $e');
+      if (mounted) {
+        setState(() {
+          _isLoadingProfile = false;
+        });
+      }
+    }
   }
 
   /// Affiche le modal de sélection de templates
@@ -124,112 +177,6 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
     }
   }
 
-  Future<void> _downloadPDF() async {
-    // Afficher un loader
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF5B5FC7)),
-            ),
-            SizedBox(height: 16),
-            Text(
-              'Génération du PDF...',
-              style: TextStyle(color: Colors.white, fontSize: 16),
-            ),
-          ],
-        ),
-      ),
-    );
-
-    try {
-      // Générer le PDF
-      final pdfGenerator = PdfGeneratorService();
-      final pdfFile = await pdfGenerator.generateInvoicePdf(_invoice);
-
-      // Sauvegarder le PDF dans un dossier permanent
-      final directory = await getApplicationDocumentsDirectory();
-      final permanentPath = '${directory.path}/${_invoice.invoiceNumber}.pdf';
-      final permanentFile = await pdfFile.copy(permanentPath);
-
-      // Fermer le loader
-      if (mounted) Navigator.pop(context);
-
-      // Afficher un dialogue avec options
-      if (mounted) {
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('PDF généré !'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Le PDF a été enregistré dans :\n$permanentPath'),
-                const SizedBox(height: 16),
-                const Text('Que souhaitez-vous faire ?'),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Fermer'),
-              ),
-              TextButton(
-                onPressed: () async {
-                  Navigator.pop(context);
-                  // Partager le PDF
-                  final pdfBytes = await permanentFile.readAsBytes();
-                  await Printing.sharePdf(
-                    bytes: pdfBytes,
-                    filename: '${_invoice.invoiceNumber}.pdf',
-                  );
-                },
-                child: const Text('Partager'),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  // Ouvrir le viewer
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => PdfViewerScreen(
-                        pdfFile: permanentFile,
-                        title: _invoice.invoiceNumber,
-                      ),
-                    ),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF5B5FC7),
-                ),
-                child: const Text('Ouvrir'),
-              ),
-            ],
-          ),
-        );
-      }
-    } catch (e) {
-      // Fermer le loader
-      if (mounted) Navigator.pop(context);
-
-      // Afficher l'erreur
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erreur lors de la génération : $e'),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    }
-  }
 
   /// Sauvegarde la facture dans Firebase avec génération du PDF et affichage d'un Toast
   Future<void> _saveInvoiceToFirebase() async {
@@ -248,10 +195,14 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
         // Recharger l'historique des factures
         context.read<InvoiceHistoryViewModel>().loadInvoices();
 
-        // Retourner à l'écran précédent après 1 seconde
+        // Retourner à la page d'accueil après 1 seconde
         await Future.delayed(const Duration(seconds: 1));
         if (mounted) {
-          Navigator.pop(context);
+          // Retourner à la page home en supprimant toutes les routes précédentes
+          Navigator.of(context).pushNamedAndRemoveUntil(
+            '/home',
+            (route) => false,
+          );
         }
       }
     } catch (e) {
@@ -295,8 +246,6 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
                 _showTemplateSelector();
               } else if (value == 'share') {
                 _shareInvoice();
-              } else if (value == 'pdf') {
-                _downloadPDF();
               } else if (value == 'save') {
                 _saveInvoiceToFirebase();
               }
@@ -345,20 +294,6 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
                     ),
                     SizedBox(width: 12),
                     Text('Partager'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'pdf',
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.download_outlined,
-                      color: Color(0xFF5B5FC7),
-                      size: 20,
-                    ),
-                    // SizedBox(width: 12),
-                    // Text('Télécharger PDF'),
                   ],
                 ),
               ),

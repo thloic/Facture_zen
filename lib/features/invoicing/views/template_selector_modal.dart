@@ -138,7 +138,10 @@ class _TemplateSelectorModalState extends State<TemplateSelectorModal> {
                   child: SizedBox(
                     height: 56,
                     child: OutlinedButton.icon(
-                      onPressed: () => widget.onPreviewTap(_viewedTemplate),
+                      onPressed: () {
+                        Navigator.pop(context);
+                        widget.onPreviewTap(_viewedTemplate);
+                      },
                       style: OutlinedButton.styleFrom(
                         foregroundColor: const Color(0xFF5B5FC7),
                         side: const BorderSide(color: Color(0xFF5B5FC7), width: 1.5),

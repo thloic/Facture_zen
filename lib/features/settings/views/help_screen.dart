@@ -82,18 +82,18 @@ class HelpScreen extends StatelessWidget {
           _buildContactCard(
             icon: Icons.email_outlined,
             title: 'Email',
-            subtitle: 'support@facturezen.com',
+            subtitle: 'contact@voxia.fr.',
             responsive: responsive,
           ),
 
           SizedBox(height: responsive.getAdaptiveSpacing(12)),
 
-          _buildContactCard(
-            icon: Icons.phone_outlined,
-            title: 'Téléphone',
-            subtitle: '+33 1 23 45 67 89',
-            responsive: responsive,
-          ),
+          // _buildContactCard(
+          //   icon: Icons.phone_outlined,
+          //   title: 'Téléphone',
+          //   subtitle: '+33 1 23 45 67 89',
+          //   responsive: responsive,
+          // ),
         ],
       ),
     );

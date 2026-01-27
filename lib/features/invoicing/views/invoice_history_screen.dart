@@ -438,8 +438,8 @@ class _InvoiceHistoryScreenState extends State<InvoiceHistoryScreen> {
               SizedBox(height: responsive.getAdaptiveSpacing(20)),
               _buildFilterOption('Date la plus récente', responsive),
               _buildFilterOption('Date la plus ancienne', responsive),
-              _buildFilterOption('Montant croissant', responsive),
-              _buildFilterOption('Montant décroissant', responsive),
+              _buildFilterOption('Nom (A-Z)', responsive),
+              _buildFilterOption('Nom (Z-A)', responsive),
               SizedBox(height: responsive.getAdaptiveSpacing(20)),
             ],
           ),
@@ -453,7 +453,28 @@ class _InvoiceHistoryScreenState extends State<InvoiceHistoryScreen> {
     return InkWell(
       onTap: () {
         Navigator.pop(context);
-        // TODO: Appliquer le filtre
+        
+        // Déterminer le type de filtre selon le label
+        String filterType;
+        switch (label) {
+          case 'Date la plus récente':
+            filterType = 'date_recent';
+            break;
+          case 'Date la plus ancienne':
+            filterType = 'date_old';
+            break;
+          case 'Nom (A-Z)':
+            filterType = 'name_asc';
+            break;
+          case 'Nom (Z-A)':
+            filterType = 'name_desc';
+            break;
+          default:
+            return;
+        }
+        
+        // Appliquer le filtre via le ViewModel
+        context.read<InvoiceHistoryViewModel>().filterInvoices(filterType);
       },
       child: Padding(
         padding: EdgeInsets.symmetric(
@@ -913,7 +934,7 @@ class _InvoiceHistoryScreenState extends State<InvoiceHistoryScreen> {
           // Recharger la liste
           await context.read<InvoiceHistoryViewModel>().loadInvoices();
           
-          _showSuccessSnackBar('✅ Numéro de facture modifié avec succès');
+          ToastUtils.showSuccess(context, '✅ Numéro de facture modifié avec succès');
         }
       } catch (e) {
         if (mounted) {
@@ -951,7 +972,7 @@ class _InvoiceHistoryScreenState extends State<InvoiceHistoryScreen> {
       );
 
       if (mounted) {
-        _showSuccessSnackBar('📤 Partage en cours...');
+        ToastUtils.showSuccess(context, '📤 Partage en cours...');
       }
     } catch (e) {
       if (mounted) {
@@ -1150,7 +1171,7 @@ class _InvoiceHistoryScreenState extends State<InvoiceHistoryScreen> {
                           );
                           
                           if (mounted) {
-                            _showSuccessSnackBar('✅ Facture supprimée avec succès');
+                            ToastUtils.showSuccess(context, '✅ Facture supprimée avec succès');
                           }
                         },
                         text: 'Supprimer',
@@ -1211,7 +1232,7 @@ class _InvoiceHistoryScreenState extends State<InvoiceHistoryScreen> {
       // Ouvrir le PDF dans le viewer
       if (mounted) {
         // Afficher un Toast de succès
-        _showSuccessSnackBar('📄 PDF chargé avec succès');
+        ToastUtils.showSuccess(context, '📄 PDF chargé avec succès');
         
         // Petite pause pour laisser le Toast s'afficher
         await Future.delayed(const Duration(milliseconds: 300));
@@ -1253,18 +1274,7 @@ class _InvoiceHistoryScreenState extends State<InvoiceHistoryScreen> {
   }
 
   /// Affiche un message de succès
-  void _showSuccessSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.green,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
-      ),
-    );
-  }
+  // ToastUtils.showSuccess est utilisé pour affichage centré
 }
 
 /// Widget de prévisualisation avec changement de template

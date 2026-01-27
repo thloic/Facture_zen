@@ -23,6 +23,8 @@ class FirebaseInvoiceService {
 
   /// Limite gratuite de factures
   static const int FREE_INVOICE_LIMIT = 3;
+  /// Nouveau : compteur global jamais décrémenté
+  static const String TOTAL_INVOICES_CREATED_KEY = 'totalInvoicesCreated';
 
   /// Récupère l'utilisateur actuel
   User? get currentUser => _auth.currentUser;
@@ -110,13 +112,13 @@ class FirebaseInvoiceService {
 
       final userData = Map<String, dynamic>.from(snapshot.value as Map);
       final isPremium = userData['isPremium'] as bool? ?? false;
-      final invoiceCount = userData['invoiceCount'] as int? ?? 0;
+      final totalInvoicesCreated = userData[TOTAL_INVOICES_CREATED_KEY] as int? ?? 0;
 
       // Si premium, pas de limite
       if (isPremium) return true;
 
-      // Sinon, vérifier la limite
-      return invoiceCount < FREE_INVOICE_LIMIT;
+      // Sinon, vérifier la limite sur le compteur global
+      return totalInvoicesCreated < FREE_INVOICE_LIMIT;
     } catch (e) {
       debugPrint('❌ Erreur canCreateInvoice: $e');
       return false;
@@ -139,8 +141,8 @@ class FirebaseInvoiceService {
 
       if (isPremium) return -1; // -1 = illimité
 
-      final invoiceCount = userData['invoiceCount'] as int? ?? 0;
-      return (FREE_INVOICE_LIMIT - invoiceCount).clamp(0, FREE_INVOICE_LIMIT);
+      final totalInvoicesCreated = userData[TOTAL_INVOICES_CREATED_KEY] as int? ?? 0;
+      return (FREE_INVOICE_LIMIT - totalInvoicesCreated).clamp(0, FREE_INVOICE_LIMIT);
     } catch (e) {
       debugPrint('❌ Erreur getRemainingInvoices: $e');
       return 0;
@@ -250,8 +252,10 @@ class FirebaseInvoiceService {
       await invoiceRef.set(invoiceData);
       debugPrint('✅ Métadonnées sauvegardées dans Realtime Database');
 
-      // Incrémenter le compteur de factures
+      // Incrémenter le compteur de factures (actif)
       await _incrementInvoiceCount(userId);
+      // Incrémenter le compteur global (jamais décrémenté)
+      await _incrementTotalInvoicesCreated(userId);
       debugPrint('✅ Compteur de factures incrémenté');
 
       debugPrint('✅ Facture sauvegardée avec succès: $invoiceId');
@@ -292,13 +296,13 @@ class FirebaseInvoiceService {
 
       InvoiceModel enrichedInvoice = invoice;
       if (profile != null) {
-        debugPrint('✅ Profil trouvé: ${profile.companyName}');
+        debugPrint('✅ Profil trouvé: ${profile.companyName ?? "Sans nom"}');
         debugPrint('📋 Détails du profil:');
-        debugPrint('   - companyName: "${profile.companyName}"');
-        debugPrint('   - companyAddress: "${profile.companyAddress}"');
-        debugPrint('   - companyPhone: "${profile.companyPhone}"');
-        debugPrint('   - companyEmail: "${profile.companyEmail}"');
-        debugPrint('   - companySiret: "${profile.companySiret}"');
+        debugPrint('   - companyName: "${profile.companyName ?? ""}"');
+        debugPrint('   - companyAddress: "${profile.companyAddress ?? ""}"');
+        debugPrint('   - companyPhone: "${profile.companyPhone ?? ""}"');
+        debugPrint('   - companyEmail: "${profile.companyEmail ?? ""}"');
+        debugPrint('   - companySiret: "${profile.companySiret ?? ""}"');
         
         // Créer une nouvelle facture avec les données du profil
         enrichedInvoice = InvoiceModel(
@@ -310,11 +314,11 @@ class FirebaseInvoiceService {
           items: invoice.items,
           notes: invoice.notes,
           templateType: invoice.templateType,
-          companyName: profile.companyName,
-          companyAddress: profile.companyAddress,
-          companyPhone: profile.companyPhone,
-          companyEmail: profile.companyEmail,
-          companySiret: profile.companySiret,
+          companyName: profile.companyName ?? '',
+          companyAddress: profile.companyAddress ?? '',
+          companyPhone: profile.companyPhone ?? '',
+          companyEmail: profile.companyEmail ?? '',
+          companySiret: profile.companySiret ?? '',
           companyLogo: profile.companyLogo,
           taxRate: invoice.taxRate,
           discountRate: invoice.discountRate,
@@ -720,10 +724,10 @@ class FirebaseInvoiceService {
       // Décrémenter le compteur
       await _decrementInvoiceCount(userId);
 
-      debugPrint('✅ Facture supprimée: $invoiceId');
+      debugPrint('Facture supprimée: $invoiceId');
       return true;
     } catch (e) {
-      debugPrint('❌ Erreur deleteInvoice: $e');
+      debugPrint('Erreur deleteInvoice: $e');
       return false;
     }
   }
@@ -754,8 +758,16 @@ class FirebaseInvoiceService {
       'email': currentUser?.email,
       'isPremium': false,
       'invoiceCount': 0,
+      'totalInvoicesCreated': 0,
       'createdAt': ServerValue.timestamp,
     });
+
+  }
+
+  /// Incrémente le compteur global de factures créées (jamais décrémenté)
+  Future<void> _incrementTotalInvoicesCreated(String userId) async {
+    final userRef = _database.ref('users/$userId/$TOTAL_INVOICES_CREATED_KEY');
+    await userRef.set(ServerValue.increment(1));
   }
 
   /// Incrémente le compteur de factures

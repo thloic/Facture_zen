@@ -64,51 +64,53 @@ class ProfileScreen extends StatelessWidget {
                             horizontal: responsive.horizontalPadding,
                             vertical: responsive.getAdaptiveSpacing(24),
                           ),
-                          child: Column(
-                            children: [
-                              _buildMenuItem(
-                                icon: Icons.person_outline,
-                                label: 'Infos du compte',
-                                iconColor: const Color(0xFF5B5FC7),
-                                iconBgColor: const Color(0xFFE8E9F8),
-                                onTap: () => _navigateToAccountInfo(context),
-                                responsive: responsive,
-                              ),
-                              SizedBox(
-                                height: responsive.getAdaptiveSpacing(12),
-                              ),
-                              _buildMenuItem(
-                                icon: Icons.business_outlined,
-                                label: 'Profil entreprise',
-                                iconColor: const Color(0xFF5B5FC7),
-                                iconBgColor: const Color(0xFFE8E9F8),
-                                onTap: () => _navigateToCompanyProfile(context),
-                                responsive: responsive,
-                              ),
-                              SizedBox(
-                                height: responsive.getAdaptiveSpacing(12),
-                              ),
-                              _buildMenuItem(
-                                icon: Icons.settings_outlined,
-                                label: 'Paramètres',
-                                iconColor: const Color(0xFF5B5FC7),
-                                iconBgColor: const Color(0xFFE8E9F8),
-                                onTap: () => _navigateToSettings(context),
-                                responsive: responsive,
-                              ),
-                              SizedBox(
-                                height: responsive.getAdaptiveSpacing(12),
-                              ),
-                              _buildMenuItem(
-                                icon: Icons.logout,
-                                label: 'Déconnexion',
-                                iconColor: const Color(0xFFEF4444),
-                                iconBgColor: const Color(0xFFFFE5E5),
-                                onTap: () => _confirmLogout(context, viewModel),
-                                responsive: responsive,
-                                isDestructive: true,
-                              ),
-                            ],
+                          child: SingleChildScrollView(
+                            child: Column(
+                              children: [
+                                _buildMenuItem(
+                                  icon: Icons.person_outline,
+                                  label: 'Infos du compte',
+                                  iconColor: const Color(0xFF5B5FC7),
+                                  iconBgColor: const Color(0xFFE8E9F8),
+                                  onTap: () => _navigateToAccountInfo(context),
+                                  responsive: responsive,
+                                ),
+                                SizedBox(
+                                  height: responsive.getAdaptiveSpacing(12),
+                                ),
+                                _buildMenuItem(
+                                  icon: Icons.business_outlined,
+                                  label: 'Profil entreprise',
+                                  iconColor: const Color(0xFF5B5FC7),
+                                  iconBgColor: const Color(0xFFE8E9F8),
+                                  onTap: () => _navigateToCompanyProfile(context),
+                                  responsive: responsive,
+                                ),
+                                SizedBox(
+                                  height: responsive.getAdaptiveSpacing(12),
+                                ),
+                                _buildMenuItem(
+                                  icon: Icons.settings_outlined,
+                                  label: 'Paramètres',
+                                  iconColor: const Color(0xFF5B5FC7),
+                                  iconBgColor: const Color(0xFFE8E9F8),
+                                  onTap: () => _navigateToSettings(context),
+                                  responsive: responsive,
+                                ),
+                                SizedBox(
+                                  height: responsive.getAdaptiveSpacing(12),
+                                ),
+                                _buildMenuItem(
+                                  icon: Icons.logout,
+                                  label: 'Déconnexion',
+                                  iconColor: const Color(0xFFEF4444),
+                                  iconBgColor: const Color(0xFFFFE5E5),
+                                  onTap: () => _confirmLogout(context, viewModel),
+                                  responsive: responsive,
+                                  isDestructive: true,
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),

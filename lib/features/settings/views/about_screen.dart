@@ -57,7 +57,7 @@ class AboutScreen extends StatelessWidget {
                 ),
                 SizedBox(height: responsive.getAdaptiveSpacing(16)),
                 Text(
-                  'Facture Zen',
+                  'VoxIn',
                   style: TextStyle(
                     fontSize: responsive.getAdaptiveTextSize(24),
                     fontWeight: FontWeight.bold,
@@ -98,7 +98,7 @@ class AboutScreen extends StatelessWidget {
                 ),
                 SizedBox(height: responsive.getAdaptiveSpacing(8)),
                 Text(
-                  'Facture Zen est votre assistant de facturation intelligent. Créez des factures professionnelles par simple commande vocale et gérez votre activité en toute simplicité.',
+                  'VoxIn est votre assistant de facturation intelligent. Créez des factures professionnelles par simple commande vocale et gérez votre activité en toute simplicité.',
                   style: TextStyle(
                     fontSize: responsive.getAdaptiveTextSize(14),
                     color: const Color(0xFF6B7280),
@@ -164,7 +164,7 @@ class AboutScreen extends StatelessWidget {
                     const Icon(Icons.email_outlined, color: Color(0xFF5B5FC7), size: 20),
                     SizedBox(width: responsive.getAdaptiveSpacing(8)),
                     Text(
-                      'support@facturezen.com',
+                      'contact@voxia.fr',
                       style: TextStyle(
                         fontSize: responsive.getAdaptiveTextSize(14),
                         color: const Color(0xFF6B7280),
@@ -195,7 +195,7 @@ class AboutScreen extends StatelessWidget {
           // Copyright
           Center(
             child: Text(
-              '© 2026 Facture Zen. Tous droits réservés.',
+              '© 2026 VoxIn. Tous droits réservés.',
               style: TextStyle(
                 fontSize: responsive.getAdaptiveTextSize(12),
                 color: const Color(0xFF9CA3AF),

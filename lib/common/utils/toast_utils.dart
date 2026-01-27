@@ -21,14 +21,20 @@ class ToastUtils {
         builder: (context) {
           debugPrint('🏗️ [TOAST] Build du widget overlay');
           return Positioned(
-            top: MediaQuery.of(context).size.height * 0.45,
-            left: 40,
-            right: 40,
+            top: 0,
+            bottom: 0,
+            left: 0,
+            right: 0,
             child: IgnorePointer(
               ignoring: true,
               child: Material(
                 color: Colors.transparent,
-                child: _buildToastContent(message, isError),
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 40),
+                    child: _buildToastContent(message, isError),
+                  ),
+                ),
               ),
             ),
           );
@@ -60,10 +66,12 @@ class ToastUtils {
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeOutBack,
       builder: (context, value, child) {
+        // Protection contre les valeurs null
+        final animValue = value ?? 0.0;
         return Transform.scale(
-          scale: value,
+          scale: animValue.clamp(0.0, 1.0),
           child: Opacity(
-            opacity: value,
+            opacity: animValue.clamp(0.0, 1.0),
             child: child,
           ),
         );

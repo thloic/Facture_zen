@@ -244,8 +244,13 @@ class _VoiceRecordingScreenState extends State<VoiceRecordingScreen>
           onPressed: viewModel.canValidate
               ? () => _handleValidation(viewModel)
               : null,
-          backgroundColor: const Color(0xFFE5E7EB),
-          iconColor: const Color(0xFF6B7280),
+          backgroundColor: viewModel.canValidate
+              ? const Color(0xFF5B5FC7) // Violet quand activé
+              : const Color(0xFFE5E7EB), // Gris quand désactivé
+          iconColor: viewModel.canValidate
+              ? Colors.white // Blanc quand activé
+              : const Color(0xFF6B7280), // Gris foncé quand désactivé
+          hasShadow: viewModel.canValidate, // Ombre uniquement quand activé
         ),
       ],
     );

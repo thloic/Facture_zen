@@ -63,7 +63,7 @@ class InvoiceHistoryViewModel extends ChangeNotifier {
   }
 
   /// Filtre les factures selon un critère
-  /// @param filterType Type de filtre (date, montant, etc.)
+  /// @param filterType Type de filtre (date, nom, etc.)
   void filterInvoices(String filterType) {
     switch (filterType) {
       case 'date_recent':
@@ -76,14 +76,14 @@ class InvoiceHistoryViewModel extends ChangeNotifier {
           return a.invoiceDate.compareTo(b.invoiceDate);
         });
         break;
-      case 'amount_asc':
+      case 'name_asc':
         _filteredInvoices.sort((a, b) {
-          return a.total.compareTo(b.total);
+          return a.clientName.toLowerCase().compareTo(b.clientName.toLowerCase());
         });
         break;
-      case 'amount_desc':
+      case 'name_desc':
         _filteredInvoices.sort((a, b) {
-          return b.total.compareTo(a.total);
+          return b.clientName.toLowerCase().compareTo(a.clientName.toLowerCase());
         });
         break;
     }

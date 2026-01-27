@@ -357,7 +357,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                               ),
                             )
                           : const Text(
-                              'Enregistrer les modifications',
+                              'Enregistrer',
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,

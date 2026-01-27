@@ -50,8 +50,8 @@ class _CompanyProfileSetupScreenState extends State<CompanyProfileSetupScreen> {
 
     if (viewModel.profile != null) {
       final profile = viewModel.profile!;
-      _companyNameController.text = profile.companyName;
-      _companyAddressController.text = profile.companyAddress;
+      _companyNameController.text = profile.companyName ?? '';
+      _companyAddressController.text = profile.companyAddress ?? '';
       _companyPhoneController.text = profile.companyPhone ?? '';
       _companyEmailController.text = profile.companyEmail ?? '';
       _companySiretController.text = profile.companySiret ?? '';
@@ -83,8 +83,12 @@ class _CompanyProfileSetupScreenState extends State<CompanyProfileSetupScreen> {
 
       final profile = UserProfile(
         userId: userId,
-        companyName: _companyNameController.text.trim(),
-        companyAddress: _companyAddressController.text.trim(),
+        companyName: _companyNameController.text.trim().isEmpty
+            ? null
+            : _companyNameController.text.trim(),
+        companyAddress: _companyAddressController.text.trim().isEmpty
+            ? null
+            : _companyAddressController.text.trim(),
         companyPhone: _companyPhoneController.text.trim().isEmpty
             ? null
             : _companyPhoneController.text.trim(),
@@ -179,9 +183,8 @@ class _CompanyProfileSetupScreenState extends State<CompanyProfileSetupScreen> {
                   _buildTextField(
                     controller: _companyNameController,
                     label: 'Nom de l\'entreprise',
-                    hint: 'Ex: SARL Martin',
+                    hint: 'Ex: SARL Martin (facultatif)',
                     icon: Icons.business,
-                    isRequired: true,
                     responsive: responsive,
                   ),
 
@@ -190,9 +193,8 @@ class _CompanyProfileSetupScreenState extends State<CompanyProfileSetupScreen> {
                   _buildTextField(
                     controller: _companyAddressController,
                     label: 'Adresse',
-                    hint: 'Ex: 10 Rue du Commerce\\n69002 Lyon',
+                    hint: 'Ex: 10 Rue du Commerce\\n69002 Lyon (facultatif)',
                     icon: Icons.location_on,
-                    isRequired: true,
                     maxLines: 3,
                     responsive: responsive,
                   ),
@@ -269,7 +271,7 @@ class _CompanyProfileSetupScreenState extends State<CompanyProfileSetupScreen> {
         ),
         SizedBox(height: responsive.getAdaptiveSpacing(8)),
         Text(
-          'Configurons votre profil entreprise pour personnaliser vos factures',
+          'Configurons votre profil entreprise pour personnaliser vos factures.\nTous les champs sont facultatifs.',
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: responsive.getAdaptiveTextSize(14),
