@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../models/invoice_model.dart';
 import '../templates/invoice_template_base.dart';
 import 'template_selector_modal.dart';
@@ -8,15 +9,16 @@ import 'pdf_viewer_screen.dart';
 import 'package:printing/printing.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
+import '../../../common/services/firebase_invoice_service.dart';
+import '../utils/invoice_creation_helper.dart';
+import '../viewmodels/invoice_history_viewmodel.dart';
 
 /// Écran de prévisualisation de la facture avec sélection de templates
 class InvoicePreviewScreen extends StatefulWidget {
   final Map<String, dynamic> invoiceData;
 
-  const InvoicePreviewScreen({
-    Key? key,
-    required this.invoiceData,
-  }) : super(key: key);
+  const InvoicePreviewScreen({Key? key, required this.invoiceData})
+    : super(key: key);
 
   @override
   State<InvoicePreviewScreen> createState() => _InvoicePreviewScreenState();
@@ -30,6 +32,7 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
   void initState() {
     super.initState();
     _invoice = InvoiceModel.fromMap(widget.invoiceData);
+    _selectedTemplate = _invoice.templateType;
   }
 
   /// Affiche le modal de sélection de templates
@@ -44,6 +47,12 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
           currentTemplate: _selectedTemplate,
           onTemplateSelected: (template) {
             setState(() {
+              _selectedTemplate = template;
+            });
+          },
+          onPreviewTap: (template) {
+             // Déjà en preview, on peut juste changer la sélection
+             setState(() {
               _selectedTemplate = template;
             });
           },
@@ -222,6 +231,34 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
     }
   }
 
+  /// Sauvegarde la facture dans Firebase avec génération du PDF et affichage d'un Toast
+  Future<void> _saveInvoiceToFirebase() async {
+    try {
+      // Utiliser le helper pour créer la facture avec Toast
+      final invoiceService = context.read<FirebaseInvoiceService>();
+      final helper = InvoiceCreationHelper(invoiceService);
+
+      final invoiceId = await helper.createInvoiceWithPdf(
+        context: context,
+        invoice: _invoice,
+        showLoader: true,
+      );
+
+      if (invoiceId != null && mounted) {
+        // Recharger l'historique des factures
+        context.read<InvoiceHistoryViewModel>().loadInvoices();
+
+        // Retourner à l'écran précédent après 1 seconde
+        await Future.delayed(const Duration(seconds: 1));
+        if (mounted) {
+          Navigator.pop(context);
+        }
+      }
+    } catch (e) {
+      debugPrint('❌ Erreur sauvegarde facture: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final responsive = ResponsiveUtils(context);
@@ -249,7 +286,9 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
           // Menu 3 points
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert, color: Color(0xFF1F2937)),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
             offset: const Offset(0, 50),
             onSelected: (value) {
               if (value == 'templates') {
@@ -258,14 +297,38 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
                 _shareInvoice();
               } else if (value == 'pdf') {
                 _downloadPDF();
+              } else if (value == 'save') {
+                _saveInvoiceToFirebase();
               }
             },
             itemBuilder: (context) => [
               PopupMenuItem(
+                value: 'save',
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.save_outlined,
+                      color: Color(0xFF10B981),
+                      size: 20,
+                    ),
+                    const SizedBox(width: 12),
+                    const Text(
+                      'Enregistrer la facture',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(enabled: false, child: Divider()),
+              PopupMenuItem(
                 value: 'templates',
                 child: Row(
                   children: [
-                    Icon(Icons.palette_outlined, color: template.primaryColor, size: 20),
+                    Icon(
+                      Icons.palette_outlined,
+                      color: template.primaryColor,
+                      size: 20,
+                    ),
                     const SizedBox(width: 12),
                     const Text('Changer de templates'),
                   ],
@@ -275,7 +338,11 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
                 value: 'share',
                 child: Row(
                   children: [
-                    Icon(Icons.share_outlined, color: Color(0xFF5B5FC7), size: 20),
+                    Icon(
+                      Icons.share_outlined,
+                      color: Color(0xFF5B5FC7),
+                      size: 20,
+                    ),
                     SizedBox(width: 12),
                     Text('Partager'),
                   ],
@@ -285,9 +352,13 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
                 value: 'pdf',
                 child: Row(
                   children: [
-                    Icon(Icons.download_outlined, color: Color(0xFF5B5FC7), size: 20),
-                    SizedBox(width: 12),
-                    Text('Télécharger PDF'),
+                    Icon(
+                      Icons.download_outlined,
+                      color: Color(0xFF5B5FC7),
+                      size: 20,
+                    ),
+                    // SizedBox(width: 12),
+                    // Text('Télécharger PDF'),
                   ],
                 ),
               ),

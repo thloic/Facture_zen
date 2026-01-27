@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../viewmodels/home_viewmodel.dart';
+import '../../notifications/viewmodels/notification_viewmodel.dart';
 import '../../../common/widgets/feature_card.dart';
 import '../../../common/widgets/invoice_card.dart';
 import '../../../common/widgets/curved_bottom_nav.dart';
@@ -21,6 +22,7 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<HomeViewModel>().loadInitialData();
+      context.read<NotificationViewModel>().loadNotifications();
     });
   }
 
@@ -145,30 +147,40 @@ class _HomeScreenState extends State<HomeScreen> {
                   size: screenWidth * 0.065,
                 ),
               ),
-              Positioned(
-                right: screenWidth * 0.02,
-                top: screenWidth * 0.02,
-                child: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFEF4444),
-                    shape: BoxShape.circle,
-                  ),
-                  constraints: BoxConstraints(
-                    minWidth: screenWidth * 0.045,
-                    minHeight: screenWidth * 0.045,
-                  ),
-                  child: Center(
-                    child: Text(
-                      '3',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: screenWidth * 0.025,
-                        fontWeight: FontWeight.bold,
+              Consumer<NotificationViewModel>(
+                builder: (context, notificationViewModel, _) {
+                  final unreadCount = notificationViewModel.unreadCount;
+                  
+                  if (unreadCount == 0) {
+                    return const SizedBox.shrink();
+                  }
+                  
+                  return Positioned(
+                    right: screenWidth * 0.02,
+                    top: screenWidth * 0.02,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFEF4444),
+                        shape: BoxShape.circle,
+                      ),
+                      constraints: BoxConstraints(
+                        minWidth: screenWidth * 0.045,
+                        minHeight: screenWidth * 0.045,
+                      ),
+                      child: Center(
+                        child: Text(
+                          unreadCount > 99 ? '99+' : '$unreadCount',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: screenWidth * 0.025,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-                ),
+                  );
+                },
               ),
             ],
           ),
@@ -217,19 +229,170 @@ class _HomeScreenState extends State<HomeScreen> {
 
           SizedBox(width: screenWidth * 0.03),
 
-          Container(
-            padding: EdgeInsets.all(screenWidth * 0.03),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF3F4F6),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(
-              Icons.tune,
-              color: const Color(0xFF1F2937),
-              size: screenWidth * 0.055,
+          GestureDetector(
+            onTap: () => _showSortMenu(context, viewModel, screenWidth),
+            child: Container(
+              padding: EdgeInsets.all(screenWidth * 0.03),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF3F4F6),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                Icons.tune,
+                color: const Color(0xFF1F2937),
+                size: screenWidth * 0.055,
+              ),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showSortMenu(BuildContext context, HomeViewModel viewModel, double screenWidth) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: EdgeInsets.symmetric(
+          horizontal: screenWidth * 0.055,
+          vertical: screenWidth * 0.05,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Titre
+            Row(
+              children: [
+                Icon(
+                  Icons.sort,
+                  color: const Color(0xFF1F2937),
+                  size: screenWidth * 0.06,
+                ),
+                SizedBox(width: screenWidth * 0.03),
+                Text(
+                  'Trier par',
+                  style: TextStyle(
+                    fontSize: screenWidth * 0.045,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF1F2937),
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: screenWidth * 0.05),
+            
+            // Option: Date
+            _buildSortOption(
+              context,
+              viewModel,
+              screenWidth,
+              icon: Icons.calendar_today,
+              title: 'Date',
+              subtitle: 'Plus récentes en premier',
+              value: 'date',
+              isSelected: viewModel.sortBy == 'date',
+            ),
+            
+            SizedBox(height: screenWidth * 0.03),
+            
+            // Option: Nom
+            _buildSortOption(
+              context,
+              viewModel,
+              screenWidth,
+              icon: Icons.sort_by_alpha,
+              title: 'Nom',
+              subtitle: 'Ordre alphabétique',
+              value: 'name',
+              isSelected: viewModel.sortBy == 'name',
+            ),
+            
+            SizedBox(height: screenWidth * 0.05),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSortOption(
+    BuildContext context,
+    HomeViewModel viewModel,
+    double screenWidth, {
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required String value,
+    required bool isSelected,
+  }) {
+    return GestureDetector(
+      onTap: () {
+        viewModel.setSortBy(value);
+        Navigator.pop(context);
+      },
+      child: Container(
+        padding: EdgeInsets.all(screenWidth * 0.04),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF5B5FC7).withOpacity(0.1) : const Color(0xFFF9FAFB),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? const Color(0xFF5B5FC7) : Colors.transparent,
+            width: 2,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: EdgeInsets.all(screenWidth * 0.025),
+              decoration: BoxDecoration(
+                color: isSelected 
+                  ? const Color(0xFF5B5FC7) 
+                  : const Color(0xFFE5E7EB),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                icon,
+                color: isSelected ? Colors.white : const Color(0xFF6B7280),
+                size: screenWidth * 0.05,
+              ),
+            ),
+            SizedBox(width: screenWidth * 0.035),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: screenWidth * 0.04,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF1F2937),
+                    ),
+                  ),
+                  SizedBox(height: screenWidth * 0.01),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: screenWidth * 0.032,
+                      color: const Color(0xFF9CA3AF),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (isSelected)
+              Icon(
+                Icons.check_circle,
+                color: const Color(0xFF5B5FC7),
+                size: screenWidth * 0.055,
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -327,7 +490,10 @@ class _HomeScreenState extends State<HomeScreen> {
           ...viewModel.filteredInvoices.map((invoice) {
             return InvoiceCard(
               invoice: invoice,
-              onTap: () {},
+              onTap: () {
+                // Naviguer vers la page historique
+                Navigator.pushNamed(context, '/historiqueInvoicing');
+              },
             );
           }).toList(),
 

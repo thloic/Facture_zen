@@ -9,6 +9,7 @@ import '../../settings/views/help_screen.dart';
 import '../../settings/views/privacy_screen.dart';
 import '../../settings/views/about_screen.dart';
 import '../../notifications/views/notifications_screen.dart';
+import 'company_profile_setup_screen.dart';
 import 'dart:math' as math;
 
 class ProfileScreen extends StatelessWidget {
@@ -71,6 +72,17 @@ class ProfileScreen extends StatelessWidget {
                                 iconColor: const Color(0xFF5B5FC7),
                                 iconBgColor: const Color(0xFFE8E9F8),
                                 onTap: () => _navigateToAccountInfo(context),
+                                responsive: responsive,
+                              ),
+                              SizedBox(
+                                height: responsive.getAdaptiveSpacing(12),
+                              ),
+                              _buildMenuItem(
+                                icon: Icons.business_outlined,
+                                label: 'Profil entreprise',
+                                iconColor: const Color(0xFF5B5FC7),
+                                iconBgColor: const Color(0xFFE8E9F8),
+                                onTap: () => _navigateToCompanyProfile(context),
                                 responsive: responsive,
                               ),
                               SizedBox(
@@ -255,6 +267,16 @@ class ProfileScreen extends StatelessWidget {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const AccountInfoScreen()),
+    );
+  }
+
+  /// Navigation vers le profil entreprise
+  void _navigateToCompanyProfile(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const CompanyProfileSetupScreen(isOnboarding: false),
+      ),
     );
   }
 

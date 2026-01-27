@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import '../templates/invoice_template_base.dart';
 
 /// Modèle de données pour une facture
 class InvoiceModel {
@@ -9,6 +10,7 @@ class InvoiceModel {
   final String clientAddress;
   final List<InvoiceItem> items;
   final String? notes;
+  final InvoiceTemplateType templateType;
 
   // Informations entreprise
   final String companyName;
@@ -40,6 +42,7 @@ class InvoiceModel {
     this.taxRate, // Par défaut null
     this.discountRate,
     this.discountLabel,
+    this.templateType = InvoiceTemplateType.classic,
   });
 
   /// Calcul du sous-total
@@ -94,13 +97,21 @@ class InvoiceModel {
           ?.map((item) => InvoiceItem.fromMap(item as Map<String, dynamic>))
           .toList() ?? [],
       notes: map['notes'] as String?,
+      
+      templateType: map['template'] != null 
+          ? InvoiceTemplateType.values.firstWhere(
+              (e) => e.toString().split('.').last == map['template'],
+              orElse: () => InvoiceTemplateType.classic,
+            )
+          : InvoiceTemplateType.classic,
 
-      // TODO: Récupérer depuis le profil utilisateur
-      companyName: 'Mon Entreprise',
-      companyAddress: '123 Rue Example\n75001 Paris',
-      companyPhone: '+33 1 23 45 67 89',
-      companyEmail: 'contact@entreprise.fr',
-      companySiret: '123 456 789 00012',
+      // Infos entreprise - seront enrichies par le service si non fournies
+      companyName: map['companyName'] as String? ?? '',
+      companyAddress: map['companyAddress'] as String? ?? '',
+      companyPhone: map['companyPhone'] as String?,
+      companyEmail: map['companyEmail'] as String?,
+      companySiret: map['companySiret'] as String?,
+      companyLogo: map['companyLogo'] as String?,
 
       // TVA et réductions optionnelles (depuis GPT)
       taxRate: map['taxRate'] as double?,

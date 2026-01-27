@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../../../common/services/firebase_invoice_service.dart';
 import '../models/invoice_model.dart';
+import '../templates/invoice_template_base.dart';
 
 class InvoiceHistoryViewModel extends ChangeNotifier {
   // Services injectés
@@ -109,6 +110,30 @@ class InvoiceHistoryViewModel extends ChangeNotifier {
       debugPrint('❌ Erreur suppression facture: $e');
       _errorMessage = 'Impossible de supprimer la facture';
       notifyListeners();
+    }
+  }
+
+  /// Met à jour le template d'une facture
+  Future<void> updateInvoiceTemplate(String invoiceId, InvoiceTemplateType newTemplate) async {
+    try {
+      debugPrint('🎨 [VIEWMODEL] Mise à jour template -> ${newTemplate.name}');
+      debugPrint('🎨 [VIEWMODEL] InvoiceId: $invoiceId');
+      
+      // Appel au service
+      await _invoiceService.updateInvoiceTemplate(invoiceId, newTemplate.name);
+
+      debugPrint('✅ [VIEWMODEL] Service a confirmé la mise à jour');
+      
+      // On recharge la liste pour être sûr d'avoir les données fraîches
+      await loadInvoices();
+
+      debugPrint('✅ [VIEWMODEL] Template mis à jour et liste rechargée');
+    } catch (e, stack) {
+      debugPrint('❌ [VIEWMODEL] Erreur update template: $e');
+      debugPrint('❌ [VIEWMODEL] Stack: $stack');
+      _errorMessage = 'Impossible de changer le template';
+      notifyListeners();
+      rethrow;
     }
   }
 

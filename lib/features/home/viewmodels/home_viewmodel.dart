@@ -14,6 +14,7 @@ class HomeViewModel extends ChangeNotifier {
   String? _errorMessage;
   int _currentPageIndex = 0;
   String _searchQuery = '';
+  String _sortBy = 'date'; // 'date' ou 'name'
 
   HomeViewModel({FirebaseInvoiceService? invoiceService})
       : _invoiceService = invoiceService ?? FirebaseInvoiceService();
@@ -24,16 +25,29 @@ class HomeViewModel extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
   int get currentPageIndex => _currentPageIndex;
   String get searchQuery => _searchQuery;
+  String get sortBy => _sortBy;
 
-  // Filtre les factures selon la recherche
+  // Filtre et trie les factures selon la recherche et le tri sélectionné
   List<InvoiceModel> get filteredInvoices {
+    List<InvoiceModel> filtered;
+    
     if (_searchQuery.isEmpty) {
-      return _recentInvoices;
+      filtered = _recentInvoices;
+    } else {
+      filtered = _recentInvoices.where((invoice) {
+        return invoice.clientName.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+               invoice.id.toLowerCase().contains(_searchQuery.toLowerCase());
+      }).toList();
     }
-    return _recentInvoices.where((invoice) {
-      return invoice.clientName.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-             invoice.id.toLowerCase().contains(_searchQuery.toLowerCase());
-    }).toList();
+    
+    // Appliquer le tri
+    if (_sortBy == 'date') {
+      filtered.sort((a, b) => b.invoiceDate.compareTo(a.invoiceDate)); // Plus récentes en premier
+    } else if (_sortBy == 'name') {
+      filtered.sort((a, b) => a.clientName.toLowerCase().compareTo(b.clientName.toLowerCase()));
+    }
+    
+    return filtered;
   }
 
   Future<void> loadInitialData() async {
@@ -84,6 +98,11 @@ class HomeViewModel extends ChangeNotifier {
 
   void updateSearchQuery(String query) {
     _searchQuery = query;
+    notifyListeners();
+  }
+
+  void setSortBy(String sortBy) {
+    _sortBy = sortBy;
     notifyListeners();
   }
 

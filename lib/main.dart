@@ -12,6 +12,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'common/services/auth_service.dart';
 import 'common/services/pin_service.dart';
 import 'common/services/firebase_invoice_service.dart';
+import 'features/profile/services/firebase_profile_service.dart';
 import 'features/auth/viewmodels/login_viewmodel.dart';
 import 'features/auth/viewmodels/register_viewmodel.dart';
 import 'features/auth/viewmodels/forgot_password_viewmodel.dart';
@@ -24,6 +25,9 @@ import 'features/settings/views/company_setup_screen.dart';
 import 'features/invoicing/viewmodels/invoice_history_viewmodel.dart';
 import 'features/invoicing/viewmodels/voice_recording_viewmodel.dart';
 import 'features/profile/viewmodels/profile_viewmodel.dart';
+import 'features/profile/viewmodels/company_profile_viewmodel.dart';
+import 'features/profile/views/company_profile_setup_screen.dart';
+import 'features/notifications/viewmodels/notification_viewmodel.dart';
 import 'firebase_options.dart';
 
 void main() async {
@@ -141,7 +145,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         ChangeNotifierProvider(
           create: (_) => InvoiceHistoryViewModel(invoiceService: invoiceService),
         ),
+        ChangeNotifierProvider(create: (_) => NotificationViewModel()),
         ChangeNotifierProvider(create: (_) => ProfileViewModel()),
+        ChangeNotifierProvider(create: (_) => CompanyProfileViewModel()),
       ],
       child: MaterialApp(
         navigatorKey: _navigatorKey,
@@ -159,6 +165,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
           '/pin-setup': (context) => const PinSetupScreen(),
           '/pin-login': (context) => const PinLoginScreen(),
           '/company-setup': (context) => const CompanySetupScreen(),
+          '/company-profile-setup': (context) => const CompanyProfileSetupScreen(),
           '/home': (context) => const HomeScreen(),
           '/record': (context) => const VoiceRecordingScreen(),
           '/historiqueInvoicing': (context) => const InvoiceHistoryScreen(),
@@ -222,6 +229,17 @@ class AppInitializer extends StatelessWidget {
     debugPrint('🔐 AppInitializer - isAuthenticated: $isAuthenticated');
 
     if (isAuthenticated) {
+      // Vérifier si le profil entreprise existe
+      final profileService = FirebaseProfileService();
+      final hasProfile = await profileService.hasProfile();
+      debugPrint('📋 AppInitializer - hasProfile: $hasProfile');
+
+      // Si pas de profil, rediriger vers la configuration
+      if (!hasProfile) {
+        debugPrint('📋 AppInitializer - Redirection vers configuration profil');
+        return '/company-profile-setup';
+      }
+
       // Utilisateur connecté - vérifier si un PIN est configuré
       final hasPin = await pinService.hasPin();
       debugPrint('🔐 AppInitializer - hasPin: $hasPin');

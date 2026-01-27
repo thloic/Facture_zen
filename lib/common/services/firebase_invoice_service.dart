@@ -6,6 +6,7 @@ import 'dart:io';
 
 import '../../features/invoicing/models/invoice_model.dart';
 import '../../features/invoicing/services/pdf_generator_service.dart';
+import '../../features/profile/services/firebase_profile_service.dart';
 
 /// Service Firebase pour la gestion des factures
 /// Utilise Realtime Database + Storage pour les PDFs
@@ -13,6 +14,7 @@ class FirebaseInvoiceService {
   final FirebaseDatabase _database = FirebaseDatabase.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final PdfGeneratorService _pdfGenerator = PdfGeneratorService();
+  final FirebaseProfileService _profileService = FirebaseProfileService();
 
   // Storage optionnel (peut être null si non configuré)
   FirebaseStorage? _storage;
@@ -63,7 +65,6 @@ class FirebaseInvoiceService {
       _storageInitialized = true;
       debugPrint('✅ Firebase Storage disponible et configuré');
       return true;
-
     } catch (e) {
       _storageAvailable = false;
       _storageInitialized = true;
@@ -79,7 +80,9 @@ class FirebaseInvoiceService {
         debugPrint('   2. Cliquez sur "Commencer"');
         debugPrint('   3. Choisissez les règles de sécurité');
         debugPrint('   4. Attendez que le bucket soit créé');
-        debugPrint('   5. Votre bucket: gs://facturezen-558b0.firebasestorage.app');
+        debugPrint(
+          '   5. Votre bucket: gs://facturezen-558b0.firebasestorage.app',
+        );
       } else {
         debugPrint('⚠️ Firebase Storage : Erreur');
         debugPrint('   Erreur complète : $errorMsg');
@@ -114,7 +117,6 @@ class FirebaseInvoiceService {
 
       // Sinon, vérifier la limite
       return invoiceCount < FREE_INVOICE_LIMIT;
-
     } catch (e) {
       debugPrint('❌ Erreur canCreateInvoice: $e');
       return false;
@@ -139,7 +141,6 @@ class FirebaseInvoiceService {
 
       final invoiceCount = userData['invoiceCount'] as int? ?? 0;
       return (FREE_INVOICE_LIMIT - invoiceCount).clamp(0, FREE_INVOICE_LIMIT);
-
     } catch (e) {
       debugPrint('❌ Erreur getRemainingInvoices: $e');
       return 0;
@@ -178,7 +179,9 @@ class FirebaseInvoiceService {
 
         // ✅ CRITIQUE : Vérifier que le fichier existe avant l'upload
         if (!await pdfFile.exists()) {
-          debugPrint('❌ ERREUR : Le fichier PDF n\'existe pas: ${pdfFile.path}');
+          debugPrint(
+            '❌ ERREUR : Le fichier PDF n\'existe pas: ${pdfFile.path}',
+          );
           throw Exception('Le fichier PDF n\'existe pas');
         }
 
@@ -217,11 +220,15 @@ class FirebaseInvoiceService {
         'invoiceNumber': invoice.invoiceNumber,
         'clientName': invoice.clientName,
         'clientAddress': invoice.clientAddress,
-        'items': invoice.items.map((item) => {
-          'description': item.description,
-          'quantity': item.quantity,
-          'unitPrice': item.unitPrice,
-        }).toList(),
+        'items': invoice.items
+            .map(
+              (item) => {
+                'description': item.description,
+                'quantity': item.quantity,
+                'unitPrice': item.unitPrice,
+              },
+            )
+            .toList(),
         'subtotal': invoice.subtotal,
         'taxRate': invoice.taxRate,
         'taxAmount': invoice.taxAmount,
@@ -234,7 +241,8 @@ class FirebaseInvoiceService {
         'companyEmail': invoice.companyEmail,
         'companySiret': invoice.companySiret,
         'notes': invoice.notes,
-        'pdfUrl': pdfUrl,  // ✅ Peut être null si Storage non configuré
+        'template': invoice.templateType.name,
+        'pdfUrl': pdfUrl, // ✅ Peut être null si Storage non configuré
         'createdAt': ServerValue.timestamp,
       };
 
@@ -254,7 +262,6 @@ class FirebaseInvoiceService {
       }
 
       return invoiceId;
-
     } catch (e, stackTrace) {
       debugPrint('❌ Erreur saveInvoice: $e');
       debugPrint('📍 StackTrace: $stackTrace');
@@ -267,15 +274,67 @@ class FirebaseInvoiceService {
   /// puis sauvegarde les métadonnées dans Realtime Database
   Future<String?> saveInvoiceWithPdf(InvoiceModel invoice) async {
     File? pdfFile;
-    
+
     try {
       debugPrint('🚀 saveInvoiceWithPdf - Début du processus');
       debugPrint('   Facture: ${invoice.invoiceNumber}');
       debugPrint('   Client: ${invoice.clientName}');
+      debugPrint('📊 [AVANT ENRICHISSEMENT] Invoice initiale:');
+      debugPrint('   - companyName: "${invoice.companyName}"');
+      debugPrint('   - companyAddress: "${invoice.companyAddress}"');
+      debugPrint('   - companyPhone: "${invoice.companyPhone}"');
+      debugPrint('   - companyEmail: "${invoice.companyEmail}"');
+      debugPrint('   - companySiret: "${invoice.companySiret}"');
 
-      // 1. Générer le PDF
-      debugPrint('📄 Étape 1/3: Génération du PDF...');
-      pdfFile = await _pdfGenerator.generateInvoicePdf(invoice);
+      // 1. Récupérer le profil utilisateur et enrichir la facture
+      debugPrint('👤 Étape 1/4: Récupération du profil entreprise...');
+      final profile = await _profileService.getUserProfile();
+
+      InvoiceModel enrichedInvoice = invoice;
+      if (profile != null) {
+        debugPrint('✅ Profil trouvé: ${profile.companyName}');
+        debugPrint('📋 Détails du profil:');
+        debugPrint('   - companyName: "${profile.companyName}"');
+        debugPrint('   - companyAddress: "${profile.companyAddress}"');
+        debugPrint('   - companyPhone: "${profile.companyPhone}"');
+        debugPrint('   - companyEmail: "${profile.companyEmail}"');
+        debugPrint('   - companySiret: "${profile.companySiret}"');
+        
+        // Créer une nouvelle facture avec les données du profil
+        enrichedInvoice = InvoiceModel(
+          id: invoice.id,
+          invoiceNumber: invoice.invoiceNumber,
+          invoiceDate: invoice.invoiceDate,
+          clientName: invoice.clientName,
+          clientAddress: invoice.clientAddress,
+          items: invoice.items,
+          notes: invoice.notes,
+          templateType: invoice.templateType,
+          companyName: profile.companyName,
+          companyAddress: profile.companyAddress,
+          companyPhone: profile.companyPhone,
+          companyEmail: profile.companyEmail,
+          companySiret: profile.companySiret,
+          companyLogo: profile.companyLogo,
+          taxRate: invoice.taxRate,
+          discountRate: invoice.discountRate,
+          discountLabel: invoice.discountLabel,
+        );
+        debugPrint('✅ Facture enrichie avec les données du profil');
+        debugPrint('📊 [APRÈS ENRICHISSEMENT] Invoice enrichie:');
+        debugPrint('   - companyName: "${enrichedInvoice.companyName}"');
+        debugPrint('   - companyAddress: "${enrichedInvoice.companyAddress}"');
+        debugPrint('   - companyPhone: "${enrichedInvoice.companyPhone}"');
+        debugPrint('   - companyEmail: "${enrichedInvoice.companyEmail}"');
+        debugPrint('   - companySiret: "${enrichedInvoice.companySiret}"');
+      } else {
+        debugPrint('⚠️ Aucun profil trouvé, utilisation des données par défaut');
+        debugPrint('⚠️ Les factures afficheront des données vides pour l\'entreprise');
+      }
+
+      // 2. Générer le PDF
+      debugPrint('📄 Étape 2/4: Génération du PDF...');
+      pdfFile = await _pdfGenerator.generateInvoicePdf(enrichedInvoice);
       debugPrint('✅ PDF généré: ${pdfFile.path}');
 
       // Vérifier que le fichier existe et n'est pas vide
@@ -290,9 +349,9 @@ class FirebaseInvoiceService {
 
       debugPrint('   Taille du PDF: $fileSize bytes');
 
-      // 2. Sauvegarder la facture avec le PDF
-      debugPrint('💾 Étape 2/3: Sauvegarde dans Firebase...');
-      final invoiceId = await saveInvoice(invoice, pdfFile: pdfFile);
+      // 3. Sauvegarder la facture avec le PDF
+      debugPrint('💾 Étape 3/4: Sauvegarde dans Firebase...');
+      final invoiceId = await saveInvoice(enrichedInvoice, pdfFile: pdfFile);
 
       if (invoiceId == null) {
         throw Exception('Échec de la sauvegarde de la facture');
@@ -300,8 +359,8 @@ class FirebaseInvoiceService {
 
       debugPrint('✅ Facture sauvegardée avec succès: $invoiceId');
 
-      // 3. Nettoyer le fichier temporaire
-      debugPrint('🧹 Étape 3/3: Nettoyage du fichier temporaire...');
+      // 4. Nettoyer le fichier temporaire
+      debugPrint('🧹 Étape 4/4: Nettoyage du fichier temporaire...');
       try {
         await pdfFile.delete();
         debugPrint('✅ Fichier temporaire supprimé');
@@ -311,7 +370,6 @@ class FirebaseInvoiceService {
 
       debugPrint('🎉 Processus terminé avec succès!');
       return invoiceId;
-
     } catch (e, stackTrace) {
       debugPrint('❌ Erreur saveInvoiceWithPdf: $e');
       debugPrint('📍 StackTrace: $stackTrace');
@@ -332,8 +390,28 @@ class FirebaseInvoiceService {
     }
   }
 
+  /// Met à jour le template d'une facture
+  Future<void> updateInvoiceTemplate(String invoiceId, String templateName) async {
+    try {
+      debugPrint('🎨 Mise à jour du template pour la facture $invoiceId: $templateName');
+      
+      await _database
+          .ref('invoices/$invoiceId')
+          .update({'template': templateName});
+          
+      debugPrint('✅ Template mis à jour avec succès');
+    } catch (e) {
+      debugPrint('❌ Erreur lors de la mise à jour du template: $e');
+      rethrow;
+    }
+  }
+
   /// Upload le PDF sur Firebase Storage
-  Future<String?> _uploadPDF(String userId, String invoiceId, File pdfFile) async {
+  Future<String?> _uploadPDF(
+    String userId,
+    String invoiceId,
+    File pdfFile,
+  ) async {
     try {
       debugPrint('📤 _uploadPDF appelé');
       debugPrint('   UserId: $userId');
@@ -383,7 +461,6 @@ class FirebaseInvoiceService {
       debugPrint('✅ PDF uploadé avec succès sur Storage');
       debugPrint('   URL de téléchargement: $downloadUrl');
       return downloadUrl;
-
     } catch (e, stackTrace) {
       debugPrint('❌ Erreur upload PDF: $e');
       debugPrint('   Type d\'erreur: ${e.runtimeType}');
@@ -393,11 +470,17 @@ class FirebaseInvoiceService {
 
       if (errorMsg.contains('storage/bucket-not-configured') ||
           errorMsg.contains('bucket is not configured')) {
-        debugPrint('💡 Le bucket Storage n\'est pas configuré dans Firebase Console');
-        debugPrint('   Allez sur: https://console.firebase.google.com/project/facturezen-558b0/storage');
+        debugPrint(
+          '💡 Le bucket Storage n\'est pas configuré dans Firebase Console',
+        );
+        debugPrint(
+          '   Allez sur: https://console.firebase.google.com/project/facturezen-558b0/storage',
+        );
       } else if (errorMsg.contains('permission-denied')) {
         debugPrint('💡 Problème de permissions Storage');
-        debugPrint('   Vérifiez les règles dans Firebase Console > Storage > Rules');
+        debugPrint(
+          '   Vérifiez les règles dans Firebase Console > Storage > Rules',
+        );
       }
 
       return null;
@@ -408,55 +491,140 @@ class FirebaseInvoiceService {
   Future<List<InvoiceModel>> getUserInvoices() async {
     try {
       final userId = currentUser?.uid;
-      if (userId == null) return [];
+      if (userId == null) {
+        debugPrint('⚠️ getUserInvoices: Aucun utilisateur connecté');
+        return [];
+      }
 
-      // Query Realtime Database
+      debugPrint('📥 Chargement des factures pour userId: $userId');
+
+      // ✅ NOUVELLE APPROCHE : Récupérer TOUTES les factures puis filtrer
+      // Cela évite les problèmes de parsing lors de la requête
       final invoicesRef = _database.ref('invoices');
-      final query = invoicesRef.orderByChild('userId').equalTo(userId);
-      final snapshot = await query.get();
+      
+      DataSnapshot snapshot;
+      try {
+        snapshot = await invoicesRef.get();
+      } catch (queryError) {
+        debugPrint('❌ Erreur lors de la requête Firebase: $queryError');
+        debugPrint('💡 La structure des données dans Firebase est peut-être corrompue');
+        debugPrint('   Essayez de vérifier vos données dans Firebase Console');
+        return [];
+      }
 
-      if (!snapshot.exists) return [];
+      if (!snapshot.exists) {
+        debugPrint('ℹ️ Aucune facture trouvée dans la base');
+        return [];
+      }
 
-      final invoicesMap = Map<String, dynamic>.from(snapshot.value as Map);
+      // ✅ CORRECTION : Vérifier que snapshot.value est bien un Map
+      final snapshotValue = snapshot.value;
+      if (snapshotValue == null) {
+        debugPrint('⚠️ snapshot.value est null');
+        return [];
+      }
+
+      if (snapshotValue is! Map) {
+        debugPrint(
+          '❌ snapshot.value n\'est pas un Map: ${snapshotValue.runtimeType}',
+        );
+        debugPrint('   Valeur reçue: $snapshotValue');
+        return [];
+      }
+
+      final allInvoicesMap = Map<String, dynamic>.from(snapshotValue as Map);
       final invoices = <InvoiceModel>[];
 
-      invoicesMap.forEach((key, value) {
-        final data = Map<String, dynamic>.from(value as Map);
+      debugPrint('📊 Total de factures dans Firebase: ${allInvoicesMap.length}');
 
-        invoices.add(InvoiceModel(
-          id: key,
-          invoiceNumber: data['invoiceNumber'] as String,
-          invoiceDate: DateTime.fromMillisecondsSinceEpoch(
-            data['createdAt'] as int? ?? DateTime.now().millisecondsSinceEpoch,
-          ),
-          clientName: data['clientName'] as String,
-          clientAddress: data['clientAddress'] as String? ?? '',
-          items: (data['items'] as List<dynamic>)
-              .map((item) => InvoiceItem(
-            description: item['description'] as String,
-            quantity: item['quantity'] as int,
-            unitPrice: (item['unitPrice'] as num).toDouble(),
-          ))
-              .toList(),
-          companyName: data['companyName'] as String,
-          companyAddress: data['companyAddress'] as String,
-          companyPhone: data['companyPhone'] as String?,
-          companyEmail: data['companyEmail'] as String?,
-          companySiret: data['companySiret'] as String?,
-          taxRate: data['taxRate'] as double?,
-          discountRate: data['discountRate'] as double?,
-          discountLabel: data['discountLabel'] as String?,
-          notes: data['notes'] as String?,
-        ));
+      allInvoicesMap.forEach((key, value) {
+        try {
+          debugPrint('🔍 Traitement facture $key');
+          debugPrint('   Type de value: ${value.runtimeType}');
+
+          // ✅ CORRECTION : Vérifier que value est bien un Map avant de le convertir
+          if (value is! Map) {
+            debugPrint(
+              '⚠️ Facture $key ignorée (valeur n\'est pas un Map): ${value.runtimeType}',
+            );
+            return;
+          }
+
+          final data = Map<String, dynamic>.from(value as Map);
+
+          // ✅ FILTRAGE : Ne garder que les factures de cet utilisateur
+          final invoiceUserId = data['userId'] as String?;
+          if (invoiceUserId != userId) {
+            debugPrint('⏭️ Facture $key ignorée (autre utilisateur)');
+            return;
+          }
+
+          debugPrint('   Clés disponibles: ${data.keys.toList()}');
+          debugPrint('   invoiceNumber: ${data['invoiceNumber']}');
+          debugPrint('   clientName: ${data['clientName']}');
+
+          // Vérifier les champs obligatoires
+          if (data['invoiceNumber'] == null || data['clientName'] == null) {
+            debugPrint(
+              '⚠️ Facture $key ignorée (champs obligatoires manquants)',
+            );
+            debugPrint('   Données complètes: $data');
+            return;
+          }
+
+          invoices.add(
+            InvoiceModel(
+              id: key,
+              invoiceNumber: data['invoiceNumber'] as String,
+              invoiceDate: DateTime.fromMillisecondsSinceEpoch(
+                data['createdAt'] as int? ??
+                    DateTime.now().millisecondsSinceEpoch,
+              ),
+              clientName: data['clientName'] as String,
+              clientAddress: data['clientAddress'] as String? ?? '',
+              items:
+                  (data['items'] as List<dynamic>?)
+                      ?.map((item) {
+                        if (item is! Map) return null;
+                        return InvoiceItem(
+                          description: item['description'] as String? ?? '',
+                          quantity: item['quantity'] as int? ?? 1,
+                          unitPrice:
+                              (item['unitPrice'] as num?)?.toDouble() ?? 0.0,
+                        );
+                      })
+                      .whereType<InvoiceItem>()
+                      .toList() ??
+                  [],
+              companyName: data['companyName'] as String? ?? '',
+              companyAddress: data['companyAddress'] as String? ?? '',
+              companyPhone: data['companyPhone'] as String?,
+              companyEmail: data['companyEmail'] as String?,
+              companySiret: data['companySiret'] as String?,
+              taxRate: (data['taxRate'] as num?)?.toDouble(),
+              discountRate: (data['discountRate'] as num?)?.toDouble(),
+              discountLabel: data['discountLabel'] as String?,
+              notes: data['notes'] as String?,
+            ),
+          );
+
+          debugPrint('✅ Facture chargée: ${data['invoiceNumber']} - Client: ${data['clientName']}');
+        } catch (itemError, stackTrace) {
+          debugPrint(
+            '⚠️ Erreur lors du parsing de la facture $key: $itemError',
+          );
+          debugPrint('📍 StackTrace: $stackTrace');
+        }
       });
 
       // Trier par date décroissante
       invoices.sort((a, b) => b.invoiceDate.compareTo(a.invoiceDate));
 
+      debugPrint('✅ ${invoices.length} facture(s) chargée(s) avec succès');
       return invoices;
-
-    } catch (e) {
+    } catch (e, stackTrace) {
       debugPrint('❌ Erreur getUserInvoices: $e');
+      debugPrint('📍 StackTrace: $stackTrace');
       return [];
     }
   }
@@ -471,7 +639,6 @@ class FirebaseInvoiceService {
 
       final data = Map<String, dynamic>.from(snapshot.value as Map);
       return data['pdfUrl'] as String?;
-
     } catch (e) {
       debugPrint('❌ Erreur getInvoicePdfUrl: $e');
       return null;
@@ -480,7 +647,10 @@ class FirebaseInvoiceService {
 
   /// Télécharge le PDF d'une facture et retourne le fichier local
   /// Utile pour ouvrir le PDF avec une app externe
-  Future<File?> downloadInvoicePdf(String invoiceId, String invoiceNumber) async {
+  Future<File?> downloadInvoicePdf(
+    String invoiceId,
+    String invoiceNumber,
+  ) async {
     try {
       debugPrint('📥 Téléchargement du PDF pour la facture: $invoiceNumber');
 
@@ -515,7 +685,6 @@ class FirebaseInvoiceService {
       debugPrint('✅ PDF téléchargé avec succès ($fileSize bytes)');
 
       return localFile;
-
     } catch (e, stackTrace) {
       debugPrint('❌ Erreur downloadInvoicePdf: $e');
       debugPrint('📍 StackTrace: $stackTrace');
@@ -533,7 +702,9 @@ class FirebaseInvoiceService {
       final isAvailable = await _ensureStorageIsAvailable();
 
       if (isAvailable) {
-        final storageRef = _storage!.ref().child('invoices/$userId/$invoiceId.pdf');
+        final storageRef = _storage!.ref().child(
+          'invoices/$userId/$invoiceId.pdf',
+        );
         try {
           await storageRef.delete();
           debugPrint('🗑️ PDF supprimé du Storage');
@@ -551,7 +722,6 @@ class FirebaseInvoiceService {
 
       debugPrint('✅ Facture supprimée: $invoiceId');
       return true;
-
     } catch (e) {
       debugPrint('❌ Erreur deleteInvoice: $e');
       return false;
@@ -571,7 +741,6 @@ class FirebaseInvoiceService {
 
       final userData = Map<String, dynamic>.from(snapshot.value as Map);
       return userData['isPremium'] as bool? ?? false;
-
     } catch (e) {
       debugPrint('❌ Erreur isPremiumUser: $e');
       return false;
@@ -635,6 +804,42 @@ class FirebaseInvoiceService {
       debugPrint('✅ URL du PDF mise à jour pour la facture: $invoiceId');
     } catch (e) {
       debugPrint('❌ Erreur updateInvoicePdfUrl: $e');
+      rethrow;
+    }
+  }
+
+  /// Met à jour une facture complète
+  Future<void> updateInvoice(InvoiceModel invoice) async {
+    try {
+      final invoiceRef = _database.ref('invoices/${invoice.id}');
+      
+      final invoiceData = {
+        'id': invoice.id,
+        'invoiceNumber': invoice.invoiceNumber,
+        'invoiceDate': invoice.invoiceDate.toIso8601String(),
+        'clientName': invoice.clientName,
+        'clientAddress': invoice.clientAddress,
+        'items': invoice.items.map((item) => {
+          'description': item.description,
+          'quantity': item.quantity,
+          'unitPrice': item.unitPrice,
+        }).toList(),
+        'notes': invoice.notes,
+        'companyName': invoice.companyName,
+        'companyAddress': invoice.companyAddress,
+        'companyPhone': invoice.companyPhone,
+        'companyEmail': invoice.companyEmail,
+        'companySiret': invoice.companySiret,
+        'companyLogo': invoice.companyLogo,
+        'taxRate': invoice.taxRate,
+        'discountRate': invoice.discountRate,
+        'discountLabel': invoice.discountLabel,
+      };
+
+      await invoiceRef.update(invoiceData);
+      debugPrint('✅ Facture mise à jour: ${invoice.id}');
+    } catch (e) {
+      debugPrint('❌ Erreur updateInvoice: $e');
       rethrow;
     }
   }

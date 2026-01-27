@@ -2,15 +2,42 @@ import 'package:flutter/material.dart';
 import '../templates/invoice_template_base.dart';
 
 /// Modal de sélection de template avec défilement horizontal
-class TemplateSelectorModal extends StatelessWidget {
+class TemplateSelectorModal extends StatefulWidget {
   final InvoiceTemplateType currentTemplate;
   final Function(InvoiceTemplateType) onTemplateSelected;
+  final Function(InvoiceTemplateType) onPreviewTap; // Nouveau callback
 
   const TemplateSelectorModal({
     Key? key,
     required this.currentTemplate,
     required this.onTemplateSelected,
+    required this.onPreviewTap,
   }) : super(key: key);
+
+  @override
+  State<TemplateSelectorModal> createState() => _TemplateSelectorModalState();
+}
+
+class _TemplateSelectorModalState extends State<TemplateSelectorModal> {
+  late InvoiceTemplateType _viewedTemplate;
+  late PageController _pageController;
+
+  @override
+  void initState() {
+    super.initState();
+    _viewedTemplate = widget.currentTemplate;
+    final initialIndex = InvoiceTemplateType.values.indexOf(widget.currentTemplate);
+    _pageController = PageController(
+      viewportFraction: 0.85,
+      initialPage: initialIndex,
+    );
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -72,17 +99,16 @@ class TemplateSelectorModal extends StatelessWidget {
           Expanded(
             child: PageView.builder(
               itemCount: templates.length,
-              controller: PageController(
-                viewportFraction: 0.85,
-                initialPage: InvoiceTemplateType.values.indexOf(currentTemplate),
-              ),
+              controller: _pageController,
               onPageChanged: (index) {
-                onTemplateSelected(InvoiceTemplateType.values[index]);
+                setState(() {
+                  _viewedTemplate = InvoiceTemplateType.values[index];
+                });
               },
               itemBuilder: (context, index) {
                 final template = templates[index];
                 final templateType = InvoiceTemplateType.values[index];
-                final isSelected = templateType == currentTemplate;
+                final isSelected = templateType == _viewedTemplate;
 
                 return Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
@@ -90,7 +116,11 @@ class TemplateSelectorModal extends StatelessWidget {
                     template: template,
                     isSelected: isSelected,
                     onTap: () {
-                      onTemplateSelected(templateType);
+                      _pageController.animateToPage(
+                        index,
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut,
+                      );
                     },
                   ),
                 );
@@ -101,27 +131,61 @@ class TemplateSelectorModal extends StatelessWidget {
           // Bouton de sélection
           Padding(
             padding: const EdgeInsets.all(24),
-            child: SizedBox(
-              width: double.infinity,
-              height: 56,
-              child: ElevatedButton(
-                onPressed: () => Navigator.pop(context),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF5B5FC7),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
+            child: Row(
+              children: [
+                // Bouton "Voir"
+                Expanded(
+                  child: SizedBox(
+                    height: 56,
+                    child: OutlinedButton.icon(
+                      onPressed: () => widget.onPreviewTap(_viewedTemplate),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF5B5FC7),
+                        side: const BorderSide(color: Color(0xFF5B5FC7), width: 1.5),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      icon: const Icon(Icons.visibility_outlined),
+                      label: const Text(
+                        'Voir',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
                   ),
-                  elevation: 0,
                 ),
-                child: const Text(
-                  'Utiliser ce template',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
+                
+                const SizedBox(width: 16),
+
+                // Bouton "Enregistrer"
+                Expanded(
+                  child: SizedBox(
+                    height: 56,
+                    child: ElevatedButton.icon(
+                      onPressed: () => widget.onTemplateSelected(_viewedTemplate),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF5B5FC7),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        elevation: 0,
+                      ),
+                      icon: const Icon(Icons.check, color: Colors.white),
+                      label: const Text(
+                        'Enregistrer',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
-              ),
+              ],
             ),
           ),
         ],
