@@ -151,6 +151,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         ChangeNotifierProvider(
           create: (_) => HomeViewModel(invoiceService: invoiceService),
         ),
+        ChangeNotifierProvider(create: (_) => SubscriptionViewModel()), // ✅ AJOUTÉ
         ChangeNotifierProvider(create: (_) => VoiceRecordingViewModel()),
         ChangeNotifierProvider(
           create: (_) => InvoiceHistoryViewModel(invoiceService: invoiceService),

@@ -216,17 +216,18 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
       final updatedInvoiceData = Map<String, dynamic>.from(widget.invoiceData);
       updatedInvoiceData['templateType'] = _selectedTemplate.name;
 
-      String savedInvoiceId;
+      String? savedInvoiceId;
+      final updatedInvoice = InvoiceModel.fromMap(updatedInvoiceData);
 
       if (widget.invoiceId != null) {
         // Mise à jour d'une facture existante
         debugPrint('🔄 [SAVE] Mise à jour de la facture existante: ${widget.invoiceId}');
-        await _invoiceService.updateInvoice(widget.invoiceId!, updatedInvoiceData);
-        savedInvoiceId = widget.invoiceId!;
+        await _invoiceService.updateInvoice(updatedInvoice);
+        savedInvoiceId = widget.invoiceId;
       } else {
         // Création d'une nouvelle facture
         debugPrint('➕ [SAVE] Création d\'une nouvelle facture');
-        savedInvoiceId = await _invoiceService.saveInvoice(updatedInvoiceData);
+        savedInvoiceId = await _invoiceService.saveInvoice(updatedInvoice);
       }
 
       // Fermer le loader
