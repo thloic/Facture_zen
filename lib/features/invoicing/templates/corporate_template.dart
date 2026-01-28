@@ -48,46 +48,43 @@ class CorporateTemplate implements InvoiceTemplate {
 
   @override
   Widget build(BuildContext context, InvoiceModel invoice) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return SingleChildScrollView(
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Bande latérale
-                  Container(
-                    width: 12,
-                    color: primaryColor,
-                  ),
+    return SingleChildScrollView(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Bande latérale
+          Container(
+            width: 12,
+            height: MediaQuery.of(context).size.height, // Hauteur fixe
+            color: primaryColor,
+          ),
 
-                  // Contenu
-                  Expanded(
-                    child: Container(
-                      color: Colors.white,
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildHeader(invoice),
-                          const SizedBox(height: 32),
-                          _buildParties(invoice),
-                          const SizedBox(height: 32),
-                          _buildItems(invoice),
-                          const SizedBox(height: 24),
-                          _buildTotals(invoice),
-                        ],
-                      ),
-                    ),
-                  ),
+          // Contenu
+          Expanded(
+            child: Container(
+              color: Colors.white,
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildHeader(invoice),
+                  const SizedBox(height: 32),
+                  _buildParties(invoice),
+                  const SizedBox(height: 32),
+                  _buildItems(invoice),
+                  const SizedBox(height: 24),
+                  _buildTotals(invoice),
+                  if (invoice.notes != null && invoice.notes!.isNotEmpty) ...[
+                    const SizedBox(height: 32),
+                    _buildNotes(invoice.notes!),
+                  ],
                 ],
               ),
             ),
           ),
-        );
-      },
+        ],
+      ),
     );
   }
 
@@ -153,6 +150,7 @@ class CorporateTemplate implements InvoiceTemplate {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Text(
             label,
@@ -179,6 +177,7 @@ class CorporateTemplate implements InvoiceTemplate {
 
   Widget _buildItems(InvoiceModel invoice) {
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
         // En-tête
         Container(
@@ -273,6 +272,7 @@ class CorporateTemplate implements InvoiceTemplate {
 
   Widget _buildTotals(InvoiceModel invoice) {
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
         _buildTotalRow('Sous-total', invoice.subtotal, false),
         if (invoice.hasDiscount) ...[
@@ -345,9 +345,38 @@ class CorporateTemplate implements InvoiceTemplate {
     );
   }
 
+  Widget _buildNotes(String notes) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text(
+            'NOTES',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            notes,
+            style: const TextStyle(fontSize: 14),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Future<void>? generatePDF(InvoiceModel invoice) {
-    // TODO: implement generatePDF
-    throw UnimplementedError();
+    // Implémenté via PdfTemplateGenerators
+    return null;
   }
 }

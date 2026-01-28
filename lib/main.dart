@@ -1,9 +1,11 @@
 import 'package:facture_zen/features/home/viewmodels/home_viewmodel.dart';
 import 'package:facture_zen/features/home/views/home_screen.dart';
 import 'package:facture_zen/features/invoicing/views/invoice_history_screen.dart';
+import 'package:facture_zen/features/invoicing/views/subscription_screen.dart';
 import 'package:facture_zen/features/invoicing/views/voice_recording_screen.dart';
 import 'package:facture_zen/features/profile/views/profile_screenn.dart';
 import 'package:facture_zen/features/notifications/views/notifications_screen.dart';
+import 'package:facture_zen/revenue_cat_util.dart' as revenue_cat;
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -21,6 +23,7 @@ import 'features/auth/views/register_screen.dart';
 import 'features/auth/views/forgot_password_screen.dart';
 import 'features/auth/views/pin_setup_screen.dart';
 import 'features/auth/views/pin_login_screen.dart';
+import 'features/invoicing/viewmodels/subscription_view_model.dart';
 import 'features/settings/views/company_setup_screen.dart';
 import 'features/invoicing/viewmodels/invoice_history_viewmodel.dart';
 import 'features/invoicing/viewmodels/voice_recording_viewmodel.dart';
@@ -33,9 +36,16 @@ import 'firebase_options.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+
   // Charger les variables d'environnement (.env)
   await dotenv.load(fileName: ".env");
 
+  await revenue_cat.initialize(
+    "App Store API Key",
+    dotenv.env['REVENUE_CAT_PLAY_STORE_KEY'] ?? '',
+    debugLogEnabled: true,
+    loadDataAfterLaunch: true,
+  );
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
@@ -167,6 +177,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
           '/company-setup': (context) => const CompanySetupScreen(),
           '/company-profile-setup': (context) => const CompanyProfileSetupScreen(),
           '/home': (context) => const HomeScreen(),
+          '/subscription-screen':(context)=>const SubscriptionScreen(),
           '/record': (context) => const VoiceRecordingScreen(),
           '/historiqueInvoicing': (context) => const InvoiceHistoryScreen(),
           '/settings': (context) => const ProfileScreen(),

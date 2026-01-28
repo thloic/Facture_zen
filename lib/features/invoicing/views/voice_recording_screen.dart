@@ -19,15 +19,12 @@ class _VoiceRecordingScreenState extends State<VoiceRecordingScreen>
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
 
-  // Historique des amplitudes pour l'effet circulaire
-  final List<double> _amplitudeHistory = List.generate(60, (_) => 0.0);
-
   @override
   void initState() {
     super.initState();
 
     _pulseController = AnimationController(
-      duration: const Duration(milliseconds: 1500),
+      duration: const Duration(milliseconds: 2000),
       vsync: this,
     );
 
@@ -79,37 +76,35 @@ class _VoiceRecordingScreenState extends State<VoiceRecordingScreen>
               _updateAnimations(viewModel.isRecording);
             });
 
-            return Column(
+            return Stack(
               children: [
-                SizedBox(height: responsive.getAdaptiveSpacing(32)),
+                // Contenu principal
+                Column(
+                  children: [
+                    SizedBox(height: responsive.getAdaptiveSpacing(24)),
+                    AppLogo(fontSize: responsive.getAdaptiveTextSize(28)),
 
-                AppLogo(fontSize: responsive.getAdaptiveTextSize(28)),
-
-                Expanded(
-                  child: Stack(
-                    children: [
-                      Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            // Timer circulaire avec effet audio autour
-                            _buildTimerWithAudioEffect(viewModel, responsive),
-                          ],
-                        ),
+                    Expanded(
+                      child: Center(
+                        child: _buildModernTimer(viewModel, responsive),
                       ),
+                    ),
 
-                      Positioned(
-                        bottom: responsive.getAdaptiveSpacing(120),
-                        left: 0,
-                        right: 0,
-                        child: _buildControlButtons(viewModel, responsive),
+                    // Boutons de contrôle
+                    Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: responsive.horizontalPadding,
                       ),
+                      child: _buildControlButtons(viewModel, responsive),
+                    ),
 
-                      if (viewModel.isGenerating)
-                        _buildGeneratingModal(responsive),
-                    ],
-                  ),
+                    SizedBox(height: responsive.getAdaptiveSpacing(32)),
+                  ],
                 ),
+
+                // Modal de génération
+                if (viewModel.isGenerating)
+                  _buildGeneratingModal(responsive),
               ],
             );
           },
@@ -119,95 +114,144 @@ class _VoiceRecordingScreenState extends State<VoiceRecordingScreen>
     );
   }
 
-  /// Widget - Timer avec effet audio circulaire
-  Widget _buildTimerWithAudioEffect(VoiceRecordingViewModel viewModel, ResponsiveUtils responsive) {
-    return StreamBuilder<double>(
-      stream: viewModel.amplitudeStream,
-      builder: (context, snapshot) {
-        // Mettre à jour l'historique des amplitudes
-        if (snapshot.hasData && snapshot.data != null) {
-          _amplitudeHistory.removeAt(0);
-          _amplitudeHistory.add(snapshot.data!);
-        }
+  Widget _buildModernTimer(VoiceRecordingViewModel viewModel, ResponsiveUtils responsive) {
+    return AnimatedBuilder(
+      animation: _pulseAnimation,
+      builder: (context, child) {
+        return Stack(
+          alignment: Alignment.center,
+          children: [
+            // Anneaux de fond animés
+            if (viewModel.isRecording) ...[
+              _buildAnimatedRing(300 + (_pulseAnimation.value * 30), 0.08),
+              _buildAnimatedRing(260 + (_pulseAnimation.value * 20), 0.15),
+            ],
 
-        return AnimatedBuilder(
-          animation: _pulseAnimation,
-          builder: (context, child) {
-            return Stack(
-              alignment: Alignment.center,
-              children: [
-                // Effet audio circulaire autour du cercle
-                if (viewModel.isRecording)
-                  SizedBox(
-                    width: 320,
-                    height: 320,
-                    child: CustomPaint(
-                      painter: CircularWaveformPainter(
-                        amplitudes: _amplitudeHistory,
-                        isRecording: viewModel.isRecording,
-                      ),
-                    ),
+            // Timer central ultra-moderne
+            Container(
+              width: 220,
+              height: 220,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: viewModel.isRecording
+                      ? [
+                    const Color(0xFF6B6FC7),
+                    const Color(0xFF494D9F),
+                    const Color(0xFF5B5FC7),
+                  ]
+                      : [
+                    const Color(0xFF8B8FD7),
+                    const Color(0xFF696DC7),
+                  ],
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF5B5FC7).withOpacity(0.4),
+                    blurRadius: 40,
+                    offset: const Offset(0, 15),
+                    spreadRadius: viewModel.isRecording ? 5 : 0,
                   ),
-
-                // Pulse d'arrière-plan
-                if (viewModel.isRecording)
-                  Container(
-                    width: 280 + (_pulseAnimation.value * 40),
-                    height: 280 + (_pulseAnimation.value * 40),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: const Color(0xFF9C9FE8).withOpacity(
-                        0.15 * (1 - _pulseAnimation.value),
-                      ),
+                  if (viewModel.isRecording)
+                    BoxShadow(
+                      color: const Color(0xFF9C9FE8).withOpacity(0.3),
+                      blurRadius: 60,
+                      offset: const Offset(0, 0),
+                      spreadRadius: 10,
                     ),
-                  ),
-
-                if (viewModel.isRecording)
-                  Container(
-                    width: 260 + (_pulseAnimation.value * 20),
-                    height: 260 + (_pulseAnimation.value * 20),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: const Color(0xFF9C9FE8).withOpacity(
-                        0.25 * (1 - _pulseAnimation.value),
-                      ),
-                    ),
-                  ),
-
-                // Cercle principal avec timer
-                Container(
-                  width: 220,
-                  height: 220,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: const LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [Color(0xFF6B6FC7), Color(0xFF494D9F)],
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF5B5FC7).withOpacity(0.3),
-                        blurRadius: 30,
-                        offset: const Offset(0, 10),
-                      ),
-                    ],
-                  ),
-                  child: Center(
-                    child: Text(
-                      viewModel.formattedDuration,
-                      style: TextStyle(
-                        fontSize: responsive.getAdaptiveTextSize(32),
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                        letterSpacing: 2,
-                      ),
-                    ),
+                ],
+              ),
+              child: Container(
+                margin: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.2),
+                    width: 2,
                   ),
                 ),
-              ],
-            );
-          },
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        viewModel.formattedDuration,
+                        style: TextStyle(
+                          fontSize: responsive.getAdaptiveTextSize(36),
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                          letterSpacing: 3,
+                          shadows: [
+                            Shadow(
+                              color: Colors.black.withOpacity(0.2),
+                              offset: const Offset(0, 2),
+                              blurRadius: 4,
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (viewModel.isRecording)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              _buildPulsingDot(0),
+                              _buildPulsingDot(200),
+                              _buildPulsingDot(400),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildAnimatedRing(double size, double opacity) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: const Color(0xFF9C9FE8).withOpacity(opacity),
+          width: 2,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPulsingDot(int delay) {
+    return AnimatedBuilder(
+      animation: _pulseAnimation,
+      builder: (context, child) {
+        final offset = (delay / 600);
+        final value = ((_pulseAnimation.value + offset) % 1.0);
+        final opacity = (math.sin(value * math.pi) * 0.8).clamp(0.2, 1.0);
+
+        return Container(
+          width: 8,
+          height: 8,
+          margin: const EdgeInsets.symmetric(horizontal: 3),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: Colors.white.withOpacity(opacity),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.white.withOpacity(opacity * 0.5),
+                blurRadius: 4,
+                spreadRadius: 1,
+              ),
+            ],
+          ),
         );
       },
     );
@@ -221,12 +265,10 @@ class _VoiceRecordingScreenState extends State<VoiceRecordingScreen>
           icon: Icons.refresh,
           size: 56,
           onPressed: viewModel.canReset ? viewModel.reset : null,
-          backgroundColor: const Color(0xFFE5E7EB),
+          backgroundColor: const Color(0xFFF3F4F6),
           iconColor: const Color(0xFF6B7280),
         ),
-
         SizedBox(width: responsive.getAdaptiveSpacing(40)),
-
         _buildActionButton(
           icon: viewModel.isRecording ? Icons.pause : Icons.mic,
           size: 80,
@@ -235,9 +277,7 @@ class _VoiceRecordingScreenState extends State<VoiceRecordingScreen>
           iconColor: Colors.white,
           hasShadow: true,
         ),
-
         SizedBox(width: responsive.getAdaptiveSpacing(40)),
-
         _buildActionButton(
           icon: Icons.check,
           size: 56,
@@ -289,9 +329,7 @@ class _VoiceRecordingScreenState extends State<VoiceRecordingScreen>
             child: Icon(
               icon,
               size: size * 0.45,
-              color: onPressed == null
-                  ? iconColor.withOpacity(0.4)
-                  : iconColor,
+              color: onPressed == null ? iconColor.withOpacity(0.4) : iconColor,
             ),
           ),
         ),
@@ -300,132 +338,61 @@ class _VoiceRecordingScreenState extends State<VoiceRecordingScreen>
   }
 
   Widget _buildGeneratingModal(ResponsiveUtils responsive) {
-    return Container(
-      color: Colors.black.withOpacity(0.5),
-      child: Center(
-        child: Container(
-          margin: EdgeInsets.symmetric(
-            horizontal: responsive.horizontalPadding * 2,
-          ),
-          padding: EdgeInsets.all(responsive.getAdaptiveSpacing(32)),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF5B5FC7)),
-              ),
-
-              SizedBox(height: responsive.getAdaptiveSpacing(20)),
-
-              Text(
-                'Transcription en cours',
-                style: TextStyle(
-                  fontSize: responsive.getAdaptiveTextSize(18),
-                  fontWeight: FontWeight.w600,
-                  color: const Color(0xFF1F2937),
+    return Positioned.fill(
+      child: Container(
+        color: Colors.black.withOpacity(0.5),
+        child: Center(
+          child: Container(
+            margin: EdgeInsets.symmetric(horizontal: responsive.horizontalPadding * 2),
+            padding: EdgeInsets.all(responsive.getAdaptiveSpacing(32)),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF5B5FC7)),
                 ),
-              ),
-
-              SizedBox(height: responsive.getAdaptiveSpacing(12)),
-
-              Text(
-                'Groq Whisper analyse votre audio...',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: responsive.getAdaptiveTextSize(14),
-                  color: const Color(0xFF6B7280),
-                  height: 1.5,
-                ),
-              ),
-
-              SizedBox(height: responsive.getAdaptiveSpacing(24)),
-
-              TextButton(
-                onPressed: () {
-                  context.read<VoiceRecordingViewModel>().cancelGeneration();
-                },
-                child: Text(
-                  'Annuler',
+                SizedBox(height: responsive.getAdaptiveSpacing(20)),
+                Text(
+                  'Transcription en cours',
                   style: TextStyle(
-                    fontSize: responsive.getAdaptiveTextSize(16),
-                    color: const Color(0xFF5B5FC7),
+                    fontSize: responsive.getAdaptiveTextSize(18),
                     fontWeight: FontWeight.w600,
+                    color: const Color(0xFF1F2937),
                   ),
                 ),
-              ),
-            ],
+                SizedBox(height: responsive.getAdaptiveSpacing(12)),
+                Text(
+                  'Groq Whisper analyse votre audio...',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: responsive.getAdaptiveTextSize(14),
+                    color: const Color(0xFF6B7280),
+                    height: 1.5,
+                  ),
+                ),
+                SizedBox(height: responsive.getAdaptiveSpacing(24)),
+                TextButton(
+                  onPressed: () {
+                    context.read<VoiceRecordingViewModel>().cancelGeneration();
+                  },
+                  child: Text(
+                    'Annuler',
+                    style: TextStyle(
+                      fontSize: responsive.getAdaptiveTextSize(16),
+                      color: const Color(0xFF5B5FC7),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
-  }
-}
-
-/// CustomPainter pour la visualisation circulaire autour du timer (effet Siri)
-class CircularWaveformPainter extends CustomPainter {
-  final List<double> amplitudes;
-  final bool isRecording;
-
-  CircularWaveformPainter({
-    required this.amplitudes,
-    required this.isRecording,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final baseRadius = size.width / 2.3;
-
-    final paint = Paint()
-      ..strokeWidth = 3.5
-      ..strokeCap = StrokeCap.round
-      ..style = PaintingStyle.stroke;
-
-    final int barCount = amplitudes.length;
-    final double angleStep = (2 * math.pi) / barCount;
-
-    for (int i = 0; i < barCount; i++) {
-      final angle = i * angleStep - math.pi / 2; // Commencer en haut
-      final amplitude = amplitudes[i];
-
-      // Longueur de la barre basée sur l'amplitude (entre 8 et 45)
-      final barLength = 8 + (amplitude * 37);
-
-      // Point de départ (sur le cercle de base)
-      final startX = center.dx + baseRadius * math.cos(angle);
-      final startY = center.dy + baseRadius * math.sin(angle);
-
-      // Point d'arrivée (vers l'extérieur)
-      final endRadius = baseRadius + barLength;
-      final endX = center.dx + endRadius * math.cos(angle);
-      final endY = center.dy + endRadius * math.sin(angle);
-
-      // Couleur avec gradient basé sur l'amplitude
-      final opacity = isRecording ? (0.6 + amplitude * 0.4) : 0.2;
-      final color = Color.lerp(
-        const Color(0xFF9C9FE8),
-        const Color(0xFF5B5FC7),
-        amplitude * 0.7,
-      )!.withOpacity(opacity);
-
-      paint.color = color;
-
-      // Dessiner la barre radiale
-      canvas.drawLine(
-        Offset(startX, startY),
-        Offset(endX, endY),
-        paint,
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(CircularWaveformPainter oldDelegate) {
-    return oldDelegate.amplitudes != amplitudes ||
-        oldDelegate.isRecording != isRecording;
   }
 }
