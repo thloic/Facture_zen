@@ -44,7 +44,6 @@ dependencies:
   permission_handler: ^12.0.1
   path_provider: ^2.1.5
   http: ^1.6.0
-  firebase_storage: ^13.0.5
   pdf: ^3.11.3
   printing: ^5.14.2
   flutter_dotenv: ^5.2.1
@@ -54,6 +53,11 @@ dependencies:
   google_fonts: ^8.0.0
   in_app_purchase: ^3.2.3                   
   purchases_flutter: ^9.10.7
+  image_picker: ^1.2.1
+  cached_network_image: ^3.4.1
+  firebase_storage: ^13.0.6
+  flutter_image_compress: ^2.4.0
+  path: ^1.9.1
 
 dev_dependencies:
   flutter_test:
