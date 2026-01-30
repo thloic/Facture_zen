@@ -95,30 +95,81 @@ class FirebaseInvoiceService {
       final userId = currentUser?.uid;
       if (userId == null) return false;
 
-      // Récupérer les données utilisateur
       final userRef = _database.ref('users/$userId');
       final snapshot = await userRef.get();
 
       if (!snapshot.exists) {
-        // Créer l'utilisateur s'il n'existe pas
         await _createUserDocument(userId);
         return true;
       }
 
       final userData = Map<String, dynamic>.from(snapshot.value as Map);
       final isPremium = userData['isPremium'] as bool? ?? false;
+
+      // ✅ NOUVEAU : Utiliser la limite du plan
+      final monthlyLimit = userData['monthlyInvoiceLimit'] as int? ?? FREE_INVOICE_LIMIT;
       final totalInvoicesCreated = userData[TOTAL_INVOICES_CREATED_KEY] as int? ?? 0;
 
-      // Si premium, pas de limite
-      if (isPremium) return true;
+      // Si premium, vérifier la limite du plan
+      if (isPremium) {
+        // Pour les plans premium, vérifier la limite mensuelle
+        // (tu pourrais ajouter un compteur mensuel qui se réinitialise)
+        return totalInvoicesCreated < monthlyLimit;
+      }
 
-
-      // Sinon, vérifier la limite
+      // Pour le plan gratuit, utiliser FREE_INVOICE_LIMIT
       return totalInvoicesCreated < FREE_INVOICE_LIMIT;
 
     } catch (e) {
       debugPrint('❌ Erreur canCreateInvoice: $e');
       return false;
+    }
+  }
+
+  Future<int> getUserInvoiceLimit() async {
+    try {
+      final userId = currentUser?.uid;
+      if (userId == null) return FREE_INVOICE_LIMIT;
+
+      final userRef = _database.ref('users/$userId');
+      final snapshot = await userRef.get();
+
+      if (!snapshot.exists) return FREE_INVOICE_LIMIT;
+
+      final userData = Map<String, dynamic>.from(snapshot.value as Map);
+      return userData['monthlyInvoiceLimit'] as int? ?? FREE_INVOICE_LIMIT;
+
+    } catch (e) {
+      debugPrint('❌ Error getting user limit: $e');
+      return FREE_INVOICE_LIMIT;
+    }
+  }
+  /// ✅ NOUVEAU : Mettre à jour le plan utilisateur
+  Future<void> updateUserPlan({
+    required bool isPremium,
+    required int monthlyInvoiceLimit,
+    required String planName,
+  }) async {
+    try {
+      final userId = currentUser?.uid;
+      if (userId == null) return;
+
+      final userRef = _database.ref('users/$userId');
+
+      await userRef.update({
+        'isPremium': isPremium,
+        'monthlyInvoiceLimit': monthlyInvoiceLimit,
+        'planName': planName,
+        'lastUpdated': ServerValue.timestamp,
+      });
+
+      debugPrint('✅ User plan updated in Firebase');
+      debugPrint('   Plan: $planName');
+      debugPrint('   Limit: $monthlyInvoiceLimit invoices/month');
+
+    } catch (e) {
+      debugPrint('❌ Error updating user plan: $e');
+      rethrow;
     }
   }
 

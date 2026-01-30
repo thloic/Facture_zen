@@ -3,8 +3,11 @@
 import '../services/revenue_cat_service.dart';
 import 'package:flutter/material.dart';
 
+import '../services/subscription_sync_service.dart';
+
 class SubscriptionViewModel extends ChangeNotifier {
   final RevenueCatService _revenueCatService = RevenueCatService();
+  final SubscriptionSyncService _syncService = SubscriptionSyncService(); // ✅ AJOUTER
 
   bool _isLoading = false;
   String? _errorMessage;
@@ -208,7 +211,7 @@ class SubscriptionViewModel extends ChangeNotifier {
   }
 
   /// ✅ Acheter l'abonnement sélectionné
-  Future<bool> purchaseSubscription() async {
+  /*Future<bool> purchaseSubscription() async {
     if (_selectedPackage == null) {
       _errorMessage = 'Aucun package sélectionné';
       notifyListeners();
@@ -227,6 +230,56 @@ class SubscriptionViewModel extends ChangeNotifier {
         _errorMessage = 'L\'achat n\'a pas pu être finalisé';
       } else {
         debugPrint('✅ Purchase completed successfully!');
+      }
+
+      return success;
+    } catch (e) {
+      final errorString = e.toString();
+
+      if (errorString.contains('PURCHASE_CANCELLED')) {
+        _errorMessage = null;
+        debugPrint('ℹ️ Purchase cancelled by user');
+      } else if (errorString.contains('DEVELOPER_ERROR')) {
+        _errorMessage = 'Erreur de configuration. Contactez le support.';
+        debugPrint('❌ Developer error: $e');
+      } else if (errorString.contains('NETWORK_ERROR')) {
+        _errorMessage = 'Erreur réseau. Vérifiez votre connexion.';
+        debugPrint('❌ Network error: $e');
+      } else {
+        _errorMessage = 'Erreur lors de l\'achat';
+        debugPrint('❌ Purchase error: $e');
+      }
+
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }*/
+
+  Future<bool> purchaseSubscription() async {
+    if (_selectedPackage == null) {
+      _errorMessage = 'Aucun package sélectionné';
+      notifyListeners();
+      return false;
+    }
+
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      debugPrint('🛒 Starting purchase for: ${_selectedPackage!.identifier}');
+      final success = await _revenueCatService.purchasePackageObject(_selectedPackage!);
+
+      if (success) {
+        debugPrint('✅ Purchase completed successfully!');
+
+        // ✅ SYNCHRONISER avec Firebase après l'achat
+        await _syncService.syncSubscriptionStatus();
+        debugPrint('✅ Subscription synced with Firebase');
+      } else {
+        _errorMessage = 'L\'achat n\'a pas pu être finalisé';
       }
 
       return success;

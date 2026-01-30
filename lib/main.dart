@@ -21,6 +21,7 @@ import 'features/auth/views/register_screen.dart';
 import 'features/auth/views/forgot_password_screen.dart';
 import 'features/auth/views/pin_setup_screen.dart';
 import 'features/auth/views/pin_login_screen.dart';
+import 'features/invoicing/services/subscription_sync_service.dart';
 import 'features/invoicing/viewmodels/subscription_view_model.dart';
 import 'features/settings/views/company_setup_screen.dart';
 import 'features/invoicing/viewmodels/invoice_history_viewmodel.dart';
@@ -44,6 +45,10 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  final syncService = SubscriptionSyncService();
+  await syncService.syncSubscriptionStatus();
+
   runApp(const MyApp());
 }
 
