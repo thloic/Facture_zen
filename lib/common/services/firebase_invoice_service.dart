@@ -19,6 +19,8 @@ class FirebaseInvoiceService {
 
   /// Limite gratuite de factures
   static const int FREE_INVOICE_LIMIT = 3;
+  /// Nouveau : compteur global jamais décrémenté
+  static const String TOTAL_INVOICES_CREATED_KEY = 'totalInvoicesCreated';
 
   /// Récupère l'utilisateur actuel
   User? get currentUser => _auth.currentUser;
@@ -105,13 +107,14 @@ class FirebaseInvoiceService {
 
       final userData = Map<String, dynamic>.from(snapshot.value as Map);
       final isPremium = userData['isPremium'] as bool? ?? false;
-      final invoiceCount = userData['invoiceCount'] as int? ?? 0;
+      final totalInvoicesCreated = userData[TOTAL_INVOICES_CREATED_KEY] as int? ?? 0;
 
       // Si premium, pas de limite
       if (isPremium) return true;
 
+
       // Sinon, vérifier la limite
-      return invoiceCount < FREE_INVOICE_LIMIT;
+      return totalInvoicesCreated < FREE_INVOICE_LIMIT;
 
     } catch (e) {
       debugPrint('❌ Erreur canCreateInvoice: $e');
@@ -243,6 +246,10 @@ class FirebaseInvoiceService {
       // Incrémenter le compteur de factures
       await _incrementInvoiceCount(userId);
       debugPrint('✅ Compteur de factures incrémenté');
+
+      await _incrementTotalInvoicesCreated(userId);
+      debugPrint('✅ Compteur de factures incrémenté');
+
 
       debugPrint('✅ Facture sauvegardée avec succès: $invoiceId');
       if (pdfUrl != null) {
@@ -472,6 +479,12 @@ class FirebaseInvoiceService {
     });
   }
 
+  /// Incrémente le compteur global de factures créées (jamais décrémenté)
+  Future<void> _incrementTotalInvoicesCreated(String userId) async {
+    final userRef = _database.ref('users/$userId/$TOTAL_INVOICES_CREATED_KEY');
+    await userRef.set(ServerValue.increment(1));
+  }
+
   /// Incrémente le compteur de factures
   Future<void> _incrementInvoiceCount(String userId) async {
     final userRef = _database.ref('users/$userId/invoiceCount');
@@ -510,6 +523,7 @@ class FirebaseInvoiceService {
     }
   }
 
+
   /// ✅ NOUVEAU : Met à jour l'URL du PDF dans une facture existante
   Future<void> updateInvoicePdfUrl(String invoiceId, String pdfUrl) async {
     try {
@@ -518,6 +532,42 @@ class FirebaseInvoiceService {
       debugPrint('✅ URL du PDF mise à jour pour la facture: $invoiceId');
     } catch (e) {
       debugPrint('❌ Erreur updateInvoicePdfUrl: $e');
+      rethrow;
+    }
+  }
+
+  /// Met à jour une facture complète
+  Future<void> updateInvoice(InvoiceModel invoice) async {
+    try {
+      final invoiceRef = _database.ref('invoices/${invoice.id}');
+
+      final invoiceData = {
+        'id': invoice.id,
+        'invoiceNumber': invoice.invoiceNumber,
+        'invoiceDate': invoice.invoiceDate.toIso8601String(),
+        'clientName': invoice.clientName,
+        'clientAddress': invoice.clientAddress,
+        'items': invoice.items.map((item) => {
+          'description': item.description,
+          'quantity': item.quantity,
+          'unitPrice': item.unitPrice,
+        }).toList(),
+        'notes': invoice.notes,
+        'companyName': invoice.companyName,
+        'companyAddress': invoice.companyAddress,
+        'companyPhone': invoice.companyPhone,
+        'companyEmail': invoice.companyEmail,
+        'companySiret': invoice.companySiret,
+        'companyLogo': invoice.companyLogo,
+        'taxRate': invoice.taxRate,
+        'discountRate': invoice.discountRate,
+        'discountLabel': invoice.discountLabel,
+      };
+
+      await invoiceRef.update(invoiceData);
+      debugPrint('✅ Facture mise à jour: ${invoice.id}');
+    } catch (e) {
+      debugPrint('❌ Erreur updateInvoice: $e');
       rethrow;
     }
   }

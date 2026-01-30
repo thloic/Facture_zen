@@ -3,8 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../viewmodels/subscription_view_model.dart';
 import '../../../common/utils/responsive_utils.dart';
+import '../services/revenue_cat_service.dart' show Package;
 
-/// Écran d'abonnement (limite atteinte)
+/// Écran d'abonnement amélioré (limite atteinte)
 class SubscriptionScreen extends StatefulWidget {
   final int remainingInvoices;
 
@@ -18,10 +19,11 @@ class SubscriptionScreen extends StatefulWidget {
 }
 
 class _SubscriptionScreenState extends State<SubscriptionScreen> {
+  int? _expandedIndex;
+
   @override
   void initState() {
     super.initState();
-    // Charger les offres au démarrage
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<SubscriptionViewModel>().loadOfferings();
     });
@@ -30,6 +32,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
   @override
   Widget build(BuildContext context) {
     final responsive = ResponsiveUtils(context);
+    final screenWidth = MediaQuery.of(context).size.width;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -40,21 +43,39 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
           icon: const Icon(Icons.close, color: Color(0xFF1F2937)),
           onPressed: () => Navigator.pop(context),
         ),
+        title: const Text(
+          'Choisissez votre offre',
+          style: TextStyle(color: Color(0xFF1F2937)),
+        ),
+        centerTitle: true,
       ),
       body: SafeArea(
         child: Consumer<SubscriptionViewModel>(
           builder: (context, viewModel, child) {
             // Afficher un loader pendant le chargement initial
-            if (viewModel.isLoading && viewModel.selectedPackage == null) {
-              return const Center(
-                child: CircularProgressIndicator(
-                  color: Color(0xFF5B5FC7),
+            if (viewModel.isLoading && viewModel.allPackages == null) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const CircularProgressIndicator(
+                      color: Color(0xFF5B5FC7),
+                    ),
+                    SizedBox(height: responsive.getAdaptiveSpacing(16)),
+                    Text(
+                      'Chargement des offres...',
+                      style: TextStyle(
+                        fontSize: responsive.getAdaptiveTextSize(14),
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
                 ),
               );
             }
 
             // Afficher une erreur si le chargement a échoué
-            if (viewModel.errorMessage != null && viewModel.selectedPackage == null) {
+            if (viewModel.errorMessage != null && viewModel.allPackages == null) {
               return Center(
                 child: Padding(
                   padding: EdgeInsets.all(responsive.getAdaptiveSpacing(24)),
@@ -64,7 +85,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                       Icon(
                         Icons.error_outline,
                         size: responsive.getAdaptiveSize(64),
-                        color: Colors.red,
+                        color: Colors.red.shade400,
                       ),
                       SizedBox(height: responsive.getAdaptiveSpacing(16)),
                       Text(
@@ -72,20 +93,26 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: responsive.getAdaptiveTextSize(15),
-                          color: Colors.red,
+                          color: Colors.red.shade700,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                       SizedBox(height: responsive.getAdaptiveSpacing(24)),
-                      ElevatedButton(
+                      ElevatedButton.icon(
                         onPressed: () => viewModel.loadOfferings(),
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Réessayer'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF5B5FC7),
+                          foregroundColor: Colors.white,
                           padding: EdgeInsets.symmetric(
                             horizontal: responsive.getAdaptiveSpacing(32),
-                            vertical: responsive.getAdaptiveSpacing(12),
+                            vertical: responsive.getAdaptiveSpacing(14),
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-                        child: const Text('Réessayer'),
                       ),
                     ],
                   ),
@@ -93,34 +120,53 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
               );
             }
 
+            final packages = viewModel.allPackages ?? [];
+
             return SingleChildScrollView(
               child: Padding(
                 padding: EdgeInsets.symmetric(
                   horizontal: responsive.horizontalPadding,
-                  vertical: responsive.getAdaptiveSpacing(20),
+                  vertical: responsive.getAdaptiveSpacing(16),
                 ),
                 child: Column(
                   children: [
-                    SizedBox(height: responsive.getAdaptiveSpacing(20)),
-
-                    // Icône Premium
-                    Container(
-                      width: responsive.getAdaptiveSize(90),
-                      height: responsive.getAdaptiveSize(90),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFFFFD700), Color(0xFFFFA500)],
+                    // Icône Premium avec animation
+                    TweenAnimationBuilder(
+                      duration: const Duration(milliseconds: 600),
+                      tween: Tween<double>(begin: 0, end: 1),
+                      builder: (context, double value, child) {
+                        return Transform.scale(
+                          scale: value,
+                          child: child,
+                        );
+                      },
+                      child: Container(
+                        width: responsive.getAdaptiveSize(85),
+                        height: responsive.getAdaptiveSize(85),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFFFFD700), Color(0xFFFFA500)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(42.5),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFFFFD700).withOpacity(0.3),
+                              blurRadius: 20,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
                         ),
-                        borderRadius: BorderRadius.circular(45),
-                      ),
-                      child: Icon(
-                        Icons.workspace_premium,
-                        size: responsive.getAdaptiveSize(55),
-                        color: Colors.white,
+                        child: Icon(
+                          Icons.workspace_premium,
+                          size: responsive.getAdaptiveSize(48),
+                          color: Colors.white,
+                        ),
                       ),
                     ),
 
-                    SizedBox(height: responsive.getAdaptiveSpacing(24)),
+                    SizedBox(height: responsive.getAdaptiveSpacing(20)),
 
                     // Titre
                     Text(
@@ -129,94 +175,115 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                         fontSize: responsive.getAdaptiveTextSize(26),
                         fontWeight: FontWeight.bold,
                         color: const Color(0xFF1F2937),
+                        letterSpacing: -0.5,
                       ),
                       textAlign: TextAlign.center,
                     ),
 
-                    SizedBox(height: responsive.getAdaptiveSpacing(12)),
+                    SizedBox(height: responsive.getAdaptiveSpacing(10)),
 
-                    // Message
-                    Text(
-                      'Vous avez atteint la limite de ${widget.remainingInvoices} factures gratuites.\nPassez à Premium pour créer des factures illimitées !',
-                      style: TextStyle(
-                        fontSize: responsive.getAdaptiveTextSize(15),
-                        color: Colors.grey.shade600,
-                        height: 1.5,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-
-                    SizedBox(height: responsive.getAdaptiveSpacing(32)),
-
-                    // Avantages Premium
-                    _buildFeature(
-                      Icons.check_circle,
-                      'Factures illimitées',
-                      responsive,
-                    ),
-                    _buildFeature(
-                      Icons.check_circle,
-                      'Tous les templates',
-                      responsive,
-                    ),
-                    _buildFeature(
-                      Icons.check_circle,
-                      'Export PDF illimité',
-                      responsive,
-                    ),
-                    _buildFeature(
-                      Icons.check_circle,
-                      'Historique complet',
-                      responsive,
-                    ),
-                    _buildFeature(
-                      Icons.check_circle,
-                      'Support prioritaire',
-                      responsive,
-                    ),
-
-                    SizedBox(height: responsive.getAdaptiveSpacing(32)),
-
-                    // Prix - Chargé dynamiquement depuis RevenueCat
+                    // Message avec meilleur formatage
                     Container(
-                      width: double.infinity,
-                      padding: EdgeInsets.all(responsive.getAdaptiveSpacing(20)),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF5B5FC7), Color(0xFF9C9FE8)],
-                        ),
-                        borderRadius: BorderRadius.circular(16),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: responsive.getAdaptiveSpacing(16),
+                        vertical: responsive.getAdaptiveSpacing(12),
                       ),
-                      child: Column(
+                      decoration: BoxDecoration(
+                        color: Colors.orange.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: Colors.orange.shade200,
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(
-                            viewModel.formattedPrice + viewModel.billingPeriod,
-                            style: TextStyle(
-                              fontSize: responsive.getAdaptiveTextSize(28),
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
+                          Icon(
+                            Icons.info_outline,
+                            color: Colors.orange.shade700,
+                            size: responsive.getAdaptiveSize(20),
                           ),
-                          SizedBox(height: responsive.getAdaptiveSpacing(6)),
-                          Text(
-                            'Annulez à tout moment',
-                            style: TextStyle(
-                              fontSize: responsive.getAdaptiveTextSize(13),
-                              color: Colors.white.withOpacity(0.8),
+                          SizedBox(width: responsive.getAdaptiveSpacing(8)),
+                          Flexible(
+                            child: Text(
+                              'Limite de ${widget.remainingInvoices} factures atteinte',
+                              style: TextStyle(
+                                fontSize: responsive.getAdaptiveTextSize(14),
+                                color: Colors.orange.shade900,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              textAlign: TextAlign.center,
                             ),
                           ),
                         ],
                       ),
                     ),
 
-                    SizedBox(height: responsive.getAdaptiveSpacing(20)),
+                    SizedBox(height: responsive.getAdaptiveSpacing(28)),
 
-                    // Bouton S'abonner avec état de chargement
-                    SizedBox(
+                    // Liste des offres avec accordions améliorés
+                    if (packages.isEmpty)
+                      Container(
+                        padding: EdgeInsets.all(responsive.getAdaptiveSpacing(32)),
+                        child: Column(
+                          children: [
+                            Icon(
+                              Icons.inbox_outlined,
+                              size: responsive.getAdaptiveSize(48),
+                              color: Colors.grey.shade400,
+                            ),
+                            SizedBox(height: responsive.getAdaptiveSpacing(12)),
+                            Text(
+                              'Aucune offre disponible',
+                              style: TextStyle(
+                                fontSize: responsive.getAdaptiveTextSize(14),
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    else
+                      ...packages.asMap().entries.map((entry) {
+                        final index = entry.key;
+                        final package = entry.value;
+                        final isSelected = viewModel.isPackageSelected(package);
+                        final isExpanded = _expandedIndex == index;
+
+                        return _buildSubscriptionCard(
+                          package: package,
+                          index: index,
+                          isSelected: isSelected,
+                          isExpanded: isExpanded,
+                          responsive: responsive,
+                          viewModel: viewModel,
+                          screenWidth: screenWidth,
+                        );
+                      }).toList(),
+
+                    SizedBox(height: responsive.getAdaptiveSpacing(28)),
+
+                    // Bouton S'abonner amélioré
+                    Container(
                       width: double.infinity,
-                      height: responsive.getAdaptiveHeight(54),
+                      height: responsive.getAdaptiveHeight(56),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: viewModel.selectedPackage != null &&
+                            !viewModel.isLoading
+                            ? [
+                          BoxShadow(
+                            color: const Color(0xFF5B5FC7).withOpacity(0.3),
+                            blurRadius: 12,
+                            offset: const Offset(0, 6),
+                          ),
+                        ]
+                            : [],
+                      ),
                       child: ElevatedButton(
-                        onPressed: viewModel.isLoading
+                        onPressed: viewModel.isLoading ||
+                            viewModel.selectedPackage == null
                             ? null
                             : () => _handleSubscription(viewModel),
                         style: ElevatedButton.styleFrom(
@@ -228,53 +295,74 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                           elevation: 0,
                         ),
                         child: viewModel.isLoading
-                            ? SizedBox(
-                          height: 20,
-                          width: 20,
+                            ? const SizedBox(
+                          height: 22,
+                          width: 22,
                           child: CircularProgressIndicator(
-                            strokeWidth: 2,
+                            strokeWidth: 2.5,
                             valueColor: AlwaysStoppedAnimation<Color>(
                               Colors.white,
                             ),
                           ),
                         )
-                            : Text(
-                          'S\'abonner maintenant',
-                          style: TextStyle(
-                            fontSize: responsive.getAdaptiveTextSize(16),
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
+                            : Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.lock_open,
+                              size: responsive.getAdaptiveSize(20),
+                            ),
+                            SizedBox(
+                                width: responsive.getAdaptiveSpacing(8)),
+                            Text(
+                              'S\'abonner maintenant',
+                              style: TextStyle(
+                                fontSize:
+                                responsive.getAdaptiveTextSize(16),
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
 
                     // Afficher les erreurs d'achat
-                    if (viewModel.errorMessage != null && viewModel.selectedPackage != null)
+                    if (viewModel.errorMessage != null &&
+                        viewModel.selectedPackage != null)
                       Padding(
                         padding: EdgeInsets.only(
-                          top: responsive.getAdaptiveSpacing(12),
+                          top: responsive.getAdaptiveSpacing(16),
                         ),
                         child: Container(
-                          padding: EdgeInsets.all(responsive.getAdaptiveSpacing(12)),
+                          padding:
+                          EdgeInsets.all(responsive.getAdaptiveSpacing(14)),
                           decoration: BoxDecoration(
                             color: Colors.red.shade50,
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Colors.red.shade200,
+                              width: 1,
+                            ),
                           ),
                           child: Row(
                             children: [
                               Icon(
                                 Icons.error_outline,
-                                color: Colors.red,
-                                size: responsive.getAdaptiveSize(20),
+                                color: Colors.red.shade700,
+                                size: responsive.getAdaptiveSize(22),
                               ),
-                              SizedBox(width: responsive.getAdaptiveSpacing(8)),
+                              SizedBox(
+                                  width: responsive.getAdaptiveSpacing(10)),
                               Expanded(
                                 child: Text(
                                   viewModel.errorMessage!,
                                   style: TextStyle(
-                                    fontSize: responsive.getAdaptiveTextSize(13),
-                                    color: Colors.red,
+                                    fontSize:
+                                    responsive.getAdaptiveTextSize(13),
+                                    color: Colors.red.shade700,
+                                    fontWeight: FontWeight.w500,
                                   ),
                                 ),
                               ),
@@ -283,26 +371,32 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                         ),
                       ),
 
-                    SizedBox(height: responsive.getAdaptiveSpacing(12)),
+                    SizedBox(height: responsive.getAdaptiveSpacing(16)),
 
                     // Bouton Restaurer les achats
-                    TextButton(
+                    TextButton.icon(
                       onPressed: viewModel.isLoading
                           ? null
                           : () => _handleRestorePurchases(viewModel),
-                      child: Text(
+                      icon: Icon(
+                        Icons.restore,
+                        size: responsive.getAdaptiveSize(18),
+                      ),
+                      label: Text(
                         'Restaurer mes achats',
                         style: TextStyle(
                           fontSize: responsive.getAdaptiveTextSize(14),
-                          color: viewModel.isLoading
-                              ? Colors.grey
-                              : const Color(0xFF5B5FC7),
                           fontWeight: FontWeight.w600,
                         ),
                       ),
+                      style: TextButton.styleFrom(
+                        foregroundColor: viewModel.isLoading
+                            ? Colors.grey
+                            : const Color(0xFF5B5FC7),
+                      ),
                     ),
 
-                    SizedBox(height: responsive.getAdaptiveSpacing(8)),
+                    SizedBox(height: responsive.getAdaptiveSpacing(4)),
 
                     // Lien Conditions
                     TextButton(
@@ -310,15 +404,16 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                         // TODO: Ouvrir les conditions d'utilisation
                       },
                       child: Text(
-                        'Voir les conditions d\'utilisation',
+                        'Conditions d\'utilisation et politique de confidentialité',
                         style: TextStyle(
-                          fontSize: responsive.getAdaptiveTextSize(13),
+                          fontSize: responsive.getAdaptiveTextSize(12),
                           color: Colors.grey.shade600,
                         ),
+                        textAlign: TextAlign.center,
                       ),
                     ),
 
-                    SizedBox(height: responsive.getAdaptiveSpacing(16)),
+                    SizedBox(height: responsive.getAdaptiveSpacing(12)),
                   ],
                 ),
               ),
@@ -329,27 +424,309 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     );
   }
 
-  Widget _buildFeature(IconData icon, String text, ResponsiveUtils responsive) {
+  Widget _buildSubscriptionCard({
+    required Package package,
+    required int index,
+    required bool isSelected,
+    required bool isExpanded,
+    required ResponsiveUtils responsive,
+    required SubscriptionViewModel viewModel,
+    required double screenWidth,
+  }) {
+    final planInfo = viewModel.getPlanInfo(package);
+    final price = viewModel.getPackagePrice(package);
+    final billingPeriod = viewModel.getPackageBillingPeriod(package);
+
+    // Calculer les tailles adaptatives pour éviter les overflow
+    final cardPadding = responsive.getAdaptiveSpacing(14);
+    final availableWidth = screenWidth - (responsive.horizontalPadding * 2);
+
     return Padding(
       padding: EdgeInsets.only(bottom: responsive.getAdaptiveSpacing(14)),
-      child: Row(
-        children: [
-          Icon(
-            icon,
-            color: const Color(0xFF10B981),
-            size: responsive.getAdaptiveSize(22),
-          ),
-          SizedBox(width: responsive.getAdaptiveSpacing(12)),
-          Flexible(
-            child: Text(
-              text,
-              style: TextStyle(
-                fontSize: responsive.getAdaptiveTextSize(15),
-                color: const Color(0xFF1F2937),
-              ),
+      child: GestureDetector(
+        onTap: () {
+          setState(() {
+            viewModel.selectPackage(package);
+            _expandedIndex = isExpanded ? null : index;
+          });
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+          decoration: BoxDecoration(
+            border: Border.all(
+              color: isSelected
+                  ? const Color(0xFF5B5FC7)
+                  : Colors.grey.shade300,
+              width: isSelected ? 2.5 : 1,
             ),
+            borderRadius: BorderRadius.circular(18),
+            color: isSelected
+                ? const Color(0xFF5B5FC7).withOpacity(0.06)
+                : Colors.white,
+            boxShadow: isSelected
+                ? [
+              BoxShadow(
+                color: const Color(0xFF5B5FC7).withOpacity(0.15),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              )
+            ]
+                : [
+              BoxShadow(
+                color: Colors.grey.shade200,
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              )
+            ],
           ),
-        ],
+          child: Column(
+            children: [
+              // En-tête de la carte
+              Padding(
+                padding: EdgeInsets.all(cardPadding),
+                child: Column(
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Radio button
+                        Container(
+                          width: responsive.getAdaptiveSize(24),
+                          height: responsive.getAdaptiveSize(24),
+                          margin: EdgeInsets.only(
+                            top: responsive.getAdaptiveSpacing(2),
+                          ),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: isSelected
+                                  ? const Color(0xFF5B5FC7)
+                                  : Colors.grey.shade400,
+                              width: 2,
+                            ),
+                          ),
+                          child: isSelected
+                              ? Center(
+                            child: Container(
+                              width: responsive.getAdaptiveSize(12),
+                              height: responsive.getAdaptiveSize(12),
+                              decoration: const BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Color(0xFF5B5FC7),
+                              ),
+                            ),
+                          )
+                              : null,
+                        ),
+
+                        SizedBox(width: responsive.getAdaptiveSpacing(12)),
+
+                        // Infos principales (flexible pour éviter overflow)
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Badges
+                              Wrap(
+                                spacing: responsive.getAdaptiveSpacing(6),
+                                runSpacing: responsive.getAdaptiveSpacing(6),
+                                children: [
+                                  Container(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal:
+                                      responsive.getAdaptiveSpacing(10),
+                                      vertical:
+                                      responsive.getAdaptiveSpacing(5),
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: planInfo.badgeColor,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      planInfo.badge,
+                                      style: TextStyle(
+                                        fontSize: responsive
+                                            .getAdaptiveTextSize(11),
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
+                                  ),
+                                  if (planInfo.isPopular)
+                                    Container(
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal:
+                                        responsive.getAdaptiveSpacing(10),
+                                        vertical:
+                                        responsive.getAdaptiveSpacing(5),
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFFFD700),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            Icons.star,
+                                            size:
+                                            responsive.getAdaptiveSize(12),
+                                            color: Colors.white,
+                                          ),
+                                          SizedBox(
+                                              width: responsive
+                                                  .getAdaptiveSpacing(4)),
+                                          Text(
+                                            'POPULAIRE',
+                                            style: TextStyle(
+                                              fontSize: responsive
+                                                  .getAdaptiveTextSize(10),
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.white,
+                                              letterSpacing: 0.5,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                ],
+                              ),
+                              SizedBox(
+                                  height: responsive.getAdaptiveSpacing(10)),
+                              Text(
+                                planInfo.title,
+                                style: TextStyle(
+                                  fontSize: responsive.getAdaptiveTextSize(17),
+                                  fontWeight: FontWeight.bold,
+                                  color: const Color(0xFF1F2937),
+                                  letterSpacing: -0.3,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              SizedBox(
+                                  height: responsive.getAdaptiveSpacing(5)),
+                              Text(
+                                planInfo.subtitle,
+                                style: TextStyle(
+                                  fontSize: responsive.getAdaptiveTextSize(12),
+                                  color: Colors.grey.shade600,
+                                  height: 1.3,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        SizedBox(width: responsive.getAdaptiveSpacing(12)),
+
+                        // Prix (colonne fixe)
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              price,
+                              style: TextStyle(
+                                fontSize: responsive.getAdaptiveTextSize(20),
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF5B5FC7),
+                              ),
+                            ),
+                            Text(
+                              billingPeriod,
+                              style: TextStyle(
+                                fontSize: responsive.getAdaptiveTextSize(11),
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        // Icône d'expansion
+                        Padding(
+                          padding: EdgeInsets.only(
+                            left: responsive.getAdaptiveSpacing(8),
+                          ),
+                          child: Icon(
+                            isExpanded
+                                ? Icons.keyboard_arrow_up_rounded
+                                : Icons.keyboard_arrow_down_rounded,
+                            color: Colors.grey.shade600,
+                            size: responsive.getAdaptiveSize(24),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              // Contenu détaillé (accordion)
+              AnimatedSize(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+                child: isExpanded
+                    ? Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.fromLTRB(
+                    cardPadding,
+                    0,
+                    cardPadding,
+                    cardPadding,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Divider(
+                        color: Colors.grey.shade300,
+                        height: 1,
+                      ),
+                      SizedBox(
+                          height: responsive.getAdaptiveSpacing(14)),
+                      ...planInfo.features.map(
+                            (feature) => Padding(
+                          padding: EdgeInsets.only(
+                            bottom: responsive.getAdaptiveSpacing(10),
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(
+                                Icons.check_circle_rounded,
+                                color: const Color(0xFF10B981),
+                                size: responsive.getAdaptiveSize(19),
+                              ),
+                              SizedBox(
+                                  width:
+                                  responsive.getAdaptiveSpacing(10)),
+                              Expanded(
+                                child: Text(
+                                  feature,
+                                  style: TextStyle(
+                                    fontSize: responsive
+                                        .getAdaptiveTextSize(13),
+                                    color: const Color(0xFF1F2937),
+                                    height: 1.4,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+                    : const SizedBox.shrink(),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -360,32 +737,38 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     if (!mounted) return;
 
     if (success) {
-      // Afficher un message de succès
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Row(
             children: [
-              Icon(Icons.check_circle, color: Colors.white),
-              SizedBox(width: 12),
+              const Icon(Icons.check_circle_rounded, color: Colors.white),
+              const SizedBox(width: 12),
               Expanded(
-                child: Text('Abonnement activé avec succès !'),
+                child: Text(
+                  'Abonnement activé avec succès !',
+                  style: TextStyle(
+                    fontSize: ResponsiveUtils(context).getAdaptiveTextSize(14),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
               ),
             ],
           ),
-          backgroundColor: Color(0xFF10B981),
-          duration: Duration(seconds: 2),
+          backgroundColor: const Color(0xFF10B981),
+          duration: const Duration(seconds: 3),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       );
 
-      // Attendre un peu pour que l'utilisateur voie le message
-      await Future.delayed(const Duration(milliseconds: 800));
+      await Future.delayed(const Duration(milliseconds: 1000));
 
-      // Fermer l'écran et retourner true pour indiquer le succès
       if (mounted) {
         Navigator.pop(context, true);
       }
     }
-    // Si échec, l'erreur est déjà affichée dans l'UI via viewModel.errorMessage
   }
 
   Future<void> _handleRestorePurchases(SubscriptionViewModel viewModel) async {
@@ -395,22 +778,32 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
 
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Row(
             children: [
-              Icon(Icons.check_circle, color: Colors.white),
-              SizedBox(width: 12),
+              const Icon(Icons.check_circle_rounded, color: Colors.white),
+              const SizedBox(width: 12),
               Expanded(
-                child: Text('Achats restaurés avec succès !'),
+                child: Text(
+                  'Achats restaurés avec succès !',
+                  style: TextStyle(
+                    fontSize: ResponsiveUtils(context).getAdaptiveTextSize(14),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
               ),
             ],
           ),
-          backgroundColor: Color(0xFF10B81),
-          duration: Duration(seconds: 2),
+          backgroundColor: const Color(0xFF10B981),
+          duration: const Duration(seconds: 3),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       );
 
-      await Future.delayed(const Duration(milliseconds: 800));
+      await Future.delayed(const Duration(milliseconds: 1000));
 
       if (mounted) {
         Navigator.pop(context, true);
@@ -420,17 +813,25 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
         SnackBar(
           content: Row(
             children: [
-              const Icon(Icons.info_outline, color: Colors.white),
+              const Icon(Icons.info_outline_rounded, color: Colors.white),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
                   viewModel.errorMessage ?? 'Aucun achat à restaurer',
+                  style: TextStyle(
+                    fontSize: ResponsiveUtils(context).getAdaptiveTextSize(14),
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ),
             ],
           ),
-          backgroundColor: Colors.orange,
-          duration: const Duration(seconds: 2),
+          backgroundColor: Colors.orange.shade600,
+          duration: const Duration(seconds: 3),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       );
     }
