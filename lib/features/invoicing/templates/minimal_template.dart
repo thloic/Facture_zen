@@ -59,7 +59,7 @@ class MinimalTemplate implements InvoiceTemplate {
               borderRadius: InvoiceDesignSystem.borderRadius,
               boxShadow: InvoiceDesignSystem.subtleShadow,
             ),
-            padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
+            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -67,6 +67,31 @@ class MinimalTemplate implements InvoiceTemplate {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
+                    if (invoice.companyLogo != null && invoice.companyLogo!.isNotEmpty) ...[
+                      Container(
+                        width: 60,
+                        height: 60,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 10,
+                            )
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.network(
+                            invoice.companyLogo!,
+                            fit: BoxFit.contain,
+                            errorBuilder: (_, __, ___) => const Icon(Icons.business, size: 30),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                    ],
                     Container(
                       height: 4,
                       width: 48,
@@ -78,9 +103,9 @@ class MinimalTemplate implements InvoiceTemplate {
                     const SizedBox(height: 18),
                     Text('FACTURE', style: InvoiceDesignSystem.titleLarge.copyWith(fontSize: 32, letterSpacing: -1)),
                     const SizedBox(height: 10),
-                    Text(invoice.invoiceNumber, style: InvoiceDesignSystem.label, textAlign: TextAlign.center),
+                    Text('N° ${invoice.invoiceNumber}', style: InvoiceDesignSystem.label, textAlign: TextAlign.center),
                     const SizedBox(height: 2),
-                    Text(_formatDate(invoice.invoiceDate), style: InvoiceDesignSystem.label, textAlign: TextAlign.center),
+                    Text(invoice.formattedDate, style: InvoiceDesignSystem.label, textAlign: TextAlign.center),
                   ],
                 ),
                 const SizedBox(height: 32),
@@ -92,33 +117,28 @@ class MinimalTemplate implements InvoiceTemplate {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('De', style: InvoiceDesignSystem.label),
-                          const SizedBox(height: 8),
-                          Text(invoice.companyName, style: InvoiceDesignSystem.titleMedium),
+                          Text('De', style: InvoiceDesignSystem.label.copyWith(fontSize: 10)),
+                          const SizedBox(height: 4),
+                          Text(invoice.companyName, style: InvoiceDesignSystem.titleMedium.copyWith(fontSize: 11), overflow: TextOverflow.ellipsis, maxLines: 1),
                           if (invoice.companyPhone != null) ...[
                             const SizedBox(height: 2),
-                            Text(invoice.companyPhone!, style: InvoiceDesignSystem.body),
+                            Text(invoice.companyPhone!, style: InvoiceDesignSystem.body.copyWith(fontSize: 10), overflow: TextOverflow.ellipsis, maxLines: 1),
                           ],
                           const SizedBox(height: 2),
-                          Text(invoice.companyAddress, style: InvoiceDesignSystem.body),
+                          Text(invoice.companyAddress, style: InvoiceDesignSystem.body.copyWith(fontSize: 10), overflow: TextOverflow.ellipsis, maxLines: 2),
                         ],
                       ),
                     ),
-                    Container(
-                      width: 1,
-                      height: 56,
-                      margin: const EdgeInsets.symmetric(horizontal: 16),
-                      color: InvoiceDesignSystem.border,
-                    ),
+                    const SizedBox(width: 8),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Pour', style: InvoiceDesignSystem.label),
-                          const SizedBox(height: 8),
-                          Text(invoice.clientName, style: InvoiceDesignSystem.titleMedium),
+                          Text('Pour', style: InvoiceDesignSystem.label.copyWith(fontSize: 10)),
+                          const SizedBox(height: 4),
+                          Text(invoice.clientName, style: InvoiceDesignSystem.titleMedium.copyWith(fontSize: 11), overflow: TextOverflow.ellipsis, maxLines: 1),
                           const SizedBox(height: 2),
-                          Text(invoice.clientAddress, style: InvoiceDesignSystem.body),
+                          Text(invoice.clientAddress, style: InvoiceDesignSystem.body.copyWith(fontSize: 10), overflow: TextOverflow.ellipsis, maxLines: 2),
                         ],
                       ),
                     ),
@@ -371,14 +391,10 @@ class MinimalTemplate implements InvoiceTemplate {
   }
 
   @override
-  Future<void>? generatePDF(InvoiceModel invoice) {
-    // TODO: implement generatePDF
-    throw UnimplementedError();
-  }
+  Future<void>? generatePDF(InvoiceModel invoice) => null;
 
   @override
   Widget build(BuildContext context, InvoiceModel invoice) {
-    // TODO: implement build
-    throw UnimplementedError();
+    return buildInvoice(context, invoice);
   }
 }

@@ -6,6 +6,11 @@ import 'creative_template.dart';
 import 'elegant_template.dart';
 import 'minimal_template.dart';
 import 'modern_template.dart';
+import 'professional_template.dart';
+import 'compact_template.dart';
+import 'stylish_template.dart';
+import 'executive_template.dart';
+import 'luxe_template.dart';
 
 /// Interface commune pour tous les templates de facture
 abstract class InvoiceTemplate {
@@ -44,6 +49,11 @@ enum InvoiceTemplateType {
   corporate,
   creative,
   elegant,
+  professional,
+  compact,
+  stylish,
+  executive,
+  luxe,
 }
 
 /// Factory pour créer les templates
@@ -62,6 +72,16 @@ class InvoiceTemplateFactory {
         return CreativeTemplate();
       case InvoiceTemplateType.elegant:
         return ElegantTemplate();
+      case InvoiceTemplateType.professional:
+        return ProfessionalTemplate();
+      case InvoiceTemplateType.compact:
+        return CompactTemplate();
+      case InvoiceTemplateType.stylish:
+        return StylishTemplate();
+      case InvoiceTemplateType.executive:
+        return ExecutiveTemplate();
+      case InvoiceTemplateType.luxe:
+        return LuxeTemplate();
     }
   }
 
@@ -73,6 +93,11 @@ class InvoiceTemplateFactory {
       CorporateTemplate(),
       CreativeTemplate(),
       ElegantTemplate(),
+      ProfessionalTemplate(),
+      CompactTemplate(),
+      StylishTemplate(),
+      ExecutiveTemplate(),
+      LuxeTemplate(),
     ];
   }
 }

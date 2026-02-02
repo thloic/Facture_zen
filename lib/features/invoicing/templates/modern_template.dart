@@ -119,18 +119,44 @@ class ModernTemplate implements InvoiceTemplate {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Flexible(
-                flex: 2,
-                child: Text(
-                  'INVOICE',
-                  style: TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                    letterSpacing: 2,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+              Flexible(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    if (invoice.companyLogo != null && invoice.companyLogo!.isNotEmpty) ...[
+                      Container(
+                        width: 50,
+                        height: 50,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.all(4),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.network(
+                            invoice.companyLogo!,
+                            fit: BoxFit.contain,
+                            errorBuilder: (_, __, ___) => Icon(Icons.business, color: primaryColor),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                    ],
+                    const Expanded(
+                      child: Text(
+                        'FACTURE',
+                        style: TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          letterSpacing: 2,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(width: 16),
@@ -158,7 +184,7 @@ class ModernTemplate implements InvoiceTemplate {
           ),
           const SizedBox(height: 16),
           Text(
-            _formatDate(invoice.invoiceDate),
+            invoice.formattedDate,
             style: const TextStyle(
               fontSize: 16,
               color: Colors.white70,
@@ -363,10 +389,14 @@ class ModernTemplate implements InvoiceTemplate {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          label,
-          style: const TextStyle(fontSize: 16),
+        Flexible(
+          child: Text(
+            label,
+            style: const TextStyle(fontSize: 16),
+            overflow: TextOverflow.ellipsis,
+          ),
         ),
+        const SizedBox(width: 8),
         Text(
           '${amount.toStringAsFixed(2)} €',
           style: const TextStyle(
@@ -411,14 +441,10 @@ class ModernTemplate implements InvoiceTemplate {
   }
 
   @override
-  Future<void>? generatePDF(InvoiceModel invoice) {
-    // TODO: implement generatePDF
-    throw UnimplementedError();
-  }
+  Future<void>? generatePDF(InvoiceModel invoice) => null;
 
   @override
   Widget build(BuildContext context, InvoiceModel invoice) {
-    // TODO: implement build
-    throw UnimplementedError();
+    return buildInvoice(context, invoice);
   }
 }

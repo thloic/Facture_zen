@@ -96,16 +96,20 @@ class VoiceRecordingViewModel extends ChangeNotifier {
 
   /// Réinitialise l'enregistrement
   Future<void> reset() async {
-    if (!canReset) return;
-
     try {
-      debugPrint('🔄 Réinitialisation...');
+      debugPrint('🔄 Réinitialisation complète...');
 
       _stopTimer();
-      await _voiceService.deleteRecording();
+      try {
+        await _voiceService.stopRecording();
+        await _voiceService.deleteRecording();
+      } catch (e) {
+        debugPrint('ℹ️ Note: rien à arrêter ou supprimer');
+      }
 
       _durationInSeconds = 0;
       _isRecording = false;
+      _isGenerating = false;
       _transcribedText = null;
       _audioPath = null;
 
@@ -113,7 +117,7 @@ class VoiceRecordingViewModel extends ChangeNotifier {
 
       debugPrint('✅ Réinitialisation effectuée');
     } catch (e) {
-      debugPrint('❌ Erreur reset: $e');
+      debugPrint('❌ Erreur lors de la réinitialisation: $e');
     }
   }
 

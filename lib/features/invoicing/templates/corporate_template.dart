@@ -49,72 +49,101 @@ class CorporateTemplate implements InvoiceTemplate {
   @override
   Widget build(BuildContext context, InvoiceModel invoice) {
     return SingleChildScrollView(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Bande latérale
-          Container(
-            width: 12,
-            height: MediaQuery.of(context).size.height, // Hauteur fixe
-            color: primaryColor,
-          ),
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Bande latérale
+            Container(
+              width: 12,
+              color: primaryColor,
+            ),
 
-          // Contenu
-          Expanded(
-            child: Container(
-              color: Colors.white,
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _buildHeader(invoice),
-                  const SizedBox(height: 32),
-                  _buildParties(invoice),
-                  const SizedBox(height: 32),
-                  _buildItems(invoice),
-                  const SizedBox(height: 24),
-                  _buildTotals(invoice),
-                  if (invoice.notes != null && invoice.notes!.isNotEmpty) ...[
+            // Contenu
+            Expanded(
+              child: Container(
+                color: Colors.white,
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildHeader(invoice),
                     const SizedBox(height: 32),
-                    _buildNotes(invoice.notes!),
+                    _buildParties(invoice),
+                    const SizedBox(height: 32),
+                    _buildItems(invoice),
+                    const SizedBox(height: 24),
+                    _buildTotals(invoice),
+                    if (invoice.notes != null && invoice.notes!.isNotEmpty) ...[
+                      const SizedBox(height: 32),
+                      _buildNotes(invoice.notes!),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildHeader(InvoiceModel invoice) {
-    return Column(
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'FACTURE',
-          style: TextStyle(
-            fontSize: 32,
-            fontWeight: FontWeight.bold,
-            color: primaryColor,
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'FACTURE',
+                style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: primaryColor,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'N° ${invoice.invoiceNumber}',
+                style: const TextStyle(fontSize: 14, color: Colors.grey),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              Text(
+                invoice.formattedDate,
+                style: const TextStyle(fontSize: 14, color: Colors.grey),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
           ),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
         ),
-        const SizedBox(height: 8),
-        Text(
-          'N° ${invoice.invoiceNumber}',
-          style: const TextStyle(fontSize: 14, color: Colors.grey),
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-        ),
-        Text(
-          invoice.formattedDate,
-          style: const TextStyle(fontSize: 14, color: Colors.grey),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
+        if (invoice.companyLogo != null && invoice.companyLogo!.isNotEmpty) ...[
+          const SizedBox(width: 16),
+          Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.grey.shade200),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.network(
+                invoice.companyLogo!,
+                fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) => Icon(Icons.business, size: 40, color: primaryColor),
+              ),
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -273,6 +302,7 @@ class CorporateTemplate implements InvoiceTemplate {
   Widget _buildTotals(InvoiceModel invoice) {
     return Column(
       mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.end,
       children: [
         _buildTotalRow('Sous-total', invoice.subtotal, false),
         if (invoice.hasDiscount) ...[
@@ -290,6 +320,7 @@ class CorporateTemplate implements InvoiceTemplate {
         ],
         const SizedBox(height: 12),
         Container(
+          constraints: const BoxConstraints(maxWidth: 300),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: primaryColor,
@@ -298,14 +329,17 @@ class CorporateTemplate implements InvoiceTemplate {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                invoice.hasTax ? 'TOTAL TTC' : 'TOTAL',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
+              Flexible(
+                child: Text(
+                  invoice.hasTax ? 'TOTAL TTC' : 'TOTAL',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
                 ),
               ),
+              const SizedBox(width: 8),
               Text(
                 '${invoice.total.toStringAsFixed(2)}€',
                 style: const TextStyle(
@@ -322,26 +356,33 @@ class CorporateTemplate implements InvoiceTemplate {
   }
 
   Widget _buildTotalRow(String label, double amount, bool isBold, {bool isDiscount = false}) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-            color: isDiscount ? Colors.red : Colors.black87,
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 300),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Flexible(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+                color: isDiscount ? Colors.red : Colors.black87,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
-        ),
-        Text(
-          '${amount.toStringAsFixed(2)}€',
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: isDiscount ? Colors.red : Colors.black87,
+          const SizedBox(width: 8),
+          Text(
+            '${amount.toStringAsFixed(2)}€',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: isDiscount ? Colors.red : Colors.black87,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 

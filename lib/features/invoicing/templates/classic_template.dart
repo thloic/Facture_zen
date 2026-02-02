@@ -159,7 +159,7 @@ class ClassicTemplate implements InvoiceTemplate {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Entreprise
+        // Entreprise avec logo
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -173,40 +173,99 @@ class ClassicTemplate implements InvoiceTemplate {
                 ),
               ),
               const SizedBox(height: 8),
-              Text(
-                invoice.companyName,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
+              // Logo + Nom de l'entreprise
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Logo de l'entreprise
+                  if (invoice.companyLogo != null && invoice.companyLogo!.isNotEmpty)
+                    Container(
+                      width: 50,
+                      height: 50,
+                      margin: const EdgeInsets.only(right: 12),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.grey.shade300),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.network(
+                          invoice.companyLogo!,
+                          fit: BoxFit.cover,
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return const Center(
+                              child: SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              ),
+                            );
+                          },
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              color: primaryColor,
+                              child: Center(
+                                child: Text(
+                                  invoice.companyName.isNotEmpty 
+                                      ? invoice.companyName[0].toUpperCase() 
+                                      : 'E',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  // Infos entreprise
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          invoice.companyName,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          invoice.companyAddress,
+                          style: const TextStyle(fontSize: 14, color: Colors.grey),
+                          maxLines: 4,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        if (invoice.companyPhone != null) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            invoice.companyPhone!,
+                            style: const TextStyle(fontSize: 14, color: Colors.grey),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                        if (invoice.companySiret != null) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            'SIRET: ${invoice.companySiret!}',
+                            style: const TextStyle(fontSize: 12, color: Colors.grey),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 4),
-              Text(
-                invoice.companyAddress,
-                style: const TextStyle(fontSize: 14, color: Colors.grey),
-                maxLines: 4,
-                overflow: TextOverflow.ellipsis,
-              ),
-              if (invoice.companyPhone != null) ...[
-                const SizedBox(height: 2),
-                Text(
-                  invoice.companyPhone!,
-                  style: const TextStyle(fontSize: 14, color: Colors.grey),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-              if (invoice.companySiret != null) ...[
-                const SizedBox(height: 2),
-                Text(
-                  'SIRET: ${invoice.companySiret!}',
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
             ],
           ),
         ),
@@ -495,14 +554,10 @@ class ClassicTemplate implements InvoiceTemplate {
   }
 
   @override
-  Future<void>? generatePDF(InvoiceModel invoice) {
-    // TODO: implement generatePDF
-    throw UnimplementedError();
-  }
+  Future<void>? generatePDF(InvoiceModel invoice) => null;
 
   @override
   Widget build(BuildContext context, InvoiceModel invoice) {
-    // TODO: implement build
-    throw UnimplementedError();
+    return buildInvoice(context, invoice);
   }
 }
