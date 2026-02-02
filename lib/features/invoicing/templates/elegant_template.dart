@@ -67,48 +67,81 @@ class ElegantTemplate implements InvoiceTemplate {
     return Column(
       children: [
         Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Container(
-              width: 4,
-              height: 50,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [goldColor, goldColor.withOpacity(0.3)],
-                ),
-              ),
-            ),
-            const SizedBox(width: 16),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Row(
                 children: [
-                  Text(
-                    'FACTURE',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.w300,
-                      color: primaryColor,
-                      letterSpacing: 3,
+                  Container(
+                    width: 4,
+                    height: 50,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [goldColor, goldColor.withOpacity(0.3)],
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    invoice.invoiceNumber,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey.shade600,
-                      letterSpacing: 1,
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'FACTURE',
+                          style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.w300,
+                            color: primaryColor,
+                            letterSpacing: 3,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'N° ${invoice.invoiceNumber}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade600,
+                            letterSpacing: 1,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          invoice.formattedDate,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade600,
+                            letterSpacing: 1,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
                     ),
-                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
             ),
+            if (invoice.companyLogo != null && invoice.companyLogo!.isNotEmpty)
+              Container(
+                width: 70,
+                height: 70,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: goldColor, width: 1),
+                ),
+                padding: const EdgeInsets.all(4),
+                child: ClipOval(
+                  child: Image.network(
+                    invoice.companyLogo!,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Icon(Icons.business, size: 30, color: goldColor),
+                  ),
+                ),
+              ),
           ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 16),
         Container(
           height: 1,
           decoration: BoxDecoration(
@@ -345,14 +378,10 @@ class ElegantTemplate implements InvoiceTemplate {
   }
 
   @override
-  Future<void>? generatePDF(InvoiceModel invoice) {
-    // TODO: implement generatePDF
-    throw UnimplementedError();
-  }
+  Future<void>? generatePDF(InvoiceModel invoice) => null;
 
   @override
   Widget build(BuildContext context, InvoiceModel invoice) {
-    // TODO: implement build
-    throw UnimplementedError();
+    return buildInvoice(context, invoice);
   }
 }

@@ -12,9 +12,14 @@ class PdfTemplateFactory {
 
   /// Génère une page PDF selon le type de template
   static pw.Page generatePdf(InvoiceTemplateType templateType, InvoiceModel invoice) {
+    return generatePdfWithLogo(templateType, invoice, null);
+  }
+
+  /// Génère une page PDF selon le type de template avec logo optionnel
+  static pw.Page generatePdfWithLogo(InvoiceTemplateType templateType, InvoiceModel invoice, pw.MemoryImage? logoImage) {
     switch (templateType) {
       case InvoiceTemplateType.classic:
-        return PdfClassicGenerator.generate(invoice);
+        return PdfClassicGenerator.generateWithLogo(invoice, logoImage);
 
       case InvoiceTemplateType.corporate:
         return PdfCorporateGenerator.generate(invoice);
@@ -28,9 +33,17 @@ class PdfTemplateFactory {
       case InvoiceTemplateType.elegant:
         return PdfElegantGenerator.generate(invoice);
 
+      case InvoiceTemplateType.professional:
+      case InvoiceTemplateType.compact:
+      case InvoiceTemplateType.stylish:
+      case InvoiceTemplateType.executive:
+      case InvoiceTemplateType.luxe:
+        // Pour ces nouveaux types, nous utilisons un rendu adapté avec logo
+        return PdfClassicGenerator.generateWithLogo(invoice, logoImage);
+
       default:
       // Fallback sur Classic si template inconnu
-        return PdfClassicGenerator.generate(invoice);
+        return PdfClassicGenerator.generateWithLogo(invoice, logoImage);
     }
   }
 }

@@ -7,6 +7,10 @@ import '../../models/invoice_model.dart';
 class PdfClassicGenerator {
 
   static pw.Page generate(InvoiceModel invoice) {
+    return generateWithLogo(invoice, null);
+  }
+
+  static pw.Page generateWithLogo(InvoiceModel invoice, pw.MemoryImage? logoImage) {
     return pw.Page(
       pageFormat: PdfPageFormat.a4,
       margin: const pw.EdgeInsets.all(40),
@@ -16,7 +20,7 @@ class PdfClassicGenerator {
           children: [
             _buildHeader(invoice),
             pw.SizedBox(height: 32),
-            _buildParties(invoice),
+            _buildPartiesWithLogo(invoice, logoImage),
             pw.SizedBox(height: 32),
             _buildItemsTable(invoice),
             pw.SizedBox(height: 24),
@@ -55,12 +59,73 @@ class PdfClassicGenerator {
   }
 
   static pw.Widget _buildParties(InvoiceModel invoice) {
+    return _buildPartiesWithLogo(invoice, null);
+  }
+
+  static pw.Widget _buildPartiesWithLogo(InvoiceModel invoice, pw.MemoryImage? logoImage) {
     return pw.Row(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
-        pw.Expanded(child: _buildPartyInfo('DE', invoice.companyName, invoice.companyAddress, invoice.companyPhone, invoice.companySiret)),
+        pw.Expanded(child: _buildPartyInfoWithLogo('DE', invoice.companyName, invoice.companyAddress, invoice.companyPhone, invoice.companySiret, logoImage)),
         pw.SizedBox(width: 32),
         pw.Expanded(child: _buildPartyInfo('FACTURÉ À', invoice.clientName, invoice.clientAddress, null, null)),
+      ],
+    );
+  }
+
+  static pw.Widget _buildPartyInfoWithLogo(String label, String name, String address, String? phone, String? siret, pw.MemoryImage? logoImage) {
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.Text(label, style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold, color: PdfColors.grey600)),
+        pw.SizedBox(height: 8),
+        // Logo + Infos entreprise
+        pw.Row(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            // Logo de l'entreprise
+            if (logoImage != null)
+              pw.Container(
+                width: 50,
+                height: 50,
+                margin: const pw.EdgeInsets.only(right: 12),
+                child: pw.Image(logoImage, fit: pw.BoxFit.contain),
+              )
+            else
+              pw.Container(
+                width: 50,
+                height: 50,
+                margin: const pw.EdgeInsets.only(right: 12),
+                decoration: pw.BoxDecoration(
+                  color: PdfColor.fromHex('#1F2937'),
+                  borderRadius: pw.BorderRadius.circular(8),
+                ),
+                child: pw.Center(
+                  child: pw.Text(
+                    name.isNotEmpty ? name[0].toUpperCase() : 'E',
+                    style: pw.TextStyle(
+                      fontSize: 24,
+                      fontWeight: pw.FontWeight.bold,
+                      color: PdfColors.white,
+                    ),
+                  ),
+                ),
+              ),
+            // Infos entreprise
+            pw.Expanded(
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text(name, style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
+                  pw.SizedBox(height: 4),
+                  pw.Text(address, style: const pw.TextStyle(fontSize: 12, color: PdfColors.grey700)),
+                  if (phone != null) pw.Text(phone, style: const pw.TextStyle(fontSize: 12, color: PdfColors.grey700)),
+                  if (siret != null) pw.Text('SIRET: $siret', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey600)),
+                ],
+              ),
+            ),
+          ],
+        ),
       ],
     );
   }

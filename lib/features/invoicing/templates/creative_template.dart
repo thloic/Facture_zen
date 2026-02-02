@@ -84,15 +84,24 @@ class CreativeTemplate implements InvoiceTemplate {
     return Row(
       children: [
         Container(
-          width: 60,
-          height: 60,
+          width: 80,
+          height: 80,
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [primaryColor, accentColor],
             ),
-            borderRadius: BorderRadius.circular(30),
+            borderRadius: BorderRadius.circular(16),
           ),
-          child: const Icon(Icons.receipt_long, color: Colors.white, size: 30),
+          child: (invoice.companyLogo != null && invoice.companyLogo!.isNotEmpty)
+              ? ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: Image.network(
+                    invoice.companyLogo!,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => const Icon(Icons.receipt_long, color: Colors.white, size: 40),
+                  ),
+                )
+              : const Icon(Icons.receipt_long, color: Colors.white, size: 40),
         ),
         const SizedBox(width: 16),
         Expanded(
@@ -100,16 +109,21 @@ class CreativeTemplate implements InvoiceTemplate {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                'INVOICE',
+                'FACTURE',
                 style: TextStyle(
-                  fontSize: 24,
+                  fontSize: 28,
                   fontWeight: FontWeight.bold,
                   letterSpacing: 2,
                 ),
               ),
               Text(
-                invoice.invoiceNumber,
-                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                'N° ${invoice.invoiceNumber}',
+                style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+                overflow: TextOverflow.ellipsis,
+              ),
+              Text(
+                invoice.formattedDate,
+                style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
                 overflow: TextOverflow.ellipsis,
               ),
             ],
@@ -329,14 +343,10 @@ class CreativeTemplate implements InvoiceTemplate {
   }
 
   @override
-  Future<void>? generatePDF(InvoiceModel invoice) {
-    // TODO: implement generatePDF
-    throw UnimplementedError();
-  }
+  Future<void>? generatePDF(InvoiceModel invoice) => null;
 
   @override
   Widget build(BuildContext context, InvoiceModel invoice) {
-    // TODO: implement build
-    throw UnimplementedError();
+    return buildInvoice(context, invoice);
   }
 }

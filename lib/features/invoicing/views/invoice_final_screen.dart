@@ -3,11 +3,15 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:http/http.dart' as http;
 import 'dart:io';
+import 'dart:typed_data';
 import '../../../common/services/firebase_invoice_service.dart';
 import '../../../common/widgets/primary_button.dart';
 import '../../../common/utils/responsive_utils.dart';
 import '../models/invoice_model.dart';
+import '../../profile/services/firebase_profile_service.dart';
+import '../../profile/models/user_profile_model.dart';
 
 /// InvoiceFinalScreen
 /// Écran d'aperçu final de la facture au format PDF
@@ -28,7 +32,51 @@ class InvoiceFinalScreen extends StatefulWidget {
 
 class _InvoiceFinalScreenState extends State<InvoiceFinalScreen> {
   final FirebaseInvoiceService _invoiceService = FirebaseInvoiceService();
+  final FirebaseProfileService _profileService = FirebaseProfileService();
   bool _isDownloading = false;
+  UserProfile? _userProfile;
+  bool _isLoadingProfile = true;
+  Uint8List? _logoBytes; // Cache des bytes du logo pour le PDF
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserProfile();
+  }
+
+  /// Charge le profil utilisateur pour récupérer le logo
+  Future<void> _loadUserProfile() async {
+    try {
+      final profile = await _profileService.getUserProfile();
+      
+      // Précharger les bytes du logo pour le PDF
+      if (profile?.companyLogo != null && profile!.companyLogo!.isNotEmpty) {
+        try {
+          final response = await http.get(Uri.parse(profile.companyLogo!));
+          if (response.statusCode == 200) {
+            _logoBytes = response.bodyBytes;
+            debugPrint('✅ Logo préchargé: ${_logoBytes!.length} bytes');
+          }
+        } catch (e) {
+          debugPrint('⚠️ Erreur préchargement logo: $e');
+        }
+      }
+      
+      if (mounted) {
+        setState(() {
+          _userProfile = profile;
+          _isLoadingProfile = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('❌ Erreur chargement profil: $e');
+      if (mounted) {
+        setState(() {
+          _isLoadingProfile = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -247,6 +295,17 @@ class _InvoiceFinalScreenState extends State<InvoiceFinalScreen> {
     try {
       final pdf = pw.Document();
 
+      // Utiliser les bytes du logo préchargés
+      pw.MemoryImage? logoImage;
+      if (_logoBytes != null) {
+        try {
+          logoImage = pw.MemoryImage(_logoBytes!);
+          debugPrint('✅ Logo ajouté au PDF');
+        } catch (e) {
+          debugPrint('⚠️ Erreur création image logo: $e');
+        }
+      }
+
       pdf.addPage(
         pw.Page(
           pageFormat: PdfPageFormat.a4,
@@ -255,8 +314,8 @@ class _InvoiceFinalScreenState extends State<InvoiceFinalScreen> {
             return pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
-                // En-tête
-                _buildPdfHeader(invoice),
+                // En-tête avec logo
+                _buildPdfHeader(invoice, logoImage),
                 pw.SizedBox(height: 30),
 
                 // Infos facture et client
@@ -294,29 +353,66 @@ class _InvoiceFinalScreenState extends State<InvoiceFinalScreen> {
     }
   }
 
-  /// En-tête du PDF
-  pw.Widget _buildPdfHeader(InvoiceModel invoice) {
+  /// En-tête du PDF avec logo
+  pw.Widget _buildPdfHeader(InvoiceModel invoice, pw.MemoryImage? logoImage) {
     return pw.Row(
       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
-        pw.Column(
+        // Logo + Infos entreprise
+        pw.Row(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
-            pw.Text(
-              invoice.companyName,
-              style: pw.TextStyle(
-                fontSize: 20,
-                fontWeight: pw.FontWeight.bold,
+            // Logo de l'entreprise
+            if (logoImage != null)
+              pw.Container(
+                width: 60,
+                height: 60,
+                margin: const pw.EdgeInsets.only(right: 15),
+                child: pw.Image(logoImage, fit: pw.BoxFit.contain),
+              )
+            else
+              pw.Container(
+                width: 60,
+                height: 60,
+                margin: const pw.EdgeInsets.only(right: 15),
+                decoration: pw.BoxDecoration(
+                  color: PdfColors.blue900,
+                  borderRadius: pw.BorderRadius.circular(8),
+                ),
+                child: pw.Center(
+                  child: pw.Text(
+                    invoice.companyName.isNotEmpty ? invoice.companyName[0].toUpperCase() : 'E',
+                    style: pw.TextStyle(
+                      fontSize: 28,
+                      fontWeight: pw.FontWeight.bold,
+                      color: PdfColors.white,
+                    ),
+                  ),
+                ),
               ),
+            // Infos entreprise
+            pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text(
+                  invoice.companyName,
+                  style: pw.TextStyle(
+                    fontSize: 20,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
+                pw.SizedBox(height: 4),
+                pw.Text(invoice.companyAddress, style: const pw.TextStyle(fontSize: 10)),
+                if (invoice.companyPhone != null)
+                  pw.Text('Tél: ${invoice.companyPhone}', style: const pw.TextStyle(fontSize: 10)),
+                if (invoice.companyEmail != null)
+                  pw.Text('Email: ${invoice.companyEmail}', style: const pw.TextStyle(fontSize: 10)),
+              ],
             ),
-            pw.SizedBox(height: 4),
-            pw.Text(invoice.companyAddress, style: const pw.TextStyle(fontSize: 10)),
-            if (invoice.companyPhone != null)
-              pw.Text('Tél: ${invoice.companyPhone}', style: const pw.TextStyle(fontSize: 10)),
-            if (invoice.companyEmail != null)
-              pw.Text('Email: ${invoice.companyEmail}', style: const pw.TextStyle(fontSize: 10)),
           ],
         ),
+        // Badge FACTURE
         pw.Container(
           padding: const pw.EdgeInsets.all(12),
           decoration: pw.BoxDecoration(
@@ -451,33 +547,104 @@ class _InvoiceFinalScreenState extends State<InvoiceFinalScreen> {
 
   /// Widget - Logo de l'entreprise
   Widget _buildCompanyLogo(ResponsiveUtils responsive) {
+    final logoUrl = _userProfile?.companyLogo;
+    final companyName = _userProfile?.companyName ?? 
+                        widget.invoiceData['companyName'] ?? 
+                        'Mon Entreprise';
+    final companyInitial = companyName.isNotEmpty 
+        ? companyName[0].toUpperCase() 
+        : 'E';
+
     return Row(
       children: [
-        Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: const Color(0xFFEF4444),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: const Center(
-            child: Text(
-              'S',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
+        // Logo ou placeholder
+        if (_isLoadingProfile)
+          Container(
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              color: const Color(0xFFE5E7EB),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Center(
+              child: SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
+          )
+        else if (logoUrl != null && logoUrl.isNotEmpty)
+          Container(
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: const Color(0xFFE5E7EB)),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.network(
+                logoUrl,
+                fit: BoxFit.cover,
+                loadingBuilder: (context, child, loadingProgress) {
+                  if (loadingProgress == null) return child;
+                  return const Center(
+                    child: SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  );
+                },
+                errorBuilder: (context, error, stackTrace) {
+                  debugPrint('⚠️ Erreur chargement logo: $error');
+                  return Container(
+                    color: const Color(0xFF5B5FC7),
+                    child: Center(
+                      child: Text(
+                        companyInitial,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          )
+        else
+          Container(
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              color: const Color(0xFF5B5FC7),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Center(
+              child: Text(
+                companyInitial,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ),
-        ),
         SizedBox(width: responsive.getAdaptiveSpacing(12)),
-        Text(
-          'Stark Industries',
-          style: TextStyle(
-            fontSize: responsive.getAdaptiveTextSize(20),
-            fontWeight: FontWeight.bold,
-            color: const Color(0xFF1F2937),
+        Expanded(
+          child: Text(
+            companyName,
+            style: TextStyle(
+              fontSize: responsive.getAdaptiveTextSize(20),
+              fontWeight: FontWeight.bold,
+              color: const Color(0xFF1F2937),
+            ),
+            overflow: TextOverflow.ellipsis,
           ),
         ),
       ],

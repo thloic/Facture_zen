@@ -5,7 +5,9 @@ import 'package:provider/provider.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:http/http.dart' as http;
 import 'dart:io';
+import 'dart:typed_data';
 import '../../../common/services/firebase_invoice_service.dart';
 import '../models/invoice_model.dart';
 import '../templates/invoice_template_base.dart';
@@ -15,6 +17,7 @@ import '../services/pdf_generator_service.dart';
 import 'pdf_viewer_screen.dart';
 import '../utils/invoice_creation_helper.dart';
 import '../viewmodels/invoice_history_viewmodel.dart';
+import '../viewmodels/voice_recording_viewmodel.dart';
 import '../../profile/services/firebase_profile_service.dart';
 
 /// Écran de prévisualisation de la facture avec sélection de templates
@@ -36,9 +39,10 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
   InvoiceTemplateType _selectedTemplate = InvoiceTemplateType.classic;
   late InvoiceModel _invoice;
   final FirebaseInvoiceService _invoiceService = FirebaseInvoiceService();
-  final FirebaseProfileService _profileService = FirebaseProfileService(); // ✅ AJOUTÉ
+  final FirebaseProfileService _profileService = FirebaseProfileService();
   bool _isDownloading = false;
-  bool _isLoadingProfile = true; // ✅ AJOUTÉ
+  bool _isLoadingProfile = true;
+  Uint8List? _logoBytes; // Cache des bytes du logo pour le PDF
 
   @override
   void initState() {
@@ -56,6 +60,21 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
       
       if (profile != null && mounted) {
         debugPrint('✅ [PREVIEW] Profil trouvé: ${profile.companyName ?? "Sans nom"}');
+        
+        // Précharger les bytes du logo pour le PDF
+        if (profile.companyLogo != null && profile.companyLogo!.isNotEmpty) {
+          try {
+            debugPrint('📥 [PREVIEW] Préchargement du logo: ${profile.companyLogo}');
+            final response = await http.get(Uri.parse(profile.companyLogo!));
+            if (response.statusCode == 200) {
+              _logoBytes = response.bodyBytes;
+              debugPrint('✅ [PREVIEW] Logo préchargé: ${_logoBytes!.length} bytes');
+            }
+          } catch (e) {
+            debugPrint('⚠️ [PREVIEW] Erreur préchargement logo: $e');
+          }
+        }
+        
         setState(() {
           _invoice = InvoiceModel(
             id: _invoice.id,
@@ -244,10 +263,23 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
 
         debugPrint('✅ [SAVE] Facture sauvegardée avec ID: $savedInvoiceId');
 
-        // Retourner à l'écran précédent après un court délai
-        Future.delayed(const Duration(milliseconds: 500), () {
+        // Réinitialiser le service vocal car la facture est terminée
+        try {
+          final voiceVM = Provider.of<VoiceRecordingViewModel>(context, listen: false);
+          voiceVM.reset();
+          debugPrint('🎙️ [VOICE] Service vocal réinitialisé');
+        } catch (e) {
+          debugPrint('⚠️ [VOICE] Erreur lors de la réinitialisation vocale: $e');
+        }
+
+        // Retourner à l'accueil et vider la pile de navigation après un court délai
+        Future.delayed(const Duration(milliseconds: 800), () {
           if (mounted) {
-            Navigator.pop(context, savedInvoiceId);
+            Navigator.pushNamedAndRemoveUntil(
+              context,
+              '/home',
+              (route) => false,
+            );
           }
         });
       }
@@ -387,7 +419,18 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
 
       final pdf = pw.Document();
 
-      pdf.addPage(PdfTemplateFactory.generatePdf(_selectedTemplate, _invoice));
+      // Préparer l'image du logo si disponible
+      pw.MemoryImage? logoImage;
+      if (_logoBytes != null) {
+        try {
+          logoImage = pw.MemoryImage(_logoBytes!);
+          debugPrint('✅ Logo ajouté au PDF');
+        } catch (e) {
+          debugPrint('⚠️ Erreur création image logo: $e');
+        }
+      }
+
+      pdf.addPage(PdfTemplateFactory.generatePdfWithLogo(_selectedTemplate, _invoice, logoImage));
 
       // Sauvegarder dans un fichier temporaire
       final tempDir = await getTemporaryDirectory();
