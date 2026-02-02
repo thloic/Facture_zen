@@ -236,12 +236,24 @@ class AppInitializer extends StatelessWidget {
     final authService = AuthService();
     final pinService = PinService();
 
-    // Vérifier si l'utilisateur est connecté à Firebase
-    final isAuthenticated = authService.isAuthenticated;
-    debugPrint('🔐 AppInitializer - isAuthenticated: $isAuthenticated');
+    // ⚠️ IMPORTANT: Attendre que Firebase Auth ait restauré l'état de l'utilisateur
+    // Le premier événement du stream contient l'état actuel après restauration
+    final user = await authService.authStateChanges.first;
+    final isAuthenticated = user != null;
+    debugPrint('🔐 AppInitializer - isAuthenticated: $isAuthenticated (user: ${user?.email})');
 
     if (isAuthenticated) {
-      // Vérifier si le profil entreprise existe
+      // Utilisateur connecté - d'abord vérifier si un PIN est configuré
+      final hasPin = await pinService.hasPin();
+      debugPrint('🔐 AppInitializer - hasPin: $hasPin');
+      
+      if (hasPin) {
+        // PIN configuré - aller à l'écran de connexion par PIN
+        debugPrint('🔐 AppInitializer - Navigation vers /pin-login');
+        return '/pin-login';
+      }
+
+      // Pas de PIN - vérifier si le profil entreprise existe
       final profileService = FirebaseProfileService();
       final hasProfile = await profileService.hasProfile();
       debugPrint('📋 AppInitializer - hasProfile: $hasProfile');
@@ -252,19 +264,9 @@ class AppInitializer extends StatelessWidget {
         return '/company-profile-setup';
       }
 
-      // Utilisateur connecté - vérifier si un PIN est configuré
-      final hasPin = await pinService.hasPin();
-      debugPrint('🔐 AppInitializer - hasPin: $hasPin');
-      
-      if (hasPin) {
-        // PIN configuré - aller à l'écran de connexion par PIN
-        debugPrint('🔐 AppInitializer - Navigation vers /pin-login');
-        return '/pin-login';
-      } else {
-        // Pas de PIN - aller directement à l'accueil
-        debugPrint('🔐 AppInitializer - Navigation vers /home (pas de PIN)');
-        return '/home';
-      }
+      // Profil existe et pas de PIN - aller directement à l'accueil
+      debugPrint('🔐 AppInitializer - Navigation vers /home (pas de PIN)');
+      return '/home';
     } else {
       // Utilisateur non connecté - aller à l'écran de login
       debugPrint('🔐 AppInitializer - Navigation vers /login (non authentifié)');

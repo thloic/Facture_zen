@@ -27,12 +27,45 @@ class FirebaseProfileService {
           .child('profile')
           .get();
 
-      final exists = snapshot.exists;
-      debugPrint('📋 [PROFILE] Profil existe: $exists');
+      if (!snapshot.exists) {
+        debugPrint('📋 [PROFILE] Profil n\'existe pas dans users/{uid}/profile');
+        return false;
+      }
 
-      return exists;
-    } catch (e) {
+      debugPrint('📋 [PROFILE] Snapshot value type: ${snapshot.value.runtimeType}');
+      debugPrint('📋 [PROFILE] Snapshot value: ${snapshot.value}');
+      
+      // Vérifier que c'est bien une Map (structure valide)
+      if (snapshot.value is! Map) {
+        debugPrint('⚠️ [PROFILE] Données profil invalides (type: ${snapshot.value.runtimeType})');
+        debugPrint('⚠️ [PROFILE] Valeur reçue: ${snapshot.value}');
+        debugPrint('🔧 [PROFILE] Données corrompues détectées, profil considéré comme absent');
+        return false;
+      }
+
+      // Cast sécurisé
+      Map<dynamic, dynamic> data;
+      try {
+        data = Map<dynamic, dynamic>.from(snapshot.value as Map);
+      } catch (castError) {
+        debugPrint('❌ [PROFILE] Erreur cast Map: $castError');
+        return false;
+      }
+      
+      // Vérifier que le profil contient au moins les champs essentiels
+      final hasCompanyName = data.containsKey('companyName') && 
+                            data['companyName'] != null && 
+                            data['companyName'].toString().isNotEmpty;
+      
+      debugPrint('📋 [PROFILE] Profil existe: $hasCompanyName');
+      if (hasCompanyName) {
+        debugPrint('   - companyName: ${data['companyName']}');
+      }
+
+      return hasCompanyName;
+    } catch (e, stack) {
       debugPrint('❌ [PROFILE] Erreur hasProfile: $e');
+      debugPrint('Stack trace: $stack');
       return false;
     }
   }
@@ -62,6 +95,14 @@ class FirebaseProfileService {
       }
 
       debugPrint('📥 [PROFILE SERVICE] Snapshot value type: ${snapshot.value.runtimeType}');
+      
+      // Vérifier que les données sont bien une Map
+      if (snapshot.value is! Map) {
+        debugPrint('❌ [PROFILE SERVICE] Format de données invalide: ${snapshot.value.runtimeType}');
+        debugPrint('   Valeur: ${snapshot.value}');
+        return null;
+      }
+      
       final data = snapshot.value as Map<dynamic, dynamic>;
       debugPrint('📥 [PROFILE SERVICE] Données brutes: $data');
       
