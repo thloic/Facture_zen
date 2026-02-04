@@ -3,7 +3,7 @@ import '../models/invoice_model.dart';
 import 'invoice_template_base.dart';
 
 /// Template Classique : Style professionnel traditionnel
-class ClassicTemplate implements InvoiceTemplate {
+class ClassicTemplate with InvoiceTemplateMixin implements InvoiceTemplate {
   @override
   String get name => 'Classique';
 
@@ -66,7 +66,7 @@ class ClassicTemplate implements InvoiceTemplate {
   }
 
   @override
-  Widget buildInvoice(BuildContext context, InvoiceModel invoice) {
+  Widget buildInvoice(BuildContext context, InvoiceModel invoice, {bool isPremium = false}) {
     return SingleChildScrollView(
       child: Container(
         color: Colors.white,
@@ -92,6 +92,9 @@ class ClassicTemplate implements InvoiceTemplate {
 
             // Notes
             if (invoice.notes != null) _buildNotes(invoice.notes!),
+            
+            // Signature VoxIn pour utilisateurs gratuits
+            if (!isPremium) buildVoxInSignature(),
           ],
         ),
       ),
@@ -557,7 +560,7 @@ class ClassicTemplate implements InvoiceTemplate {
   Future<void>? generatePDF(InvoiceModel invoice) => null;
 
   @override
-  Widget build(BuildContext context, InvoiceModel invoice) {
-    return buildInvoice(context, invoice);
+  Widget build(BuildContext context, InvoiceModel invoice, {bool isPremium = false}) {
+    return buildInvoice(context, invoice, isPremium: isPremium);
   }
 }

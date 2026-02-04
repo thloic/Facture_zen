@@ -3,7 +3,7 @@ import '../models/invoice_model.dart';
 import 'invoice_template_base.dart';
 
 /// Template Executive : Style premium épuré avec accents dorés
-class ExecutiveTemplate implements InvoiceTemplate {
+class ExecutiveTemplate with InvoiceTemplateMixin implements InvoiceTemplate {
   @override
   String get name => 'Executive';
 
@@ -45,7 +45,7 @@ class ExecutiveTemplate implements InvoiceTemplate {
   }
 
   @override
-  Widget buildInvoice(BuildContext context, InvoiceModel invoice) {
+  Widget buildInvoice(BuildContext context, InvoiceModel invoice, {bool isPremium = false}) {
     return SingleChildScrollView(
       child: Container(
         color: Colors.white,
@@ -65,6 +65,9 @@ class ExecutiveTemplate implements InvoiceTemplate {
                     const SizedBox(height: 32),
                     _buildNotes(invoice.notes!),
                   ],
+                  
+                  // Signature VoxIn pour utilisateurs gratuits
+                  if (!isPremium) buildVoxInSignature(),
                 ],
               ),
             ),
@@ -76,8 +79,8 @@ class ExecutiveTemplate implements InvoiceTemplate {
   }
 
   @override
-  Widget build(BuildContext context, InvoiceModel invoice) {
-    return buildInvoice(context, invoice);
+  Widget build(BuildContext context, InvoiceModel invoice, {bool isPremium = false}) {
+    return buildInvoice(context, invoice, isPremium: isPremium);
   }
 
   @override

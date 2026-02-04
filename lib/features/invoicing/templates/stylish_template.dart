@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/invoice_model.dart';
 import 'invoice_template_base.dart';
 
-class StylishTemplate implements InvoiceTemplate {
+class StylishTemplate with InvoiceTemplateMixin implements InvoiceTemplate {
   @override
   String get name => 'Épure';
 
@@ -40,12 +40,12 @@ class StylishTemplate implements InvoiceTemplate {
   }
 
   @override
-  Widget buildInvoice(BuildContext context, InvoiceModel invoice) {
-    return build(context, invoice);
+  Widget buildInvoice(BuildContext context, InvoiceModel invoice, {bool isPremium = false}) {
+    return build(context, invoice, isPremium: isPremium);
   }
 
   @override
-  Widget build(BuildContext context, InvoiceModel invoice) {
+  Widget build(BuildContext context, InvoiceModel invoice, {bool isPremium = false}) {
     return SingleChildScrollView(
       child: Container(
         color: const Color(0xFFF9FAFB),
@@ -59,6 +59,9 @@ class StylishTemplate implements InvoiceTemplate {
             _buildItemList(invoice),
             const SizedBox(height: 16),
             _buildFooter(invoice),
+            
+            // Signature VoxIn pour utilisateurs gratuits
+            if (!isPremium) buildVoxInSignature(),
           ],
         ),
       ),

@@ -7,6 +7,10 @@ import '../../models/invoice_model.dart';
 class PdfCreativeGenerator {
 
   static pw.Page generate(InvoiceModel invoice) {
+    return generateWithLogo(invoice, null);
+  }
+
+  static pw.Page generateWithLogo(InvoiceModel invoice, pw.MemoryImage? logoImage) {
     return pw.Page(
       pageFormat: PdfPageFormat.a4,
       margin: const pw.EdgeInsets.all(40),
@@ -14,7 +18,7 @@ class PdfCreativeGenerator {
         return pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
-            _buildHeader(invoice),
+            _buildHeader(invoice, logoImage),
             pw.SizedBox(height: 32),
             _buildParties(invoice),
             pw.SizedBox(height: 32),
@@ -30,25 +34,34 @@ class PdfCreativeGenerator {
     );
   }
 
-  static pw.Widget _buildHeader(InvoiceModel invoice) {
+  static pw.Widget _buildHeader(InvoiceModel invoice, pw.MemoryImage? logoImage) {
     return pw.Row(
+      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
       children: [
-        pw.Container(
-          width: 60,
-          height: 60,
-          decoration: pw.BoxDecoration(color: PdfColor.fromHex('#FF6B6B'), borderRadius: pw.BorderRadius.circular(30)),
-          child: pw.Center(child: pw.Icon(pw.IconData(0xe873), color: PdfColors.white, size: 30)),
+        pw.Row(
+          children: [
+            pw.Container(
+              width: 60,
+              height: 60,
+              decoration: pw.BoxDecoration(color: PdfColor.fromHex('#FF6B6B'), borderRadius: pw.BorderRadius.circular(30)),
+              child: pw.Center(child: pw.Icon(pw.IconData(0xe873), color: PdfColors.white, size: 30)),
+            ),
+            pw.SizedBox(width: 16),
+            pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text('INVOICE', style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold, letterSpacing: 2)),
+                pw.Text(invoice.invoiceNumber, style: const pw.TextStyle(fontSize: 12, color: PdfColors.grey600)),
+              ],
+            ),
+          ],
         ),
-        pw.SizedBox(width: 16),
-        pw.Expanded(
-          child: pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              pw.Text('INVOICE', style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold, letterSpacing: 2)),
-              pw.Text(invoice.invoiceNumber, style: const pw.TextStyle(fontSize: 12, color: PdfColors.grey600)),
-            ],
+        if (logoImage != null)
+          pw.Container(
+            width: 80,
+            height: 80,
+            child: pw.Image(logoImage, fit: pw.BoxFit.contain),
           ),
-        ),
       ],
     );
   }

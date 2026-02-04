@@ -1293,11 +1293,23 @@ class _InvoiceTemplatePreview extends StatefulWidget {
 
 class _InvoiceTemplatePreviewState extends State<_InvoiceTemplatePreview> {
   late InvoiceTemplateType _selectedTemplate;
+  bool _isPremium = false;
+  final FirebaseInvoiceService _invoiceService = FirebaseInvoiceService();
 
   @override
   void initState() {
     super.initState();
     _selectedTemplate = widget.initialTemplate;
+    _loadPremiumStatus();
+  }
+
+  Future<void> _loadPremiumStatus() async {
+    final isPremiumUser = await _invoiceService.isPremiumUser();
+    if (mounted) {
+      setState(() {
+        _isPremium = isPremiumUser;
+      });
+    }
   }
 
   void _showTemplateSelector() {
@@ -1389,7 +1401,7 @@ class _InvoiceTemplatePreviewState extends State<_InvoiceTemplatePreview> {
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(16),
-              child: template.buildInvoice(context, widget.invoice),
+              child: template.buildInvoice(context, widget.invoice, isPremium: _isPremium),
             ),
           ),
         ),

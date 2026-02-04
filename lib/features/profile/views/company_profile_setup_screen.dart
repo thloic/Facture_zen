@@ -417,14 +417,17 @@ class _CompanyProfileSetupScreenState extends State<CompanyProfileSetupScreen> w
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.info_outline, color: Colors.white, size: 16),
-                const SizedBox(width: 8),
-                Text(
-                  'Tous les champs sont facultatifs',
-                  style: TextStyle(
-                    fontSize: responsive.getAdaptiveTextSize(12),
-                    color: Colors.white,
-                    fontWeight: FontWeight.w500,
+                const Icon(Icons.info_outline, color: Colors.white, size: 14),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    'Tous les champs sont facultatifs',
+                    style: TextStyle(
+                      fontSize: responsive.getAdaptiveTextSize(11),
+                      color: Colors.white,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
@@ -608,21 +611,24 @@ class _CompanyProfileSetupScreenState extends State<CompanyProfileSetupScreen> w
                                   fontSize: responsive.getAdaptiveTextSize(12),
                                   color: const Color(0xFF6B7280),
                                 ),
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
-                            SizedBox(width: responsive.getAdaptiveSpacing(8)),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: _getCompletionColor(completionRate).withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                '${completionRate.toStringAsFixed(0)}%',
-                                style: TextStyle(
-                                  fontSize: responsive.getAdaptiveTextSize(11),
-                                  fontWeight: FontWeight.w600,
-                                  color: _getCompletionColor(completionRate),
+                            SizedBox(width: responsive.getAdaptiveSpacing(4)),
+                            Flexible(
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: _getCompletionColor(completionRate).withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  '${completionRate.toStringAsFixed(0)}%',
+                                  style: TextStyle(
+                                    fontSize: responsive.getAdaptiveTextSize(10),
+                                    fontWeight: FontWeight.w600,
+                                    color: _getCompletionColor(completionRate),
+                                  ),
                                 ),
                               ),
                             ),

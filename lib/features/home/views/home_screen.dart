@@ -421,7 +421,9 @@ class _HomeScreenState extends State<HomeScreen> {
             buttonText: 'Abonnement',
             icon: Icons.workspace_premium_outlined,
             backgroundColor: const Color(0xFFFF9F66),
-            onTap: () {},
+            onTap: () {
+              Navigator.pushNamed(context, '/subscription-screen');
+            },
           ),
 
           const SizedBox(width: 16),

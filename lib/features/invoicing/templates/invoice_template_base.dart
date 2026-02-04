@@ -30,16 +30,108 @@ abstract class InvoiceTemplate {
   Widget buildThumbnail(BuildContext context);
 
   /// Widget complet de la facture
-  Widget buildInvoice(BuildContext context, InvoiceModel invoice);
+  Widget buildInvoice(BuildContext context, InvoiceModel invoice, {bool isPremium = false});
 
   /// Méthode de compatibilité (appelle buildInvoice)
-  Widget build(BuildContext context, InvoiceModel invoice) {
-    return buildInvoice(context, invoice);
+  Widget build(BuildContext context, InvoiceModel invoice, {bool isPremium = false}) {
+    return buildInvoice(context, invoice, isPremium: isPremium);
   }
 
   /// Génère le PDF (optionnel, pour plus tard)
   Future<void>? generatePDF(InvoiceModel invoice) => null;
 }
+
+/// Mixin pour fournir des méthodes communes aux templates
+mixin InvoiceTemplateMixin {
+  /// Widget de signature VoxIn pour utilisateurs gratuits
+  Widget buildVoxInSignature() {
+    return Container(
+      margin: const EdgeInsets.only(top: 32, bottom: 8),
+      child: Column(
+        children: [
+          // Ligne de séparation élégante
+          Container(
+            height: 1,
+            margin: const EdgeInsets.only(bottom: 16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Colors.grey.shade200,
+                  Colors.grey.shade400,
+                  Colors.grey.shade200,
+                ],
+              ),
+            ),
+          ),
+          // Signature
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Colors.grey.shade50,
+                      Colors.white,
+                      Colors.grey.shade50,
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: Colors.grey.shade300,
+                    width: 1,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.grey.shade200,
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.workspace_premium_outlined,
+                      size: 16,
+                      color: Colors.grey.shade600,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Généré avec',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey.shade500,
+                        fontWeight: FontWeight.w400,
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'VoxIn',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade700,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+  Future<void>? generatePDF(InvoiceModel invoice) => null;
+
 
 /// Enum des templates disponibles
 enum InvoiceTemplateType {

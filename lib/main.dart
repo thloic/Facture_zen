@@ -157,7 +157,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
           create: (_) => InvoiceHistoryViewModel(invoiceService: invoiceService),
         ),
         ChangeNotifierProvider(create: (_) => NotificationViewModel()),
-        ChangeNotifierProvider(create: (_) => ProfileViewModel()),
         ChangeNotifierProvider(create: (_) => CompanyProfileViewModel()),
       ],
       child: MaterialApp(

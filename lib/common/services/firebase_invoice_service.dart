@@ -476,55 +476,79 @@ class FirebaseInvoiceService {
   Future<List<InvoiceModel>> getUserInvoices() async {
     try {
       final userId = currentUser?.uid;
-      if (userId == null) return [];
+      if (userId == null) {
+        debugPrint('❌ [getUserInvoices] Utilisateur non connecté');
+        return [];
+      }
 
-      // Query Realtime Database
+      debugPrint('📋 [getUserInvoices] Récupération factures pour: $userId');
+
+      // Query Realtime Database - cherche toutes les factures de cet utilisateur
       final invoicesRef = _database.ref('invoices');
-      final query = invoicesRef.orderByChild('userId').equalTo(userId);
-      final snapshot = await query.get();
+      final snapshot = await invoicesRef.get();
 
-      if (!snapshot.exists) return [];
+      debugPrint('📋 [getUserInvoices] Snapshot exists: ${snapshot.exists}');
 
-      final invoicesMap = Map<String, dynamic>.from(snapshot.value as Map);
+      if (!snapshot.exists) {
+        debugPrint('📋 [getUserInvoices] Aucune facture dans la base');
+        return [];
+      }
+
+      final allInvoicesMap = Map<String, dynamic>.from(snapshot.value as Map);
       final invoices = <InvoiceModel>[];
 
-      invoicesMap.forEach((key, value) {
-        final data = Map<String, dynamic>.from(value as Map);
+      debugPrint('📋 [getUserInvoices] Nombre total de factures: ${allInvoicesMap.length}');
 
-        invoices.add(InvoiceModel(
-          id: key,
-          invoiceNumber: data['invoiceNumber'] as String,
-          invoiceDate: DateTime.fromMillisecondsSinceEpoch(
-            data['createdAt'] as int? ?? DateTime.now().millisecondsSinceEpoch,
-          ),
-          clientName: data['clientName'] as String,
-          clientAddress: data['clientAddress'] as String? ?? '',
-          items: (data['items'] as List<dynamic>)
-              .map((item) => InvoiceItem(
-            description: item['description'] as String,
-            quantity: item['quantity'] as int,
-            unitPrice: (item['unitPrice'] as num).toDouble(),
-          ))
-              .toList(),
-          companyName: data['companyName'] as String,
-          companyAddress: data['companyAddress'] as String,
-          companyPhone: data['companyPhone'] as String?,
-          companyEmail: data['companyEmail'] as String?,
-          companySiret: data['companySiret'] as String?,
-          taxRate: data['taxRate'] as double?,
-          discountRate: data['discountRate'] as double?,
-          discountLabel: data['discountLabel'] as String?,
-          notes: data['notes'] as String?,
-        ));
+      // Filtrer les factures de l'utilisateur actuel
+      allInvoicesMap.forEach((key, value) {
+        try {
+          final data = Map<String, dynamic>.from(value as Map);
+          
+          // Vérifier que c'est bien une facture de cet utilisateur
+          if (data['userId'] == userId) {
+            debugPrint('✅ [getUserInvoices] Facture trouvée: $key - ${data['clientName']}');
+            
+            invoices.add(InvoiceModel(
+              id: key,
+              invoiceNumber: data['invoiceNumber'] as String,
+              invoiceDate: DateTime.fromMillisecondsSinceEpoch(
+                data['createdAt'] as int? ?? DateTime.now().millisecondsSinceEpoch,
+              ),
+              clientName: data['clientName'] as String,
+              clientAddress: data['clientAddress'] as String? ?? '',
+              items: (data['items'] as List<dynamic>)
+                  .map((item) => InvoiceItem(
+                description: item['description'] as String,
+                quantity: item['quantity'] as int,
+                unitPrice: (item['unitPrice'] as num).toDouble(),
+              ))
+                  .toList(),
+              companyName: data['companyName'] as String,
+              companyAddress: data['companyAddress'] as String,
+              companyPhone: data['companyPhone'] as String?,
+              companyEmail: data['companyEmail'] as String?,
+              companySiret: data['companySiret'] as String?,
+              taxRate: data['taxRate'] as double?,
+              discountRate: data['discountRate'] as double?,
+              discountLabel: data['discountLabel'] as String?,
+              notes: data['notes'] as String?,
+            ));
+          }
+        } catch (e) {
+          debugPrint('⚠️ [getUserInvoices] Erreur parsing facture $key: $e');
+        }
       });
+
+      debugPrint('📋 [getUserInvoices] ${invoices.length} facture(s) récupérée(s)');
 
       // Trier par date décroissante
       invoices.sort((a, b) => b.invoiceDate.compareTo(a.invoiceDate));
 
       return invoices;
 
-    } catch (e) {
+    } catch (e, stack) {
       debugPrint('❌ Erreur getUserInvoices: $e');
+      debugPrint('Stack: $stack');
       return [];
     }
   }

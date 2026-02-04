@@ -7,6 +7,10 @@ import '../../models/invoice_model.dart';
 class PdfElegantGenerator {
 
   static pw.Page generate(InvoiceModel invoice) {
+    return generateWithLogo(invoice, null);
+  }
+
+  static pw.Page generateWithLogo(InvoiceModel invoice, pw.MemoryImage? logoImage) {
     return pw.Page(
       pageFormat: PdfPageFormat.a4,
       margin: const pw.EdgeInsets.all(40),
@@ -14,7 +18,7 @@ class PdfElegantGenerator {
         return pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
-            _buildHeader(invoice),
+            _buildHeader(invoice, logoImage),
             pw.SizedBox(height: 40),
             _buildParties(invoice),
             pw.SizedBox(height: 40),
@@ -30,23 +34,32 @@ class PdfElegantGenerator {
     );
   }
 
-  static pw.Widget _buildHeader(InvoiceModel invoice) {
+  static pw.Widget _buildHeader(InvoiceModel invoice, pw.MemoryImage? logoImage) {
     return pw.Column(
       children: [
         pw.Row(
+          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
           children: [
-            pw.Container(width: 4, height: 50, color: PdfColor.fromHex('#D4AF37')), // Or
-            pw.SizedBox(width: 16),
-            pw.Expanded(
-              child: pw.Column(
-                crossAxisAlignment: pw.CrossAxisAlignment.start,
-                children: [
-                  pw.Text('FACTURE', style: pw.TextStyle(fontSize: 28, fontWeight: pw.FontWeight.normal, color: PdfColor.fromHex('#2D3436'), letterSpacing: 3)),
-                  pw.SizedBox(height: 4),
-                  pw.Text(invoice.invoiceNumber, style: const pw.TextStyle(fontSize: 12, color: PdfColors.grey600, letterSpacing: 1)),
-                ],
-              ),
+            pw.Row(
+              children: [
+                pw.Container(width: 4, height: 50, color: PdfColor.fromHex('#D4AF37')), // Or
+                pw.SizedBox(width: 16),
+                pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text('FACTURE', style: pw.TextStyle(fontSize: 28, fontWeight: pw.FontWeight.normal, color: PdfColor.fromHex('#2D3436'), letterSpacing: 3)),
+                    pw.SizedBox(height: 4),
+                    pw.Text(invoice.invoiceNumber, style: const pw.TextStyle(fontSize: 12, color: PdfColors.grey600, letterSpacing: 1)),
+                  ],
+                ),
+              ],
             ),
+            if (logoImage != null)
+              pw.Container(
+                width: 80,
+                height: 80,
+                child: pw.Image(logoImage, fit: pw.BoxFit.contain),
+              ),
           ],
         ),
         pw.SizedBox(height: 8),

@@ -22,16 +22,16 @@ class PdfTemplateFactory {
         return PdfClassicGenerator.generateWithLogo(invoice, logoImage);
 
       case InvoiceTemplateType.corporate:
-        return PdfCorporateGenerator.generate(invoice);
+        return PdfCorporateGenerator.generateWithLogo(invoice, logoImage);
 
       case InvoiceTemplateType.creative:
-        return PdfCreativeGenerator.generate(invoice);
+        return PdfCreativeGenerator.generateWithLogo(invoice, logoImage);
 
       case InvoiceTemplateType.minimal:
-        return PdfMinimalGenerator.generate(invoice);
+        return PdfMinimalGenerator.generateWithLogo(invoice, logoImage);
 
       case InvoiceTemplateType.elegant:
-        return PdfElegantGenerator.generate(invoice);
+        return PdfElegantGenerator.generateWithLogo(invoice, logoImage);
 
       case InvoiceTemplateType.professional:
       case InvoiceTemplateType.compact:

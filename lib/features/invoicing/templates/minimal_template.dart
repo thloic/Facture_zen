@@ -3,7 +3,7 @@ import '../models/invoice_model.dart';
 import 'invoice_template_base.dart';
 import 'invoice_design_system.dart';
 /// Template Minimaliste : Style épuré et simple
-class MinimalTemplate implements InvoiceTemplate {
+class MinimalTemplate with InvoiceTemplateMixin implements InvoiceTemplate {
   @override
   String get name => 'Minimaliste';
 
@@ -46,7 +46,8 @@ class MinimalTemplate implements InvoiceTemplate {
   }
 
   @override
-  Widget buildInvoice(BuildContext context, InvoiceModel invoice) {
+  @override
+  Widget buildInvoice(BuildContext context, InvoiceModel invoice, {bool isPremium = false}) {
     return SingleChildScrollView(
       child: Container(
         color: InvoiceDesignSystem.background,
@@ -154,6 +155,8 @@ class MinimalTemplate implements InvoiceTemplate {
                   const SizedBox(height: 32),
                   _buildNotes(invoice.notes!),
                 ],
+                // Signature VoxIn pour utilisateurs gratuits
+                if (!isPremium) buildVoxInSignature(),
               ],
             ),
           ),
@@ -394,7 +397,7 @@ class MinimalTemplate implements InvoiceTemplate {
   Future<void>? generatePDF(InvoiceModel invoice) => null;
 
   @override
-  Widget build(BuildContext context, InvoiceModel invoice) {
-    return buildInvoice(context, invoice);
+  Widget build(BuildContext context, InvoiceModel invoice, {bool isPremium = false}) {
+    return buildInvoice(context, invoice, isPremium: isPremium);
   }
 }
