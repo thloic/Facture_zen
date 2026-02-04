@@ -73,7 +73,7 @@ class InvoicePdfExample {
       // - L'uploade sur Firebase Storage
       // - Sauvegarde les métadonnées dans Realtime Database
       // - Nettoie le fichier temporaire
-      final invoiceId = await _invoiceService.saveInvoiceWithPdf(invoice);
+      final invoiceId = await _invoiceService.saveInvoice(invoice);
 
       // 4. Fermer le loader
       if (context.mounted) Navigator.pop(context);

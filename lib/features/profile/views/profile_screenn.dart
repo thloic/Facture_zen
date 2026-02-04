@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../common/widgets/curved_bottom_nav.dart';
+import '../../invoicing/services/subscription_sync_service.dart';
+import '../../invoicing/views/subscription_screen.dart';
 import '../viewmodels/profile_viewmodel.dart';
 import '../../../common/utils/responsive_utils.dart';
 import '../../auth/views/login_screen.dart';
@@ -43,12 +45,12 @@ class ProfileScreen extends StatelessWidget {
                       ),
                     ),
 
-                    SizedBox(height: responsive.getAdaptiveSpacing(40)),
+                    SizedBox(height: responsive.getAdaptiveSpacing(30)),
 
                     // Avatar et nom
                     _buildUserAvatar(viewModel, responsive),
 
-                    SizedBox(height: responsive.getAdaptiveSpacing(40)),
+                    SizedBox(height: responsive.getAdaptiveSpacing(24)),
 
                     // Carte blanche avec les options
                     Expanded(
@@ -62,11 +64,23 @@ class ProfileScreen extends StatelessWidget {
                         child: Padding(
                           padding: EdgeInsets.symmetric(
                             horizontal: responsive.horizontalPadding,
-                            vertical: responsive.getAdaptiveSpacing(24),
+                            vertical: responsive.getAdaptiveSpacing(20),
                           ),
                           child: SingleChildScrollView(
+                            physics: const BouncingScrollPhysics(),
                             child: Column(
                               children: [
+                                // ✅ NOUVEAU : Carte du plan d'abonnement
+                                _buildSubscriptionPlanCard(
+                                  context,
+                                  viewModel,
+                                  responsive,
+                                ),
+
+                                SizedBox(
+                                  height: responsive.getAdaptiveSpacing(20),
+                                ),
+
                                 _buildMenuItem(
                                   icon: Icons.person_outline,
                                   label: 'Infos du compte',
@@ -128,10 +142,368 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
+  /// ✅ NOUVEAU : Carte moderne du plan d'abonnement
+  Widget _buildSubscriptionPlanCard(
+      BuildContext context,
+      ProfileViewModel viewModel,
+      ResponsiveUtils responsive,
+      ) {
+    final plan = viewModel.currentPlan;
+    final isLoading = viewModel.isLoadingPlan;
+
+    if (isLoading) {
+      return Container(
+        height: responsive.getAdaptiveHeight(140),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFFE8E9F8), Color(0xFFF3F4F6)],
+          ),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: const Center(
+          child: CircularProgressIndicator(
+            color: Color(0xFF5B5FC7),
+            strokeWidth: 2.5,
+          ),
+        ),
+      );
+    }
+
+    // Configuration visuelle selon le plan
+    final planConfig = _getPlanConfig(plan);
+
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: planConfig.gradientColors,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: planConfig.gradientColors.first.withOpacity(0.4),
+            blurRadius: 24,
+            offset: const Offset(0, 10),
+            spreadRadius: -5,
+          ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          // Motifs décoratifs en arrière-plan
+          Positioned(
+            right: -20,
+            top: -20,
+            child: Container(
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withOpacity(0.1),
+              ),
+            ),
+          ),
+          Positioned(
+            left: -30,
+            bottom: -30,
+            child: Container(
+              width: 100,
+              height: 100,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withOpacity(0.08),
+              ),
+            ),
+          ),
+
+          // Contenu principal
+          Padding(
+            padding: EdgeInsets.all(responsive.getAdaptiveSpacing(20)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    // Icône du plan avec cercle
+                    Container(
+                      width: responsive.getAdaptiveSize(52),
+                      height: responsive.getAdaptiveSize(52),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.25),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.4),
+                          width: 2,
+                        ),
+                      ),
+                      child: Icon(
+                        planConfig.icon,
+                        color: Colors.white,
+                        size: responsive.getAdaptiveSize(26),
+                      ),
+                    ),
+
+                    SizedBox(width: responsive.getAdaptiveSpacing(14)),
+
+                    // Nom et badge du plan
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  plan?.name ?? 'Chargement...',
+                                  style: TextStyle(
+                                    fontSize: responsive.getAdaptiveTextSize(20),
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                    letterSpacing: -0.5,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              if (planConfig.isPremium) ...[
+                                SizedBox(width: responsive.getAdaptiveSpacing(8)),
+                                Container(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: responsive.getAdaptiveSpacing(8),
+                                    vertical: responsive.getAdaptiveSpacing(4),
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFFD700),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.star_rounded,
+                                        size: responsive.getAdaptiveSize(12),
+                                        color: Colors.white,
+                                      ),
+                                      SizedBox(width: responsive.getAdaptiveSpacing(3)),
+                                      Text(
+                                        'PRO',
+                                        style: TextStyle(
+                                          fontSize: responsive.getAdaptiveTextSize(9),
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                          SizedBox(height: responsive.getAdaptiveSpacing(4)),
+                          Text(
+                            planConfig.subtitle,
+                            style: TextStyle(
+                              fontSize: responsive.getAdaptiveTextSize(13),
+                              color: Colors.white.withOpacity(0.9),
+                              height: 1.3,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+
+                SizedBox(height: responsive.getAdaptiveSpacing(16)),
+
+                // Statistiques du plan (responsive)
+                Row(
+                  children: [
+                    // Factures
+                    Expanded(
+                      child: _buildPlanStat(
+                        icon: Icons.description_outlined,
+                        value: plan?.monthlyInvoiceLimit == -1
+                            ? '∞'
+                            : '${plan?.monthlyInvoiceLimit ?? 0}',
+                        label: 'Factures',
+                        responsive: responsive,
+                      ),
+                    ),
+
+                    SizedBox(width: responsive.getAdaptiveSpacing(12)),
+
+                    // Templates
+                    Expanded(
+                      child: _buildPlanStat(
+                        icon: Icons.palette_outlined,
+                        value: plan?.allowedTemplatesCount == -1
+                            ? '∞'
+                            : '${plan?.allowedTemplatesCount ?? 0}',
+                        label: 'Templates',
+                        responsive: responsive,
+                      ),
+                    ),
+                  ],
+                ),
+
+                SizedBox(height: responsive.getAdaptiveSpacing(16)),
+
+                // Bouton "Changer de plan"
+                SizedBox(
+                  width: double.infinity,
+                  height: responsive.getAdaptiveHeight(46),
+                  child: ElevatedButton(
+                    onPressed: () => _navigateToSubscription(context, viewModel),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: planConfig.gradientColors.first,
+                      elevation: 0,
+                      shadowColor: Colors.transparent,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          planConfig.isPremium
+                              ? Icons.upgrade_rounded
+                              : Icons.rocket_launch_rounded,
+                          size: responsive.getAdaptiveSize(20),
+                        ),
+                        SizedBox(width: responsive.getAdaptiveSpacing(8)),
+                        Text(
+                          planConfig.isPremium
+                              ? 'Changer de plan'
+                              : 'Passer à Premium',
+                          style: TextStyle(
+                            fontSize: responsive.getAdaptiveTextSize(15),
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.2,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Widget pour afficher une statistique du plan
+  Widget _buildPlanStat({
+    required IconData icon,
+    required String value,
+    required String label,
+    required ResponsiveUtils responsive,
+  }) {
+    return Container(
+      padding: EdgeInsets.all(responsive.getAdaptiveSpacing(12)),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.2),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        children: [
+          Icon(
+            icon,
+            color: Colors.white,
+            size: responsive.getAdaptiveSize(22),
+          ),
+          SizedBox(height: responsive.getAdaptiveSpacing(6)),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: responsive.getAdaptiveTextSize(18),
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          SizedBox(height: responsive.getAdaptiveSpacing(2)),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: responsive.getAdaptiveTextSize(11),
+              color: Colors.white.withOpacity(0.85),
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Configuration visuelle selon le plan
+  _PlanConfig _getPlanConfig(SubscriptionPlan? plan) {
+    if (plan == null) {
+      return _PlanConfig(
+        gradientColors: [const Color(0xFFE8E9F8), const Color(0xFFF3F4F6)],
+        icon: Icons.hourglass_empty,
+        subtitle: 'Chargement...',
+        isPremium: false,
+      );
+    }
+
+    final planId = plan.name.toLowerCase();
+
+    if (planId.contains('pro') || planId.contains('enterprise')) {
+      return _PlanConfig(
+        gradientColors: [
+          const Color(0xFF6366F1), // Indigo vibrant
+          const Color(0xFF8B5CF6), // Violet riche
+        ],
+        icon: Icons.workspace_premium_rounded,
+        subtitle: '${plan.monthlyInvoiceLimit} factures/mois',
+        isPremium: true,
+      );
+    } else if (planId.contains('basic')) {
+      return _PlanConfig(
+        gradientColors: [
+          const Color(0xFF10B981), // Vert emeraude
+          const Color(0xFF059669), // Vert foncé
+        ],
+        icon: Icons.verified_rounded,
+        subtitle: '${plan.monthlyInvoiceLimit} factures/mois',
+        isPremium: true,
+      );
+    } else {
+      // Plan gratuit
+      return _PlanConfig(
+        gradientColors: [
+          const Color(0xFF94A3B8), // Gris bleuté
+          const Color(0xFF64748B), // Gris ardoise
+        ],
+        icon: Icons.star_border_rounded,
+        subtitle: '${plan.monthlyInvoiceLimit} factures/mois',
+        isPremium: false,
+      );
+    }
+  }
+
   /// Widget - Background avec dégradé violet et motifs SVG
   Widget _buildBackground(BuildContext context) {
     return Container(
-      height: MediaQuery.of(context).size.height * 0.45,
+      height: MediaQuery.of(context).size.height * 0.40,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -148,9 +520,9 @@ class ProfileScreen extends StatelessWidget {
 
   /// Widget - Avatar et nom de l'utilisateur
   Widget _buildUserAvatar(
-    ProfileViewModel viewModel,
-    ResponsiveUtils responsive,
-  ) {
+      ProfileViewModel viewModel,
+      ResponsiveUtils responsive,
+      ) {
     return Column(
       children: [
         // Avatar circulaire
@@ -162,7 +534,7 @@ class ProfileScreen extends StatelessWidget {
             color: Colors.white,
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.1),
+                color: Colors.black.withOpacity(0.15),
                 blurRadius: 20,
                 offset: const Offset(0, 10),
               ),
@@ -172,17 +544,17 @@ class ProfileScreen extends StatelessWidget {
             child: viewModel.userAvatarUrl != null
                 ? Image.network(viewModel.userAvatarUrl!, fit: BoxFit.cover)
                 : Container(
-                    color: const Color(0xFF5B5FC7),
-                    child: const Icon(
-                      Icons.person,
-                      size: 50,
-                      color: Colors.white,
-                    ),
-                  ),
+              color: const Color(0xFF5B5FC7),
+              child: const Icon(
+                Icons.person,
+                size: 50,
+                color: Colors.white,
+              ),
+            ),
           ),
         ),
 
-        SizedBox(height: responsive.getAdaptiveSpacing(16)),
+        SizedBox(height: responsive.getAdaptiveSpacing(14)),
 
         // Nom de l'utilisateur
         Text(
@@ -192,6 +564,8 @@ class ProfileScreen extends StatelessWidget {
             fontWeight: FontWeight.w600,
             color: Colors.white,
           ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
       ],
     );
@@ -252,9 +626,9 @@ class ProfileScreen extends StatelessWidget {
               ),
 
               // Flèche
-              Icon(
+              const Icon(
                 Icons.chevron_right,
-                color: const Color(0xFF9CA3AF),
+                color: Color(0xFF9CA3AF),
                 size: 24,
               ),
             ],
@@ -290,10 +664,27 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
+  /// ✅ NOUVEAU : Navigation vers l'écran d'abonnement avec rafraîchissement au retour
+  Future<void> _navigateToSubscription(
+      BuildContext context,
+      ProfileViewModel viewModel,
+      ) async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const SubscriptionScreen(remainingInvoices: 0),
+      ),
+    );
+
+    // Si l'utilisateur a acheté un abonnement, rafraîchir le plan
+    if (result == true) {
+      debugPrint('✅ Retour de l\'écran d\'abonnement - rafraîchissement du plan');
+      await viewModel.refreshSubscriptionPlan();
+    }
+  }
+
   /// Confirmation de déconnexion - Design Premium
   void _confirmLogout(BuildContext context, ProfileViewModel viewModel) {
-    final responsive = ResponsiveUtils(context);
-    
     showDialog(
       context: context,
       barrierDismissible: true,
@@ -303,7 +694,7 @@ class ProfileScreen extends StatelessWidget {
           child: Dialog(
             backgroundColor: Colors.transparent,
             elevation: 0,
-            insetPadding: EdgeInsets.symmetric(horizontal: 24),
+            insetPadding: const EdgeInsets.symmetric(horizontal: 24),
             child: Container(
               width: double.infinity,
               constraints: const BoxConstraints(maxWidth: 380),
@@ -355,9 +746,9 @@ class ProfileScreen extends StatelessWidget {
                         color: Color(0xFFEF4444),
                       ),
                     ),
-                    
+
                     const SizedBox(height: 20),
-                    
+
                     // Titre
                     const Text(
                       'Déconnexion',
@@ -367,9 +758,9 @@ class ProfileScreen extends StatelessWidget {
                         color: Color(0xFF1F2937),
                       ),
                     ),
-                    
+
                     const SizedBox(height: 10),
-                    
+
                     // Message
                     const Text(
                       'Êtes-vous sûr de vouloir vous déconnecter ?',
@@ -380,9 +771,9 @@ class ProfileScreen extends StatelessWidget {
                         height: 1.5,
                       ),
                     ),
-                    
+
                     const SizedBox(height: 28),
-                    
+
                     // Boutons
                     Column(
                       children: [
@@ -394,17 +785,17 @@ class ProfileScreen extends StatelessWidget {
                             onPressed: () async {
                               // Sauvegarder le navigator avant async
                               final navigator = Navigator.of(context);
-                              
+
                               // Fermer le dialog
                               navigator.pop();
-                              
+
                               // Effectuer la déconnexion
                               await viewModel.logout();
-                              
-                              // Navigation vers login (sans vérifier context.mounted car on utilise le navigator sauvegardé)
+
+                              // Navigation vers login
                               navigator.pushAndRemoveUntil(
                                 MaterialPageRoute(builder: (context) => const LoginScreen()),
-                                (route) => false,
+                                    (route) => false,
                               );
                             },
                             style: ElevatedButton.styleFrom(
@@ -426,9 +817,9 @@ class ProfileScreen extends StatelessWidget {
                             ),
                           ),
                         ),
-                        
+
                         const SizedBox(height: 12),
-                        
+
                         // Bouton Annuler
                         SizedBox(
                           width: double.infinity,
@@ -469,6 +860,21 @@ class ProfileScreen extends StatelessWidget {
   }
 }
 
+/// Classe helper pour la configuration visuelle du plan
+class _PlanConfig {
+  final List<Color> gradientColors;
+  final IconData icon;
+  final String subtitle;
+  final bool isPremium;
+
+  _PlanConfig({
+    required this.gradientColors,
+    required this.icon,
+    required this.subtitle,
+    required this.isPremium,
+  });
+}
+
 /// CustomPainter pour les motifs SVG du background
 class ProfileBackgroundPainter extends CustomPainter {
   @override
@@ -479,9 +885,7 @@ class ProfileBackgroundPainter extends CustomPainter {
       ..style = PaintingStyle.stroke;
 
     // Dessiner plusieurs lignes courbes aléatoires
-    final random = math.Random(
-      42,
-    ); // Seed fixe pour avoir toujours le même motif
+    final random = math.Random(42); // Seed fixe pour avoir toujours le même motif
 
     for (int i = 0; i < 8; i++) {
       final path = Path();
@@ -508,8 +912,7 @@ class ProfileBackgroundPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-/// SettingsScreen
-/// Écran des paramètres détaillés
+/// SettingsScreen (reste inchangé)
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({Key? key}) : super(key: key);
 
@@ -617,9 +1020,9 @@ class SettingsScreen extends StatelessWidget {
 
   /// Widget - En-tête avec avatar et email
   Widget _buildUserHeader(
-    ProfileViewModel viewModel,
-    ResponsiveUtils responsive,
-  ) {
+      ProfileViewModel viewModel,
+      ResponsiveUtils responsive,
+      ) {
     return Container(
       padding: EdgeInsets.all(responsive.getAdaptiveSpacing(16)),
       decoration: BoxDecoration(
@@ -632,9 +1035,9 @@ class SettingsScreen extends StatelessWidget {
           Container(
             width: 50,
             height: 50,
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               shape: BoxShape.circle,
-              color: const Color(0xFF5B5FC7),
+              color: Color(0xFF5B5FC7),
             ),
             child: ClipOval(
               child: viewModel.userAvatarUrl != null
@@ -728,49 +1131,14 @@ class SettingsScreen extends StatelessWidget {
               ),
 
               // Flèche
-              Icon(
+              const Icon(
                 Icons.chevron_right,
-                color: const Color(0xFF9CA3AF),
+                color: Color(0xFF9CA3AF),
                 size: 24,
               ),
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  /// Confirmation de déconnexion
-  void _confirmLogout(BuildContext context, ProfileViewModel viewModel) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Déconnexion'),
-        content: const Text('Êtes-vous sûr de vouloir vous déconnecter ?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Annuler'),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(context); // Fermer la boîte de dialogue
-
-              // Effectuer la déconnexion
-              await viewModel.logout();
-
-              // Naviguer vers l'écran de login et supprimer toute la pile de navigation
-              if (context.mounted) {
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (context) => const LoginScreen()),
-                  (route) => false, // Supprime toutes les routes précédentes
-                );
-              }
-            },
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Déconnexion'),
-          ),
-        ],
       ),
     );
   }
