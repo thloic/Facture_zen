@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../../common/models/user_model.dart';
 import '../../../common/services/auth_service.dart';
 import '../../../common/services/pin_service.dart';
+import '../../invoicing/services/subscription_sync_service.dart';
 
 /// ProfileViewModel
 /// Gère l'état et la logique du profil utilisateur
@@ -10,10 +11,15 @@ import '../../../common/services/pin_service.dart';
 class ProfileViewModel extends ChangeNotifier {
   // Services injectés
   final AuthService _authService;
+  final SubscriptionSyncService _subscriptionService = SubscriptionSyncService();
 
   // Données utilisateur
   UserModel? _currentUser;
   String? _userAvatarUrl;
+
+  // ✅ NOUVEAU : Données d'abonnement
+  SubscriptionPlan? _currentPlan;
+  bool _isLoadingPlan = false;
 
   // État de la vue
   bool _isLoading = false;
@@ -33,11 +39,48 @@ class ProfileViewModel extends ChangeNotifier {
   bool get hasError => _errorMessage != null;
   User? get firebaseUser => _authService.currentUser;
 
+  // ✅ NOUVEAU : Getters pour l'abonnement
+  SubscriptionPlan? get currentPlan => _currentPlan;
+  bool get isLoadingPlan => _isLoadingPlan;
+
   /// Constructeur avec injection du service
   ProfileViewModel({AuthService? authService})
-    : _authService = authService ?? AuthService() {
+      : _authService = authService ?? AuthService() {
     // Charger automatiquement le profil au démarrage
     loadUserProfile();
+    // ✅ NOUVEAU : Charger le plan d'abonnement
+    _loadSubscriptionPlan();
+  }
+
+  /// ✅ NOUVEAU : Charge le plan d'abonnement actuel
+  Future<void> _loadSubscriptionPlan() async {
+    _isLoadingPlan = true;
+    notifyListeners();
+
+    try {
+      debugPrint('🔄 Chargement du plan d\'abonnement...');
+
+      // Synchroniser le statut avec RevenueCat
+      await _subscriptionService.syncSubscriptionStatus();
+
+      // Récupérer le plan actuel
+      _currentPlan = await _subscriptionService.getCurrentPlan();
+
+      debugPrint('✅ Plan chargé: ${_currentPlan?.name}');
+    } catch (e) {
+      debugPrint('❌ Erreur lors du chargement du plan: $e');
+      // En cas d'erreur, utiliser le plan gratuit par défaut
+      _currentPlan = SubscriptionSyncService.PLAN_LIMITS['zen_gratuit'];
+    } finally {
+      _isLoadingPlan = false;
+      notifyListeners();
+    }
+  }
+
+  /// ✅ NOUVEAU : Rafraîchir le plan (à appeler après un changement d'abonnement)
+  Future<void> refreshSubscriptionPlan() async {
+    debugPrint('🔄 Rafraîchissement du plan...');
+    await _loadSubscriptionPlan();
   }
 
   /// Charge les informations du profil utilisateur depuis Firebase
@@ -193,7 +236,7 @@ class ProfileViewModel extends ChangeNotifier {
 
       // NE PAS supprimer le PIN - il reste pour les prochaines connexions
       // Le PIN permet de se reconnecter rapidement sans email/password
-      
+
       // Réinitialiser les tentatives échouées du PIN
       final pinService = PinService();
       await pinService.resetFailedAttempts();
@@ -204,6 +247,7 @@ class ProfileViewModel extends ChangeNotifier {
       // Réinitialiser les données locales
       _currentUser = null;
       _userAvatarUrl = null;
+      _currentPlan = null;
 
       debugPrint('✅ Déconnexion réussie (PIN conservé)');
       notifyListeners();
@@ -228,6 +272,7 @@ class ProfileViewModel extends ChangeNotifier {
       // Réinitialiser les données
       _currentUser = null;
       _userAvatarUrl = null;
+      _currentPlan = null;
 
       debugPrint('✅ Compte supprimé');
       _setLoading(false);
@@ -244,9 +289,9 @@ class ProfileViewModel extends ChangeNotifier {
   /// @param currentPassword Mot de passe actuel
   /// @param newPassword Nouveau mot de passe
   Future<bool> changePassword(
-    String currentPassword,
-    String newPassword,
-  ) async {
+      String currentPassword,
+      String newPassword,
+      ) async {
     _setLoading(true);
     _errorMessage = null;
 

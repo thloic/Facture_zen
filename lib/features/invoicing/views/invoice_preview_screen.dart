@@ -1,3 +1,4 @@
+import 'package:facture_zen/features/invoicing/views/subscription_screen.dart';
 import 'package:facture_zen/features/invoicing/views/utils/PdfTemplateGenerators.dart';
 import 'package:facture_zen/features/invoicing/views/utils/pdf_template_factory.dart';
 import 'package:flutter/material.dart';
@@ -306,6 +307,33 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
   Future<void> _downloadAndUploadInvoice() async {
     if (_isDownloading) return;
 
+    final canCreate = await _invoiceService.canCreateInvoice();
+
+    if (!canCreate) {
+      debugPrint('⚠️ Limite atteinte, affichage direct de l\'écran d\'abonnement');
+
+      final remaining = await _invoiceService.getRemainingInvoices();
+
+      if (mounted) {
+        final result = await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => SubscriptionScreen(
+              remainingInvoices: remaining,
+            ),
+          ),
+        );
+
+        // Si abonné, réessayer
+        if (result == true) {
+          // Relancer la fonction
+          await _downloadAndUploadInvoice();
+        }
+      }
+
+      return; // ← Arrêter ici
+    }
+
     setState(() {
       _isDownloading = true;
     });
@@ -313,12 +341,15 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
     try {
       debugPrint('🚀 Démarrage: Génération + Téléchargement + Upload');
 
+
       // 1. Générer le PDF optimisé selon le template
       final pdfFile = await _generateOptimizedPdf();
 
       if (pdfFile == null) {
         throw Exception('Erreur lors de la génération du PDF');
       }
+      final invoiceId = await _invoiceService.saveInvoice(_invoice);
+
 
       debugPrint('✅ PDF généré: ${pdfFile.path}');
 
@@ -331,14 +362,14 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
       debugPrint('✅ PDF téléchargé sur l\'appareil');
 
       // 3. Upload sur Firebase Storage (seulement si on a un invoiceId)
-      if (_invoice.id != null) {
+      if (invoiceId != null) {
         final userId = _invoiceService.currentUser?.uid;
         if (userId != null) {
           debugPrint('📤 Upload du PDF sur Firebase Storage...');
 
           final pdfUrl = await _invoiceService.uploadPDF(
             userId,
-            _invoice.id!,
+            invoiceId!,
             pdfFile,
           );
 
@@ -346,7 +377,7 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
             debugPrint('✅ PDF uploadé sur Storage: $pdfUrl');
 
             // 4. Mettre à jour l'URL dans la facture
-            await _invoiceService.updateInvoicePdfUrl(_invoice.id!, pdfUrl);
+            await _invoiceService.updateInvoicePdfUrl(invoiceId!, pdfUrl);
             debugPrint('✅ URL du PDF mise à jour dans la facture');
 
             if (mounted) {
@@ -391,7 +422,7 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
         debugPrint('⚠️ Erreur suppression fichier temporaire: $e');
       }
 
-    } catch (e, stackTrace) {
+    }catch (e, stackTrace) {
       debugPrint('❌ Erreur _downloadAndUploadInvoice: $e');
       debugPrint('📍 StackTrace: $stackTrace');
 
@@ -411,7 +442,6 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
       }
     }
   }
-
   /// Génère un PDF optimisé selon le template sélectionné
   Future<File?> _generateOptimizedPdf() async {
     try {
@@ -502,7 +532,7 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
               } else if (value == 'share') {
                 _shareInvoice();
               } else if (value == 'save') {
-                _saveInvoiceToFirebase();
+                _downloadAndUploadInvoice();
               }
             },
             itemBuilder: (context) => [

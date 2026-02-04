@@ -53,7 +53,7 @@ class InvoiceCreationHelper {
       }
 
       // 3. Générer le PDF et sauvegarder la facture
-      final invoiceId = await _invoiceService.saveInvoiceWithPdf(invoice);
+      final invoiceId = await _invoiceService.saveInvoice(invoice);
 
       // 4. Fermer le loader
       _hideLoader(loaderOverlay);
