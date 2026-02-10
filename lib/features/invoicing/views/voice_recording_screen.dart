@@ -18,6 +18,9 @@ class _VoiceRecordingScreenState extends State<VoiceRecordingScreen>
     with TickerProviderStateMixin {
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
+  late AnimationController _waveController;
+  late Animation<double> _waveAnimation;
+  late List<Animation<double>> _barAnimations;
 
   @override
   void initState() {
@@ -31,20 +34,50 @@ class _VoiceRecordingScreenState extends State<VoiceRecordingScreen>
     _pulseAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
+
+    // Contrôleur pour l'animation des vagues sonores
+    _waveController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+
+    _waveAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _waveController,
+        curve: Curves.easeInOut,
+      ),
+    );
+
+    // Créer des animations individuelles pour chaque barre de l'onde sonore
+    _barAnimations = List.generate(8, (index) {
+      return Tween<double>(begin: 0.1, end: 1.0).animate(
+        CurvedAnimation(
+          parent: _waveController,
+          curve: Interval(
+            (index * 0.1).clamp(0.0, 0.7),
+            ((index + 1) * 0.1).clamp(0.3, 1.0),
+          ),
+        ),
+      );
+    });
   }
 
   @override
   void dispose() {
     _pulseController.dispose();
+    _waveController.dispose();
     super.dispose();
   }
 
   void _updateAnimations(bool isRecording) {
     if (isRecording) {
       _pulseController.repeat(reverse: true);
+      _waveController.repeat(reverse: true);
     } else {
       _pulseController.stop();
       _pulseController.reset();
+      _waveController.stop();
+      _waveController.reset();
     }
   }
 
@@ -84,6 +117,10 @@ class _VoiceRecordingScreenState extends State<VoiceRecordingScreen>
                     SizedBox(height: responsive.getAdaptiveSpacing(24)),
                     AppLogo(fontSize: responsive.getAdaptiveTextSize(28)),
 
+                    // Animation d'onde sonore moderne
+                    if (viewModel.isRecording)
+                      _buildModernSoundWave(responsive),
+
                     Expanded(
                       child: Center(
                         child: _buildModernTimer(viewModel, responsive),
@@ -111,6 +148,61 @@ class _VoiceRecordingScreenState extends State<VoiceRecordingScreen>
         ),
       ),
       bottomNavigationBar: const CurvedBottomNav(currentIndex: 1),
+    );
+  }
+
+  Widget _buildModernSoundWave(ResponsiveUtils responsive) {
+    return Padding(
+      padding: EdgeInsets.only(
+        top: responsive.getAdaptiveSpacing(20),
+        bottom: responsive.getAdaptiveSpacing(40),
+      ),
+      child: AnimatedBuilder(
+        animation: _waveController,
+        builder: (context, child) {
+          return SizedBox(
+            height: 60,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(8, (index) {
+                final animation = _barAnimations[index];
+                final height = animation.value * 60;
+                final opacity = 0.3 + (animation.value * 0.7);
+
+                // Alternance de couleurs pour un effet plus dynamique
+                final color = index % 2 == 0
+                    ? const Color(0xFF5B5FC7) // Violet principal
+                    : const Color(0xFF9C9FE8); // Violet clair
+
+                return Container(
+                  width: 6,
+                  height: height,
+                  margin: const EdgeInsets.symmetric(horizontal: 2),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(3),
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        color.withOpacity(opacity * 0.8),
+                        color.withOpacity(opacity),
+                        Colors.white.withOpacity(opacity * 0.3),
+                      ],
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: color.withOpacity(opacity * 0.4),
+                        blurRadius: 8,
+                        spreadRadius: 1,
+                      ),
+                    ],
+                  ),
+                );
+              }),
+            ),
+          );
+        },
+      ),
     );
   }
 
