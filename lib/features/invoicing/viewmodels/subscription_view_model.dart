@@ -3,6 +3,7 @@
 import '../services/revenue_cat_service.dart';
 import 'package:flutter/material.dart';
 
+import '../../../common/services/tracking_service.dart';
 import '../services/subscription_sync_service.dart';
 
 class SubscriptionViewModel extends ChangeNotifier {
@@ -197,6 +198,16 @@ class SubscriptionViewModel extends ChangeNotifier {
     _selectedPackage = package;
     _errorMessage = null;
     debugPrint('✅ Package selected: ${package.identifier}');
+    
+    // 📊 Tracker l'ajout au panier (Google Ads + Facebook Ads)
+    final price = package.storeProduct.price;
+    final currency = package.storeProduct.currencyCode;
+    TrackingService().logAddToCart(
+      productId: package.identifier,
+      price: price,
+      currency: currency,
+    );
+    
     notifyListeners();
   }
 
@@ -269,6 +280,16 @@ class SubscriptionViewModel extends ChangeNotifier {
 
       if (success) {
         debugPrint('✅ Purchase completed successfully!');
+        
+        // 📊 Tracker l'achat (Google Ads + Facebook Ads)
+        final price = _selectedPackage!.storeProduct.price;
+        final currency = _selectedPackage!.storeProduct.currencyCode;
+        await TrackingService().logPurchase(
+          productId: _selectedPackage!.identifier,
+          price: price,
+          currency: currency,
+        );
+        debugPrint('📊 Purchase tracked: ${_selectedPackage!.identifier}');
 
         // ✅ SYNCHRONISER avec Firebase après l'achat
         await _syncService.syncSubscriptionStatus();

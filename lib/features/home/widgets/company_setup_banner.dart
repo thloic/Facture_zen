@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../profile/viewmodels/profile_viewmodel.dart';
 import '../../profile/views/company_profile_setup_screen.dart';
 
@@ -34,18 +35,24 @@ class _CompanySetupBannerState extends State<CompanySetupBanner> with SingleTick
     );
   }
 
-  /// Charger l'état du banner (caché ou non)
+  /// Charger l'état du banner (caché ou non) pour l'utilisateur actuel
   Future<void> _loadBannerDismissedState() async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) return;
+    
     final prefs = await SharedPreferences.getInstance();
     setState(() {
-      _bannerDismissed = prefs.getBool('company_setup_banner_dismissed') ?? false;
+      _bannerDismissed = prefs.getBool('company_setup_banner_dismissed_$userId') ?? false;
     });
   }
 
-  /// Marquer le banner comme caché
+  /// Marquer le banner comme caché pour l'utilisateur actuel
   Future<void> _dismissBanner() async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) return;
+    
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('company_setup_banner_dismissed', true);
+    await prefs.setBool('company_setup_banner_dismissed_$userId', true);
     setState(() {
       _bannerDismissed = true;
     });

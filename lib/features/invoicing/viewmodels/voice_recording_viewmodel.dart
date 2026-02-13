@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'dart:async';
 import '../services/voice_recognition_service.dart';
+import '../../../common/services/tracking_service.dart';
 
 /// VoiceRecordingViewModel
 /// Gère l'état et la logique de l'enregistrement vocal avec transcription Whisper
@@ -152,6 +153,9 @@ class VoiceRecordingViewModel extends ChangeNotifier {
               ? _transcribedText!.substring(0, 50)
               : _transcribedText!;
           debugPrint('✅ Transcription réussie: $preview...');
+          
+          // 📊 Tracker l'utilisation de la reconnaissance vocale
+          await TrackingService().logVoiceRecording();
         } else {
           debugPrint('⚠️ Transcription vide ou échouée');
           _transcribedText = 'Erreur: Impossible de transcrire l\'audio. Veuillez réessayer.';

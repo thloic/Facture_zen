@@ -2,15 +2,16 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
 import '../../models/invoice_model.dart';
+import 'pdf_template_factory.dart';
 
 /// Générateur PDF pour le template Creative
 class PdfCreativeGenerator {
 
-  static pw.Page generate(InvoiceModel invoice) {
-    return generateWithLogo(invoice, null);
+  static pw.Page generate(InvoiceModel invoice, {bool isPremium = false}) {
+    return generateWithLogo(invoice, null, isPremium: isPremium);
   }
 
-  static pw.Page generateWithLogo(InvoiceModel invoice, pw.MemoryImage? logoImage) {
+  static pw.Page generateWithLogo(InvoiceModel invoice, pw.MemoryImage? logoImage, {bool isPremium = false}) {
     return pw.Page(
       pageFormat: PdfPageFormat.a4,
       margin: const pw.EdgeInsets.all(40),
@@ -28,6 +29,9 @@ class PdfCreativeGenerator {
             pw.Spacer(),
             if (invoice.notes != null && invoice.notes!.isNotEmpty)
               _buildNotes(invoice.notes!),
+            // Signature VoxIn pour utilisateurs gratuits
+            if (!isPremium)
+              PdfTemplateFactory.buildVoxInSignature(),
           ],
         );
       },

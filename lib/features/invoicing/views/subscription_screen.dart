@@ -207,7 +207,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                           SizedBox(width: responsive.getAdaptiveSpacing(8)),
                           Flexible(
                             child: Text(
-                              'Limite de ${widget.remainingInvoices} factures atteinte',
+                              'Limite de 3 factures atteinte',
                               style: TextStyle(
                                 fontSize: responsive.getAdaptiveTextSize(14),
                                 color: Colors.orange.shade900,

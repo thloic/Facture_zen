@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import '../../../common/services/auth_service.dart';
+import '../../../common/services/tracking_service.dart';
 
 class LoginViewModel extends ChangeNotifier {
   final AuthService _authService;
@@ -26,6 +27,10 @@ class LoginViewModel extends ChangeNotifier {
       final user = await _authService.signIn(email: email, password: password);
 
       if (user != null) {
+        // Tracker la connexion (Google Ads)
+        await TrackingService().logLogin(method: 'email');
+        await TrackingService().setUserId(user.uid);
+        
         _setLoading(false);
         return true;
       } else {
@@ -90,6 +95,10 @@ class LoginViewModel extends ChangeNotifier {
       final user = await _authService.signInWithGoogle();
 
       if (user != null) {
+        // Tracker la connexion Google (Google Ads + Facebook Ads)
+        await TrackingService().logLogin(method: 'google');
+        await TrackingService().setUserId(user.uid);
+        
         _setLoading(false);
         return true;
       } else {

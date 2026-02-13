@@ -7,12 +7,19 @@
     <uses-permission android:name="com.android.vending.BILLING"/>
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
+    <!-- Permission pour Google Ads -->
+    <uses-permission android:name="com.google.android.gms.permission.AD_ID"/>
 
 
     <application
         android:label="facture_zen"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+        
+        <!-- Facebook SDK Configuration -->
+        <meta-data android:name="com.facebook.sdk.ApplicationId" android:value="@string/facebook_app_id"/>
+        <meta-data android:name="com.facebook.sdk.ClientToken" android:value="@string/facebook_client_token"/>
+        
         <activity
             android:name=".MainActivity"
             android:exported="true"

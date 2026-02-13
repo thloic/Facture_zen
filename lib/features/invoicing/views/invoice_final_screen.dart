@@ -12,6 +12,7 @@ import '../../../common/utils/responsive_utils.dart';
 import '../models/invoice_model.dart';
 import '../../profile/services/firebase_profile_service.dart';
 import '../../profile/models/user_profile_model.dart';
+import 'subscription_screen.dart';
 
 /// InvoiceFinalScreen
 /// Écran d'aperçu final de la facture au format PDF
@@ -37,6 +38,7 @@ class _InvoiceFinalScreenState extends State<InvoiceFinalScreen> {
   UserProfile? _userProfile;
   bool _isLoadingProfile = true;
   Uint8List? _logoBytes; // Cache des bytes du logo pour le PDF
+  bool _isPremium = false; // Statut premium de l'utilisateur
 
   @override
   void initState() {
@@ -47,6 +49,10 @@ class _InvoiceFinalScreenState extends State<InvoiceFinalScreen> {
   /// Charge le profil utilisateur pour récupérer le logo
   Future<void> _loadUserProfile() async {
     try {
+      // Vérifier le statut premium
+      final remainingInvoices = await _invoiceService.getRemainingInvoices();
+      _isPremium = remainingInvoices == -1; // -1 = illimité = premium
+      
       final profile = await _profileService.getUserProfile();
       
       // Précharger les bytes du logo pour le PDF
@@ -196,6 +202,24 @@ class _InvoiceFinalScreenState extends State<InvoiceFinalScreen> {
 
   /// Télécharge la facture en PDF ET l'upload sur Firebase Storage
   Future<void> _downloadAndUploadInvoice(BuildContext context) async {
+    // ✅ VÉRIFICATION LIMITE AVANT GÉNÉRATION
+    final canCreate = await _invoiceService.canCreateInvoice();
+    final remainingInvoices = await _invoiceService.getRemainingInvoices();
+    
+    if (!canCreate) {
+      // Limite atteinte → Afficher le paywall
+      debugPrint('⚠️ Limite de factures atteinte ($remainingInvoices restantes)');
+      if (mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => SubscriptionScreen(remainingInvoices: remainingInvoices),
+          ),
+        );
+      }
+      return; // ❌ Ne pas générer le PDF
+    }
+
     setState(() {
       _isDownloading = true;
     });
@@ -480,8 +504,8 @@ class _InvoiceFinalScreenState extends State<InvoiceFinalScreen> {
           children: [
             _buildPdfTableCell(item.description),
             _buildPdfTableCell(item.quantity.toString()),
-            _buildPdfTableCell('${item.unitPrice.toStringAsFixed(2)}€'),
-            _buildPdfTableCell('${(item.quantity * item.unitPrice).toStringAsFixed(2)}€'),
+            _buildPdfTableCell('${item.unitPrice.toStringAsFixed(2)} EUR'),
+            _buildPdfTableCell('${(item.quantity * item.unitPrice).toStringAsFixed(2)} EUR'),
           ],
         )),
       ],
@@ -506,11 +530,11 @@ class _InvoiceFinalScreenState extends State<InvoiceFinalScreen> {
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.end,
       children: [
-        pw.Text('Sous-total: ${invoice.subtotal.toStringAsFixed(2)}€'),
+        pw.Text('Sous-total: ${invoice.subtotal.toStringAsFixed(2)} EUR'),
         if (invoice.taxAmount > 0)
-          pw.Text('TVA (${(invoice.taxRate! * 100).toStringAsFixed(0)}%): ${invoice.taxAmount.toStringAsFixed(2)}€'),
+          pw.Text('TVA (${(invoice.taxRate! * 100).toStringAsFixed(0)}%): ${invoice.taxAmount.toStringAsFixed(2)} EUR'),
         if (invoice.discountAmount > 0)
-          pw.Text('Remise: -${invoice.discountAmount.toStringAsFixed(2)}€'),
+          pw.Text('Remise: -${invoice.discountAmount.toStringAsFixed(2)} EUR'),
         pw.SizedBox(height: 8),
         pw.Container(
           padding: const pw.EdgeInsets.all(8),
@@ -518,7 +542,7 @@ class _InvoiceFinalScreenState extends State<InvoiceFinalScreen> {
             border: pw.Border.all(color: PdfColors.grey800, width: 2),
           ),
           child: pw.Text(
-            'TOTAL: ${invoice.total.toStringAsFixed(2)}€',
+            'TOTAL: ${invoice.total.toStringAsFixed(2)} EUR',
             style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold),
           ),
         ),
@@ -537,10 +561,44 @@ class _InvoiceFinalScreenState extends State<InvoiceFinalScreen> {
           pw.SizedBox(height: 10),
         ],
         pw.Divider(),
-        pw.Text(
-          'Merci pour votre confiance!',
-          style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey600),
-        ),
+        // Signature VoxIn pour utilisateurs gratuits
+        if (!_isPremium)
+          pw.Container(
+            margin: const pw.EdgeInsets.only(top: 16),
+            child: pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.center,
+              children: [
+                pw.Container(
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  decoration: pw.BoxDecoration(
+                    color: PdfColors.grey100,
+                    borderRadius: pw.BorderRadius.circular(20),
+                    border: pw.Border.all(color: PdfColors.grey300),
+                  ),
+                  child: pw.Row(
+                    mainAxisSize: pw.MainAxisSize.min,
+                    children: [
+                      pw.Text(
+                        'Genere avec ',
+                        style: pw.TextStyle(
+                          fontSize: 10,
+                          color: PdfColors.grey600,
+                        ),
+                      ),
+                      pw.Text(
+                        'VoxIn',
+                        style: pw.TextStyle(
+                          fontSize: 11,
+                          fontWeight: pw.FontWeight.bold,
+                          color: PdfColors.grey800,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
       ],
     );
   }

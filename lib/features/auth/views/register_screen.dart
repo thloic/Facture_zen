@@ -50,8 +50,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
 
     if (success && mounted) {
-      // Navigation vers l'écran de configuration du PIN
-      Navigator.pushReplacementNamed(context, '/pin-setup');
+      // Attendre un court instant pour que Firebase Auth propage l'utilisateur
+      await Future.delayed(const Duration(milliseconds: 500));
+      
+      // Afficher un message de succès
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('✅ Inscription réussie ! Bienvenue sur Facture Zen'),
+          backgroundColor: Color(0xFF10B981),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      
+      // Rediriger vers le home
+      Navigator.pushReplacementNamed(context, '/home');
     }
   }
 

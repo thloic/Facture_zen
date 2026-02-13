@@ -4,7 +4,9 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../../../common/widgets/primary_button.dart';
 import '../../../common/utils/responsive_utils.dart';
+import '../../../common/services/firebase_invoice_service.dart';
 import 'invoice_preview_screen.dart';
+import 'subscription_screen.dart';
 
 /// TextPreviewScreen
 /// Écran d'aperçu du texte transcrit + génération de facture par GPT
@@ -218,6 +220,24 @@ class _TextPreviewScreenState extends State<TextPreviewScreen> {
 
   /// Génère la facture via GPT (Groq ou OpenAI)
   Future<void> _generateInvoiceWithGPT() async {
+    // Vérifier la limite AVANT la génération
+    final invoiceService = FirebaseInvoiceService();
+    final canCreate = await invoiceService.canCreateInvoice();
+    final remainingInvoices = await invoiceService.getRemainingInvoices();
+    
+    if (!canCreate) {
+      // Limite atteinte -> Afficher le paywall
+      if (mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => SubscriptionScreen(remainingInvoices: remainingInvoices),
+          ),
+        );
+      }
+      return; // Ne pas continuer
+    }
+
     setState(() {
       _isGenerating = true;
       _errorMessage = null;

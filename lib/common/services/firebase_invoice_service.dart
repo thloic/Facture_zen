@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'dart:io';
 
 import '../../features/invoicing/models/invoice_model.dart';
+import 'tracking_service.dart';
 
 /// Service Firebase pour la gestion des factures
 /// Utilise Realtime Database + Storage pour les PDFs
@@ -271,8 +272,8 @@ class FirebaseInvoiceService {
 
       if (isPremium) return -1; // -1 = illimité
 
-      final invoiceCount = userData['invoiceCount'] as int? ?? 0;
-      return (FREE_INVOICE_LIMIT - invoiceCount).clamp(0, FREE_INVOICE_LIMIT);
+      final totalInvoicesCreated = userData[TOTAL_INVOICES_CREATED_KEY] as int? ?? 0;
+      return (FREE_INVOICE_LIMIT - totalInvoicesCreated).clamp(0, FREE_INVOICE_LIMIT);
 
     } catch (e) {
       debugPrint('❌ Erreur getRemainingInvoices: $e');
@@ -383,6 +384,11 @@ class FirebaseInvoiceService {
       await _incrementTotalInvoicesCreated(userId);
       debugPrint('✅ Compteur de factures incrémenté');
 
+      // 📊 Tracker la création de facture (Google Ads + Facebook Ads)
+      await TrackingService().logCreateInvoice(
+        amount: invoice.total,
+        currency: 'EUR',
+      );
 
       debugPrint('✅ Facture sauvegardée avec succès: $invoiceId');
       if (pdfUrl != null) {

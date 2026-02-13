@@ -97,6 +97,7 @@ class ProfileViewModel extends ChangeNotifier {
       if (user == null) {
         _errorMessage = 'Aucun utilisateur connecté';
         _setLoading(false);
+        
         debugPrint('❌ Aucun utilisateur connecté');
         return;
       }

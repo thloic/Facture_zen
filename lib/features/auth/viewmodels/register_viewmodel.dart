@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import '../../../common/services/auth_service.dart';
+import '../../../common/services/tracking_service.dart';
 
 /// RegisterViewModel
 /// Gère l'état et la logique de présentation de l'écran d'inscription
@@ -63,6 +64,11 @@ class RegisterViewModel extends ChangeNotifier {
 
       if (user != null) {
         debugPrint('✅ Inscription réussie pour: ${user.email}');
+        
+        // Tracker l'inscription (Google Ads + Facebook Ads)
+        await TrackingService().logSignUp(method: 'email');
+        await TrackingService().setUserId(user.uid);
+        
         _setLoading(false);
         return true;
       } else {

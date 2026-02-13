@@ -1,3 +1,4 @@
+import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import '../../models/invoice_model.dart';
 import '../../templates/invoice_template_base.dart';
@@ -11,27 +12,27 @@ import 'pdf_elegant_generator.dart';
 class PdfTemplateFactory {
 
   /// Génère une page PDF selon le type de template
-  static pw.Page generatePdf(InvoiceTemplateType templateType, InvoiceModel invoice) {
-    return generatePdfWithLogo(templateType, invoice, null);
+  static pw.Page generatePdf(InvoiceTemplateType templateType, InvoiceModel invoice, {bool isPremium = false}) {
+    return generatePdfWithLogo(templateType, invoice, null, isPremium: isPremium);
   }
 
   /// Génère une page PDF selon le type de template avec logo optionnel
-  static pw.Page generatePdfWithLogo(InvoiceTemplateType templateType, InvoiceModel invoice, pw.MemoryImage? logoImage) {
+  static pw.Page generatePdfWithLogo(InvoiceTemplateType templateType, InvoiceModel invoice, pw.MemoryImage? logoImage, {bool isPremium = false}) {
     switch (templateType) {
       case InvoiceTemplateType.classic:
-        return PdfClassicGenerator.generateWithLogo(invoice, logoImage);
+        return PdfClassicGenerator.generateWithLogo(invoice, logoImage, isPremium: isPremium);
 
       case InvoiceTemplateType.corporate:
-        return PdfCorporateGenerator.generateWithLogo(invoice, logoImage);
+        return PdfCorporateGenerator.generateWithLogo(invoice, logoImage, isPremium: isPremium);
 
       case InvoiceTemplateType.creative:
-        return PdfCreativeGenerator.generateWithLogo(invoice, logoImage);
+        return PdfCreativeGenerator.generateWithLogo(invoice, logoImage, isPremium: isPremium);
 
       case InvoiceTemplateType.minimal:
-        return PdfMinimalGenerator.generateWithLogo(invoice, logoImage);
+        return PdfMinimalGenerator.generateWithLogo(invoice, logoImage, isPremium: isPremium);
 
       case InvoiceTemplateType.elegant:
-        return PdfElegantGenerator.generateWithLogo(invoice, logoImage);
+        return PdfElegantGenerator.generateWithLogo(invoice, logoImage, isPremium: isPremium);
 
       case InvoiceTemplateType.professional:
       case InvoiceTemplateType.compact:
@@ -39,11 +40,50 @@ class PdfTemplateFactory {
       case InvoiceTemplateType.executive:
       case InvoiceTemplateType.luxe:
         // Pour ces nouveaux types, nous utilisons un rendu adapté avec logo
-        return PdfClassicGenerator.generateWithLogo(invoice, logoImage);
+        return PdfClassicGenerator.generateWithLogo(invoice, logoImage, isPremium: isPremium);
 
       default:
       // Fallback sur Classic si template inconnu
-        return PdfClassicGenerator.generateWithLogo(invoice, logoImage);
+        return PdfClassicGenerator.generateWithLogo(invoice, logoImage, isPremium: isPremium);
     }
+  }
+  
+  /// Crée la signature VoxIn pour les utilisateurs gratuits
+  static pw.Widget buildVoxInSignature() {
+    return pw.Container(
+      margin: const pw.EdgeInsets.only(top: 20),
+      padding: const pw.EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+      decoration: pw.BoxDecoration(
+        border: pw.Border.all(color: PdfColors.grey300, width: 1),
+        borderRadius: pw.BorderRadius.circular(8),
+        color: PdfColors.grey50,
+      ),
+      child: pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.center,
+        children: [
+          pw.Container(
+            padding: const pw.EdgeInsets.all(6),
+            decoration: pw.BoxDecoration(
+              color: PdfColor.fromHex('#5B5FC7'),
+              borderRadius: pw.BorderRadius.circular(4),
+            ),
+            child: pw.Icon(
+              pw.IconData(0xe84f), // workspace_premium icon
+              color: PdfColors.white,
+              size: 14,
+            ),
+          ),
+          pw.SizedBox(width: 8),
+          pw.Text(
+            'Généré avec VoxIn',
+            style: pw.TextStyle(
+              fontSize: 10,
+              color: PdfColors.grey600,
+              fontWeight: pw.FontWeight.normal,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

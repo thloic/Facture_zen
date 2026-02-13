@@ -70,8 +70,8 @@ class _LoginScreenState extends State<LoginScreen> {
       final hasPin = await pinService.hasPin();
       
       if (hasPin) {
-        // PIN déjà configuré, aller à l'accueil
-        Navigator.pushReplacementNamed(context, '/home');
+        // PIN déjà configuré, demander le PIN pour sécurité
+        Navigator.pushReplacementNamed(context, '/pin-login');
       } else {
         // Première connexion Google, configurer le PIN
         debugPrint('🔐 Première connexion Google - Redirection vers configuration PIN');
