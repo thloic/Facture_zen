@@ -9,7 +9,7 @@
 	<!-- Facebook SDK Configuration -->
 	<!-- À REMPLACER par votre vrai App ID Facebook -->
 	<key>FacebookAppID</key>
-	<string>VOTRE_FACEBOOK_APP_ID</string>
+	<string>1189357973187739</string>
 	<key>FacebookClientToken</key>
 	<string>VOTRE_FACEBOOK_CLIENT_TOKEN</string>
 	<key>FacebookDisplayName</key>
@@ -19,7 +19,7 @@
 		<dict>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>fbVOTRE_FACEBOOK_APP_ID</string>
+				<string>fb1189357973187739</string>
 			</array>
 		</dict>
 	</array>
