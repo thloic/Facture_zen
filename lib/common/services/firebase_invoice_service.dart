@@ -377,6 +377,11 @@ class FirebaseInvoiceService {
       await invoiceRef.set(invoiceData);
       debugPrint('✅ Métadonnées sauvegardées dans Realtime Database');
 
+      // ✅ NOUVEAU : Créer une référence dans le profil utilisateur
+      final userInvoiceRef = _database.ref('users/$userId/invoices/$invoiceId');
+      await userInvoiceRef.set(true); // Juste une référence booléenne
+      debugPrint('✅ Référence ajoutée dans le profil utilisateur');
+
       // Incrémenter le compteur de factures
       await _incrementInvoiceCount(userId);
       debugPrint('✅ Compteur de factures incrémenté');
@@ -480,84 +485,229 @@ class FirebaseInvoiceService {
 
   /// Récupère toutes les factures de l'utilisateur
   Future<List<InvoiceModel>> getUserInvoices() async {
-    try {
-      final userId = currentUser?.uid;
-      if (userId == null) {
-        debugPrint('❌ [getUserInvoices] Utilisateur non connecté');
-        return [];
-      }
-
-      debugPrint('📋 [getUserInvoices] Récupération factures pour: $userId');
-
-      // Query Realtime Database - cherche toutes les factures de cet utilisateur
-      final invoicesRef = _database.ref('invoices');
-      final snapshot = await invoicesRef.get();
-
-      debugPrint('📋 [getUserInvoices] Snapshot exists: ${snapshot.exists}');
-
-      if (!snapshot.exists) {
-        debugPrint('📋 [getUserInvoices] Aucune facture dans la base');
-        return [];
-      }
-
-      final allInvoicesMap = Map<String, dynamic>.from(snapshot.value as Map);
-      final invoices = <InvoiceModel>[];
-
-      debugPrint('📋 [getUserInvoices] Nombre total de factures: ${allInvoicesMap.length}');
-
-      // Filtrer les factures de l'utilisateur actuel
-      allInvoicesMap.forEach((key, value) {
-        try {
-          final data = Map<String, dynamic>.from(value as Map);
-          
-          // Vérifier que c'est bien une facture de cet utilisateur
-          if (data['userId'] == userId) {
-            debugPrint('✅ [getUserInvoices] Facture trouvée: $key - ${data['clientName']}');
-            
-            invoices.add(InvoiceModel(
-              id: key,
-              invoiceNumber: data['invoiceNumber'] as String,
-              invoiceDate: DateTime.fromMillisecondsSinceEpoch(
-                data['createdAt'] as int? ?? DateTime.now().millisecondsSinceEpoch,
-              ),
-              clientName: data['clientName'] as String,
-              clientAddress: data['clientAddress'] as String? ?? '',
-              items: (data['items'] as List<dynamic>)
-                  .map((item) => InvoiceItem(
-                description: item['description'] as String,
-                quantity: item['quantity'] as int,
-                unitPrice: (item['unitPrice'] as num).toDouble(),
-              ))
-                  .toList(),
-              companyName: data['companyName'] as String,
-              companyAddress: data['companyAddress'] as String,
-              companyPhone: data['companyPhone'] as String?,
-              companyEmail: data['companyEmail'] as String?,
-              companySiret: data['companySiret'] as String?,
-              taxRate: data['taxRate'] as double?,
-              discountRate: data['discountRate'] as double?,
-              discountLabel: data['discountLabel'] as String?,
-              notes: data['notes'] as String?,
-            ));
-          }
-        } catch (e) {
-          debugPrint('⚠️ [getUserInvoices] Erreur parsing facture $key: $e');
-        }
-      });
-
-      debugPrint('📋 [getUserInvoices] ${invoices.length} facture(s) récupérée(s)');
-
-      // Trier par date décroissante
-      invoices.sort((a, b) => b.invoiceDate.compareTo(a.invoiceDate));
-
-      return invoices;
-
-    } catch (e, stack) {
-      debugPrint('❌ Erreur getUserInvoices: $e');
-      debugPrint('Stack: $stack');
+  try {
+    final userId = currentUser?.uid;
+    if (userId == null) {
+      debugPrint('❌ [getUserInvoices] Utilisateur non connecté');
       return [];
     }
+
+    debugPrint('📋 [getUserInvoices] Récupération factures pour: $userId');
+
+    // Alternative : Récupérer les IDs des factures depuis users/{userId}/invoices
+    // puis charger chaque facture individuellement
+    final userInvoicesRef = _database.ref('users/$userId/invoices');
+    
+    DataSnapshot userSnapshot;
+    try {
+      userSnapshot = await userInvoicesRef.get();
+      
+      if (!userSnapshot.exists || userSnapshot.value == null) {
+        debugPrint('📋 [getUserInvoices] Aucune facture dans le profil utilisateur');
+        // Essayer l'ancienne méthode avec query
+        return await _getUserInvoicesWithQuery(userId);
+      }
+      
+      // Récupérer les IDs de factures depuis le profil utilisateur
+      final invoiceIds = <String>[];
+      final data = userSnapshot.value;
+      
+      if (data is Map) {
+        data.forEach((key, value) {
+          if (key is String) {
+            invoiceIds.add(key);
+          }
+        });
+      }
+      
+      debugPrint('📋 [getUserInvoices] ${invoiceIds.length} facture(s) trouvée(s) dans le profil');
+      
+      // Charger chaque facture individuellement
+      final invoices = <InvoiceModel>[];
+      for (final invoiceId in invoiceIds) {
+        try {
+          final invoiceRef = _database.ref('invoices/$invoiceId');
+          final invoiceSnapshot = await invoiceRef.get();
+          
+          if (invoiceSnapshot.exists && invoiceSnapshot.value != null) {
+            final data = invoiceSnapshot.value;
+            
+            if (data is Map) {
+              final invoiceData = Map<String, dynamic>.from(data);
+              
+              // Vérifier que c'est bien une facture de cet utilisateur
+              if (invoiceData['userId'] == userId) {
+                invoices.add(InvoiceModel(
+                  id: invoiceId,
+                  invoiceNumber: invoiceData['invoiceNumber'] as String? ?? '',
+                  invoiceDate: DateTime.fromMillisecondsSinceEpoch(
+                    invoiceData['createdAt'] is int
+                        ? invoiceData['createdAt'] as int
+                        : DateTime.now().millisecondsSinceEpoch,
+                  ),
+                  clientName: invoiceData['clientName'] as String? ?? '',
+                  clientAddress: invoiceData['clientAddress'] as String? ?? '',
+                  items: (invoiceData['items'] as List<dynamic>? ?? [])
+                      .map((item) {
+                        final itemMap = Map<String, dynamic>.from(item as Map);
+                        return InvoiceItem(
+                          description: itemMap['description'] as String? ?? '',
+                          quantity: (itemMap['quantity'] as num?)?.toInt() ?? 0,
+                          unitPrice: (itemMap['unitPrice'] as num?)?.toDouble() ?? 0.0,
+                        );
+                      })
+                      .toList(),
+                  companyName: invoiceData['companyName'] as String? ?? '',
+                  companyAddress: invoiceData['companyAddress'] as String? ?? '',
+                  companyPhone: invoiceData['companyPhone'] as String?,
+                  companyEmail: invoiceData['companyEmail'] as String?,
+                  companySiret: invoiceData['companySiret'] as String?,
+                  taxRate: (invoiceData['taxRate'] as num?)?.toDouble(),
+                  discountRate: (invoiceData['discountRate'] as num?)?.toDouble(),
+                  discountLabel: invoiceData['discountLabel'] as String?,
+                  notes: invoiceData['notes'] as String?,
+                ));
+                debugPrint('✅ [getUserInvoices] Facture chargée: $invoiceId');
+              }
+            }
+          }
+        } catch (e) {
+          debugPrint('⚠️ [getUserInvoices] Erreur chargement facture $invoiceId: $e');
+          continue;
+        }
+      }
+      
+      invoices.sort((a, b) => b.invoiceDate.compareTo(a.invoiceDate));
+      debugPrint('📋 [getUserInvoices] ${invoices.length} facture(s) récupérée(s)');
+      return invoices;
+      
+    } catch (e) {
+      debugPrint('⚠️ [getUserInvoices] Erreur méthode profil: $e');
+      debugPrint('💡 Tentative avec query directe...');
+      
+      // Si la query échoue aussi, on retourne une liste vide
+      try {
+        return await _getUserInvoicesWithQuery(userId);
+      } catch (queryError) {
+        debugPrint('❌ [getUserInvoices] Query aussi échouée: $queryError');
+        debugPrint('🔧 SOLUTION: Nettoyez vos données Firebase sous /invoices');
+        debugPrint('   Console: https://console.firebase.google.com/project/facturezen-558b0/database');
+        return [];
+      }
+    }
+
+  } catch (e, stack) {
+    debugPrint('❌ Erreur getUserInvoices globale: $e');
+    debugPrint('Stack: $stack');
+    debugPrint('🔧 SOLUTION: Nettoyez vos données Firebase');
+    debugPrint('   1. Allez sur: https://console.firebase.google.com/project/facturezen-558b0/database');
+    debugPrint('   2. Supprimez le nœud /invoices');
+    debugPrint('   3. Créez une nouvelle facture pour repartir sur des données propres');
+    return [];
   }
+}
+
+  /// Méthode alternative avec query (peut échouer si données corrompues)
+  Future<List<InvoiceModel>> _getUserInvoicesWithQuery(String userId) async {
+    try {
+      debugPrint('📋 [_getUserInvoicesWithQuery] Tentative avec query...');
+      
+      final invoicesRef = _database.ref('invoices');
+      final snapshot = await invoicesRef
+          .orderByChild('userId')
+          .equalTo(userId)
+          .get();
+
+      debugPrint('📋 [_getUserInvoicesWithQuery] Snapshot exists: ${snapshot.exists}');
+      debugPrint('📋 [_getUserInvoicesWithQuery] Snapshot value type: ${snapshot.value?.runtimeType}');
+
+      if (!snapshot.exists || snapshot.value == null) {
+        debugPrint('📋 [_getUserInvoicesWithQuery] Aucune facture trouvée');
+        return [];
+      }
+
+      final raw = snapshot.value;
+      
+      // Gérer le cas où snapshot.value est une String (erreur de structure)
+      if (raw is String) {
+        debugPrint('❌ [_getUserInvoicesWithQuery] Données corrompues (String): $raw');
+        return [];
+      }
+      
+      if (raw is! Map) {
+        debugPrint('❌ [_getUserInvoicesWithQuery] Format inattendu: ${raw.runtimeType}');
+        debugPrint('📋 [_getUserInvoicesWithQuery] Valeur brute: $raw');
+        return [];
+      }
+
+    final allInvoicesMap = Map<String, dynamic>.from(raw);
+    final invoices = <InvoiceModel>[];
+
+    debugPrint('📋 [_getUserInvoicesWithQuery] Nombre de factures: ${allInvoicesMap.length}');
+
+    allInvoicesMap.forEach((key, value) {
+      try {
+        if (value is! Map) {
+          debugPrint('⚠️ Entrée ignorée (pas un Map): $key → ${value.runtimeType}');
+          return;
+        }
+
+        final data = Map<String, dynamic>.from(value);
+
+        // La query a déjà filtré par userId, mais on vérifie quand même
+        if (data['userId'] != userId) {
+          debugPrint('⚠️ Facture ignorée (userId différent): $key');
+          return;
+        }
+
+        debugPrint('✅ [_getUserInvoicesWithQuery] Facture trouvée: $key - ${data['clientName']}');
+
+        invoices.add(InvoiceModel(
+          id: key,
+          invoiceNumber: data['invoiceNumber'] as String? ?? '',
+          invoiceDate: DateTime.fromMillisecondsSinceEpoch(
+            data['createdAt'] is int
+                ? data['createdAt'] as int
+                : DateTime.now().millisecondsSinceEpoch,
+          ),
+          clientName: data['clientName'] as String? ?? '',
+          clientAddress: data['clientAddress'] as String? ?? '',
+          items: (data['items'] as List<dynamic>? ?? [])
+              .map((item) {
+                final itemMap = Map<String, dynamic>.from(item as Map);
+                return InvoiceItem(
+                  description: itemMap['description'] as String? ?? '',
+                  quantity: (itemMap['quantity'] as num?)?.toInt() ?? 0,
+                  unitPrice: (itemMap['unitPrice'] as num?)?.toDouble() ?? 0.0,
+                );
+              })
+              .toList(),
+          companyName: data['companyName'] as String? ?? '',
+          companyAddress: data['companyAddress'] as String? ?? '',
+          companyPhone: data['companyPhone'] as String?,
+          companyEmail: data['companyEmail'] as String?,
+          companySiret: data['companySiret'] as String?,
+          taxRate: (data['taxRate'] as num?)?.toDouble(),
+          discountRate: (data['discountRate'] as num?)?.toDouble(),
+          discountLabel: data['discountLabel'] as String?,
+          notes: data['notes'] as String?,
+        ));
+      } catch (e) {
+        debugPrint('⚠️ [_getUserInvoicesWithQuery] Erreur parsing facture $key: $e');
+      }
+    });
+
+    invoices.sort((a, b) => b.invoiceDate.compareTo(a.invoiceDate));
+
+    debugPrint('📋 [_getUserInvoicesWithQuery] ${invoices.length} facture(s) récupérée(s)');
+    return invoices;
+
+  } catch (e, stack) {
+    debugPrint('❌ Erreur _getUserInvoicesWithQuery: $e');
+    debugPrint('Stack: $stack');
+    return [];
+  }
+}
 
   /// Télécharge le PDF d'une facture
   Future<String?> getInvoicePdfUrl(String invoiceId) async {
@@ -598,6 +748,11 @@ class FirebaseInvoiceService {
       // Supprimer de la base de données
       final invoiceRef = _database.ref('invoices/$invoiceId');
       await invoiceRef.remove();
+
+      // ✅ NOUVEAU : Supprimer la référence du profil utilisateur
+      final userInvoiceRef = _database.ref('users/$userId/invoices/$invoiceId');
+      await userInvoiceRef.remove();
+      debugPrint('✅ Référence supprimée du profil utilisateur');
 
       // Décrémenter le compteur
       await _decrementInvoiceCount(userId);

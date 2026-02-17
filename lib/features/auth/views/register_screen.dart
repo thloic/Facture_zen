@@ -56,14 +56,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
       // Afficher un message de succès
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('✅ Inscription réussie ! Bienvenue sur Facture Zen'),
+          content: Text('✅ Inscription réussie ! Configurez votre code PIN'),
           backgroundColor: Color(0xFF10B981),
           duration: Duration(seconds: 2),
         ),
       );
       
-      // Rediriger vers le home
-      Navigator.pushReplacementNamed(context, '/home');
+      // Rediriger vers la configuration du PIN pour sécuriser le compte
+      Navigator.pushReplacementNamed(context, '/pin-setup');
     }
   }
 

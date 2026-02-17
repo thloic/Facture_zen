@@ -36,7 +36,11 @@ class InvoiceHistoryViewModel extends ChangeNotifier {
       _invoices = await _invoiceService.getUserInvoices();
       _filteredInvoices = List.from(_invoices);
 
-      debugPrint('✅ ${_invoices.length} facture(s) chargée(s)');
+      if (_invoices.isEmpty) {
+        debugPrint('📋 Aucune facture chargée');
+      } else {
+        debugPrint('✅ ${_invoices.length} facture(s) chargée(s)');
+      }
       _setLoading(false);
     } catch (e) {
       _errorMessage = 'Impossible de charger les factures';

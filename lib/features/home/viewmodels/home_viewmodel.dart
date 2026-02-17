@@ -87,7 +87,11 @@ class HomeViewModel extends ChangeNotifier {
       debugPrint('📋 Chargement des factures récentes...');
       final allInvoices = await _invoiceService.getUserInvoices();
       _recentInvoices = allInvoices.take(5).toList(); // Les 5 plus récentes
-      debugPrint('✅ ${_recentInvoices.length} facture(s) récente(s) chargée(s)');
+      if (_recentInvoices.isEmpty) {
+        debugPrint('📋 Aucune facture récente');
+      } else {
+        debugPrint('✅ ${_recentInvoices.length} facture(s) récente(s) chargée(s)');
+      }
 
       _setLoading(false);
     } catch (e) {
