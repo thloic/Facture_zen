@@ -2,11 +2,16 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
 import '../../models/invoice_model.dart';
+import 'pdf_template_factory.dart';
 
 /// Générateur PDF pour le template Elegant
 class PdfElegantGenerator {
 
-  static pw.Page generate(InvoiceModel invoice) {
+  static pw.Page generate(InvoiceModel invoice, {bool isPremium = false}) {
+    return generateWithLogo(invoice, null, isPremium: isPremium);
+  }
+
+  static pw.Page generateWithLogo(InvoiceModel invoice, pw.MemoryImage? logoImage, {bool isPremium = false}) {
     return pw.Page(
       pageFormat: PdfPageFormat.a4,
       margin: const pw.EdgeInsets.all(40),
@@ -14,7 +19,7 @@ class PdfElegantGenerator {
         return pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
-            _buildHeader(invoice),
+            _buildHeader(invoice, logoImage),
             pw.SizedBox(height: 40),
             _buildParties(invoice),
             pw.SizedBox(height: 40),
@@ -24,29 +29,41 @@ class PdfElegantGenerator {
             pw.Spacer(),
             if (invoice.notes != null && invoice.notes!.isNotEmpty)
               _buildNotes(invoice.notes!),
+            // Signature VoxIn pour utilisateurs gratuits
+            if (!isPremium)
+              PdfTemplateFactory.buildVoxInSignature(),
           ],
         );
       },
     );
   }
 
-  static pw.Widget _buildHeader(InvoiceModel invoice) {
+  static pw.Widget _buildHeader(InvoiceModel invoice, pw.MemoryImage? logoImage) {
     return pw.Column(
       children: [
         pw.Row(
+          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
           children: [
-            pw.Container(width: 4, height: 50, color: PdfColor.fromHex('#D4AF37')), // Or
-            pw.SizedBox(width: 16),
-            pw.Expanded(
-              child: pw.Column(
-                crossAxisAlignment: pw.CrossAxisAlignment.start,
-                children: [
-                  pw.Text('FACTURE', style: pw.TextStyle(fontSize: 28, fontWeight: pw.FontWeight.normal, color: PdfColor.fromHex('#2D3436'), letterSpacing: 3)),
-                  pw.SizedBox(height: 4),
-                  pw.Text(invoice.invoiceNumber, style: const pw.TextStyle(fontSize: 12, color: PdfColors.grey600, letterSpacing: 1)),
-                ],
-              ),
+            pw.Row(
+              children: [
+                pw.Container(width: 4, height: 50, color: PdfColor.fromHex('#D4AF37')), // Or
+                pw.SizedBox(width: 16),
+                pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text('FACTURE', style: pw.TextStyle(fontSize: 28, fontWeight: pw.FontWeight.normal, color: PdfColor.fromHex('#2D3436'), letterSpacing: 3)),
+                    pw.SizedBox(height: 4),
+                    pw.Text(invoice.invoiceNumber, style: const pw.TextStyle(fontSize: 12, color: PdfColors.grey600, letterSpacing: 1)),
+                  ],
+                ),
+              ],
             ),
+            if (logoImage != null)
+              pw.Container(
+                width: 80,
+                height: 80,
+                child: pw.Image(logoImage, fit: pw.BoxFit.contain),
+              ),
           ],
         ),
         pw.SizedBox(height: 8),

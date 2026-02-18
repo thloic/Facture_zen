@@ -2,11 +2,16 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
 import '../../models/invoice_model.dart';
+import 'pdf_template_factory.dart';
 
 /// Générateur PDF pour le template Corporate
 class PdfCorporateGenerator {
 
-  static pw.Page generate(InvoiceModel invoice) {
+  static pw.Page generate(InvoiceModel invoice, {bool isPremium = false}) {
+    return generateWithLogo(invoice, null, isPremium: isPremium);
+  }
+
+  static pw.Page generateWithLogo(InvoiceModel invoice, pw.MemoryImage? logoImage, {bool isPremium = false}) {
     return pw.Page(
       pageFormat: PdfPageFormat.a4,
       margin: pw.EdgeInsets.zero,
@@ -24,7 +29,7 @@ class PdfCorporateGenerator {
                 child: pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
-                    _buildHeader(invoice),
+                    _buildHeader(invoice, logoImage),
                     pw.SizedBox(height: 32),
                     _buildParties(invoice),
                     pw.SizedBox(height: 32),
@@ -34,6 +39,9 @@ class PdfCorporateGenerator {
                     pw.Spacer(),
                     if (invoice.notes != null && invoice.notes!.isNotEmpty)
                       _buildNotes(invoice.notes!),
+                    // Signature VoxIn pour utilisateurs gratuits
+                    if (!isPremium)
+                      PdfTemplateFactory.buildVoxInSignature(),
                   ],
                 ),
               ),
@@ -44,14 +52,46 @@ class PdfCorporateGenerator {
     );
   }
 
-  static pw.Widget _buildHeader(InvoiceModel invoice) {
+  static pw.Widget _buildHeader(InvoiceModel invoice, pw.MemoryImage? logoImage) {
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
-        pw.Text('FACTURE', style: pw.TextStyle(fontSize: 32, fontWeight: pw.FontWeight.bold, color: PdfColor.fromHex('#0066CC'))),
-        pw.SizedBox(height: 8),
-        pw.Text('N° ${invoice.invoiceNumber}', style: const pw.TextStyle(fontSize: 14, color: PdfColors.grey600)),
-        pw.Text(_formatDate(invoice.invoiceDate), style: const pw.TextStyle(fontSize: 14, color: PdfColors.grey600)),
+        pw.Row(
+          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+          children: [
+            pw.Expanded(
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text(
+                    'FACTURE',
+                    style: pw.TextStyle(
+                      fontSize: 32,
+                      fontWeight: pw.FontWeight.bold,
+                      color: PdfColor.fromHex('#0066CC'),
+                    ),
+                  ),
+                  pw.SizedBox(height: 8),
+                  pw.Text(
+                    'N° ${invoice.invoiceNumber}',
+                    style: const pw.TextStyle(fontSize: 14, color: PdfColors.grey600),
+                  ),
+                  pw.Text(
+                    _formatDate(invoice.invoiceDate),
+                    style: const pw.TextStyle(fontSize: 14, color: PdfColors.grey600),
+                  ),
+                ],
+              ),
+            ),
+            // Logo si disponible
+            if (logoImage != null)
+              pw.Container(
+                width: 80,
+                height: 80,
+                child: pw.Image(logoImage, fit: pw.BoxFit.contain),
+              ),
+          ],
+        ),
       ],
     );
   }

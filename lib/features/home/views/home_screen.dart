@@ -410,7 +410,7 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icons.description_outlined,
             backgroundColor: const Color(0xFF6B8AFF),
             onTap: () {
-              Navigator.pushNamed(context, '/subscription-screen'); //changer le lien vers record !!!
+              Navigator.pushNamed(context, '/record');
             },
           ),
 
@@ -421,7 +421,9 @@ class _HomeScreenState extends State<HomeScreen> {
             buttonText: 'Abonnement',
             icon: Icons.workspace_premium_outlined,
             backgroundColor: const Color(0xFFFF9F66),
-            onTap: () {},
+            onTap: () {
+              Navigator.pushNamed(context, '/subscription-screen');
+            },
           ),
 
           const SizedBox(width: 16),

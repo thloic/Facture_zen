@@ -238,8 +238,8 @@ class PdfGeneratorService {
           children: [
             _buildTableCell(item.description, isLeft: true),
             _buildTableCell(item.quantity.toString()),
-            _buildTableCell('${item.unitPrice.toStringAsFixed(2)} €'),
-            _buildTableCell('${item.total.toStringAsFixed(2)} €'),
+            _buildTableCell('${item.unitPrice.toStringAsFixed(2)} EUR'),
+            _buildTableCell('${item.total.toStringAsFixed(2)} EUR'),
           ],
         )),
       ],
@@ -284,14 +284,14 @@ class PdfGeneratorService {
           child: pw.Column(
             children: [
               // Sous-total
-              _buildTotalRow('Sous-total HT:', '${invoice.subtotal.toStringAsFixed(2)} €'),
+              _buildTotalRow('Sous-total HT:', '${invoice.subtotal.toStringAsFixed(2)} EUR'),
               
               // Réduction si applicable
               if (invoice.hasDiscount) ...[
                 pw.SizedBox(height: 5),
                 _buildTotalRow(
                   invoice.discountLabel ?? 'Réduction (${invoice.discountRate}%):',
-                  '-${invoice.discountAmount.toStringAsFixed(2)} €',
+                  '-${invoice.discountAmount.toStringAsFixed(2)} EUR',
                   color: PdfColors.green,
                 ),
               ],
@@ -301,7 +301,7 @@ class PdfGeneratorService {
                 pw.SizedBox(height: 5),
                 _buildTotalRow(
                   'TVA (${invoice.taxRate}%):',
-                  '${invoice.taxAmount.toStringAsFixed(2)} €',
+                  '${invoice.taxAmount.toStringAsFixed(2)} EUR',
                 ),
               ],
               
@@ -312,7 +312,7 @@ class PdfGeneratorService {
               // Total
               _buildTotalRow(
                 invoice.hasTax ? 'TOTAL TTC:' : 'TOTAL HT:',
-                '${invoice.total.toStringAsFixed(2)} €',
+                '${invoice.total.toStringAsFixed(2)} EUR',
                 isBold: true,
                 fontSize: 14,
               ),
@@ -392,13 +392,35 @@ class PdfGeneratorService {
         pw.SizedBox(height: 20),
         pw.Divider(),
         pw.SizedBox(height: 10),
-        pw.Text(
-          'Merci pour votre confiance !',
-          style: const pw.TextStyle(
-            fontSize: 10,
-            color: PdfColors.grey600,
+        // Signature VoxIn pour utilisateurs gratuits
+        pw.Container(
+          padding: const pw.EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+          decoration: pw.BoxDecoration(
+            color: PdfColors.grey100,
+            borderRadius: pw.BorderRadius.circular(20),
+            border: pw.Border.all(color: PdfColors.grey300),
           ),
-          textAlign: pw.TextAlign.center,
+          child: pw.Row(
+            mainAxisSize: pw.MainAxisSize.min,
+            mainAxisAlignment: pw.MainAxisAlignment.center,
+            children: [
+              pw.Text(
+                'Genere avec ',
+                style: pw.TextStyle(
+                  fontSize: 10,
+                  color: PdfColors.grey600,
+                ),
+              ),
+              pw.Text(
+                'VoxIn',
+                style: pw.TextStyle(
+                  fontSize: 11,
+                  fontWeight: pw.FontWeight.bold,
+                  color: PdfColors.grey800,
+                ),
+              ),
+            ],
+          ),
         ),
       ],
     );

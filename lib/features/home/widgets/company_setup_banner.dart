@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../profile/viewmodels/profile_viewmodel.dart';
+import '../../profile/views/company_profile_setup_screen.dart';
 
 /// Widget - Banner pour configurer l'entreprise
 /// Affiché uniquement si les informations entreprise ne sont pas configurées
@@ -14,10 +17,13 @@ class CompanySetupBanner extends StatefulWidget {
 class _CompanySetupBannerState extends State<CompanySetupBanner> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _opacityAnimation;
+  bool _bannerDismissed = false;
 
   @override
   void initState() {
     super.initState();
+    _loadBannerDismissedState();
+    
     // Animation de clignotement
     _controller = AnimationController(
       duration: const Duration(milliseconds: 1500),
@@ -27,6 +33,29 @@ class _CompanySetupBannerState extends State<CompanySetupBanner> with SingleTick
     _opacityAnimation = Tween<double>(begin: 0.7, end: 1.0).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
     );
+  }
+
+  /// Charger l'état du banner (caché ou non) pour l'utilisateur actuel
+  Future<void> _loadBannerDismissedState() async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) return;
+    
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _bannerDismissed = prefs.getBool('company_setup_banner_dismissed_$userId') ?? false;
+    });
+  }
+
+  /// Marquer le banner comme caché pour l'utilisateur actuel
+  Future<void> _dismissBanner() async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) return;
+    
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('company_setup_banner_dismissed_$userId', true);
+    setState(() {
+      _bannerDismissed = true;
+    });
   }
 
   @override
@@ -41,15 +70,26 @@ class _CompanySetupBannerState extends State<CompanySetupBanner> with SingleTick
 
     return Consumer<ProfileViewModel>(
       builder: (context, profileViewModel, child) {
+        // Vérifier si le banner a été caché manuellement
+        if (_bannerDismissed) {
+          return const SizedBox.shrink();
+        }
+
         // Vérifier si l'entreprise n'est pas configurée
         final companyName = profileViewModel.companyName;
-        final companyAddress = profileViewModel.userCompanyAddress;
+        // On considère l'entreprise non configurée si l'adresse est non renseignée ou par défaut 
+        // OU si le nom de l'entreprise est "Entreprise" (valeur par défaut)
+        final isConfigured = companyName != null && 
+                            companyName.isNotEmpty && 
+                            companyName != 'Entreprise' && 
+                            profileViewModel.userCompanyAddress != null && 
+                            profileViewModel.userCompanyAddress != 'Adresse non renseignée' &&
+                            profileViewModel.userCompanyAddress!.isNotEmpty;
 
-        debugPrint('🏢 Banner check - Company: $companyName, Address: $companyAddress');
+        debugPrint('🏢 Banner check - Company: $companyName, IsConfigured: $isConfigured');
 
-        // Si déjà configuré, ne rien afficher
-        if ((companyName != null && companyName.isNotEmpty) && 
-            (companyAddress != null && companyAddress.isNotEmpty)) {
+        // Si déjà configuré, ne rien afficher avec un SizedBox.shrink (espace vide)
+        if (isConfigured) {
           return const SizedBox.shrink();
         }
 
@@ -59,8 +99,19 @@ class _CompanySetupBannerState extends State<CompanySetupBanner> with SingleTick
           child: Padding(
             padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.055),
             child: InkWell(
-              onTap: () {
-                Navigator.pushNamed(context, '/company-setup');
+              onTap: () async {
+                // Cacher le banner dès que l'utilisateur clique
+                await _dismissBanner();
+                
+                // Naviguer vers la page de configuration
+                if (mounted) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const CompanyProfileSetupScreen(isOnboarding: false),
+                    ),
+                  );
+                }
               },
               borderRadius: BorderRadius.circular(12),
               child: Container(

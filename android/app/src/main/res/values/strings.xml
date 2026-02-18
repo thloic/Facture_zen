@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">FactureZen</string>
+    
+    <!-- Facebook App ID - À REMPLACER par votre vrai App ID Facebook -->
+    <!-- Obtenir sur: https://developers.facebook.com/apps/ -->
+    <string name="facebook_app_id">1189357973187739</string>
+    <string name="facebook_client_token">VOTRE_FACEBOOK_CLIENT_TOKEN</string>
+    <string name="fb_login_protocol_scheme">fb1189357973187739</string>
+</resources>

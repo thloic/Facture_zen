@@ -3,7 +3,7 @@ import '../models/invoice_model.dart';
 import 'invoice_template_base.dart';
 
 /// Template Corporate : Style entreprise avec bande latérale bleue
-class CorporateTemplate implements InvoiceTemplate {
+class CorporateTemplate with InvoiceTemplateMixin implements InvoiceTemplate {
   @override
   String get name => 'Corporate';
 
@@ -42,12 +42,12 @@ class CorporateTemplate implements InvoiceTemplate {
   }
 
   @override
-  Widget buildInvoice(BuildContext context, InvoiceModel invoice) {
-    return build(context, invoice);
+  Widget buildInvoice(BuildContext context, InvoiceModel invoice, {bool isPremium = false}) {
+    return build(context, invoice, isPremium: isPremium);
   }
 
   @override
-  Widget build(BuildContext context, InvoiceModel invoice) {
+  Widget build(BuildContext context, InvoiceModel invoice, {bool isPremium = false}) {
     return SingleChildScrollView(
       child: IntrinsicHeight(
         child: Row(
@@ -79,6 +79,9 @@ class CorporateTemplate implements InvoiceTemplate {
                       const SizedBox(height: 32),
                       _buildNotes(invoice.notes!),
                     ],
+                    
+                    // Signature VoxIn pour utilisateurs gratuits
+                    if (!isPremium) buildVoxInSignature(),
                   ],
                 ),
               ),

@@ -3,7 +3,7 @@ import '../models/invoice_model.dart';
 import 'invoice_template_base.dart';
 
 /// Template Luxe : Style premium minimaliste avec touches de couleur subtiles
-class LuxeTemplate implements InvoiceTemplate {
+class LuxeTemplate with InvoiceTemplateMixin implements InvoiceTemplate {
   @override
   String get name => 'Luxe';
 
@@ -47,7 +47,7 @@ class LuxeTemplate implements InvoiceTemplate {
   }
 
   @override
-  Widget buildInvoice(BuildContext context, InvoiceModel invoice) {
+  Widget buildInvoice(BuildContext context, InvoiceModel invoice, {bool isPremium = false}) {
     return SingleChildScrollView(
       child: Container(
         color: const Color(0xFFFAF9F7),
@@ -67,6 +67,9 @@ class LuxeTemplate implements InvoiceTemplate {
             ],
             const SizedBox(height: 48),
             _buildFooter(invoice),
+            
+            // Signature VoxIn pour utilisateurs gratuits
+            if (!isPremium) buildVoxInSignature(),
           ],
         ),
       ),
@@ -74,8 +77,8 @@ class LuxeTemplate implements InvoiceTemplate {
   }
 
   @override
-  Widget build(BuildContext context, InvoiceModel invoice) {
-    return buildInvoice(context, invoice);
+  Widget build(BuildContext context, InvoiceModel invoice, {bool isPremium = false}) {
+    return buildInvoice(context, invoice, isPremium: isPremium);
   }
 
   @override

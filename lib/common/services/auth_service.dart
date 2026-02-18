@@ -56,6 +56,9 @@ class AuthService {
             'email': email,
             'firstName': firstName,
             'lastName': lastName,
+            'companyName': 'Entreprise',
+            'companyAddress': 'Adresse non renseignée',
+            'isPremium': false,
             'createdAt': ServerValue.timestamp,
             'updatedAt': ServerValue.timestamp,
           });

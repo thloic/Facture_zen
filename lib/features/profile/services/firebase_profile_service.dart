@@ -12,6 +12,7 @@ class FirebaseProfileService {
   String? get _currentUserId => _auth.currentUser?.uid;
 
   /// Vérifie si l'utilisateur a un profil configuré
+  /// Vérifie d'abord dans users/{uid}/profile, puis dans users/{uid} pour compatibilité
   Future<bool> hasProfile() async {
     try {
       if (_currentUserId == null) {
@@ -21,7 +22,8 @@ class FirebaseProfileService {
 
       debugPrint('🔍 [PROFILE] Vérification existence profil pour: $_currentUserId');
 
-      final snapshot = await _database
+      // 1. D'abord vérifier dans users/{uid}/profile (nouveau format)
+      var snapshot = await _database
           .child('users')
           .child(_currentUserId!)
           .child('profile')
@@ -29,7 +31,18 @@ class FirebaseProfileService {
 
       if (!snapshot.exists) {
         debugPrint('📋 [PROFILE] Profil n\'existe pas dans users/{uid}/profile');
-        return false;
+        
+        // 2. Vérifier dans users/{uid} directement (ancien format - inscription)
+        snapshot = await _database
+            .child('users')
+            .child(_currentUserId!)
+            .get();
+            
+        if (!snapshot.exists) {
+          debugPrint('📋 [PROFILE] Profil n\'existe pas non plus dans users/{uid}');
+          return false;
+        }
+        debugPrint('📋 [PROFILE] Données trouvées dans users/{uid} (format inscription)');
       }
 
       debugPrint('📋 [PROFILE] Snapshot value type: ${snapshot.value.runtimeType}');
@@ -71,6 +84,7 @@ class FirebaseProfileService {
   }
 
   /// Récupère le profil de l'utilisateur
+  /// Cherche d'abord dans users/{uid}/profile, puis dans users/{uid} pour compatibilité
   Future<UserProfile?> getUserProfile() async {
     try {
       if (_currentUserId == null) {
@@ -80,18 +94,29 @@ class FirebaseProfileService {
 
       debugPrint('📥 [PROFILE SERVICE] Récupération profil pour: $_currentUserId');
 
-      final snapshot = await _database
+      // 1. D'abord chercher dans users/{uid}/profile (nouveau format)
+      var snapshot = await _database
           .child('users')
           .child(_currentUserId!)
           .child('profile')
           .get();
 
-      debugPrint('📥 [PROFILE SERVICE] Snapshot exists: ${snapshot.exists}');
+      debugPrint('📥 [PROFILE SERVICE] Snapshot profile exists: ${snapshot.exists}');
 
       if (!snapshot.exists) {
-        debugPrint('📭 [PROFILE SERVICE] Aucun profil trouvé dans Firebase');
-        debugPrint('💡 [PROFILE SERVICE] L\'utilisateur doit configurer son profil entreprise');
-        return null;
+        // 2. Chercher dans users/{uid} directement (ancien format - inscription)
+        debugPrint('📭 [PROFILE SERVICE] Pas de profil dans /profile, vérification racine...');
+        snapshot = await _database
+            .child('users')
+            .child(_currentUserId!)
+            .get();
+            
+        if (!snapshot.exists) {
+          debugPrint('📭 [PROFILE SERVICE] Aucun profil trouvé dans Firebase');
+          debugPrint('💡 [PROFILE SERVICE] L\'utilisateur doit configurer son profil entreprise');
+          return null;
+        }
+        debugPrint('📥 [PROFILE SERVICE] Données trouvées dans users/{uid} (format inscription)');
       }
 
       debugPrint('📥 [PROFILE SERVICE] Snapshot value type: ${snapshot.value.runtimeType}');

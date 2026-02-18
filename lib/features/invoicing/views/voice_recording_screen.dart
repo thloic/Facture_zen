@@ -4,7 +4,9 @@ import '../../../common/widgets/curved_bottom_nav.dart';
 import '../viewmodels/voice_recording_viewmodel.dart';
 import '../../../common/widgets/app_logo.dart';
 import '../../../common/utils/responsive_utils.dart';
+import '../../../common/services/firebase_invoice_service.dart';
 import 'text_preview_screen.dart';
+import 'subscription_screen.dart';
 import 'dart:math' as math;
 
 class VoiceRecordingScreen extends StatefulWidget {
@@ -82,6 +84,24 @@ class _VoiceRecordingScreenState extends State<VoiceRecordingScreen>
   }
 
   Future<void> _handleValidation(VoiceRecordingViewModel viewModel) async {
+    // Vérifier la limite AVANT la transcription
+    final invoiceService = FirebaseInvoiceService();
+    final canCreate = await invoiceService.canCreateInvoice();
+    final remainingInvoices = await invoiceService.getRemainingInvoices();
+    
+    if (!canCreate) {
+      // Limite atteinte -> Afficher le paywall
+      if (mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => SubscriptionScreen(remainingInvoices: remainingInvoices),
+          ),
+        );
+      }
+      return; // Ne pas continuer
+    }
+
     final transcribedText = await viewModel.validate();
 
     if (transcribedText != null && mounted) {

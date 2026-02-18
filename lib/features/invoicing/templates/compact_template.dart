@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/invoice_model.dart';
 import 'invoice_template_base.dart';
 
-class CompactTemplate implements InvoiceTemplate {
+class CompactTemplate with InvoiceTemplateMixin implements InvoiceTemplate {
   @override
   String get name => 'Compact';
 
@@ -46,12 +46,12 @@ class CompactTemplate implements InvoiceTemplate {
   }
 
   @override
-  Widget buildInvoice(BuildContext context, InvoiceModel invoice) {
-    return build(context, invoice);
+  Widget buildInvoice(BuildContext context, InvoiceModel invoice, {bool isPremium = false}) {
+    return build(context, invoice, isPremium: isPremium);
   }
 
   @override
-  Widget build(BuildContext context, InvoiceModel invoice) {
+  Widget build(BuildContext context, InvoiceModel invoice, {bool isPremium = false}) {
     return SingleChildScrollView(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -64,6 +64,9 @@ class CompactTemplate implements InvoiceTemplate {
             _buildItemsTable(invoice),
             const SizedBox(height: 16),
             _buildBottomSection(invoice),
+            
+            // Signature VoxIn pour utilisateurs gratuits
+            if (!isPremium) buildVoxInSignature(),
           ],
         ),
       ),

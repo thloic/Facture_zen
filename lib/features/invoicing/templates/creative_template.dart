@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/invoice_model.dart';
 import 'invoice_template_base.dart';
 
-class CreativeTemplate implements InvoiceTemplate {
+class CreativeTemplate with InvoiceTemplateMixin implements InvoiceTemplate {
   @override
   String get name => 'Créatif';
 
@@ -51,7 +51,7 @@ class CreativeTemplate implements InvoiceTemplate {
   }
 
   @override
-  Widget buildInvoice(BuildContext context, InvoiceModel invoice) {
+  Widget buildInvoice(BuildContext context, InvoiceModel invoice, {bool isPremium = false}) {
     return SingleChildScrollView(
       child: Container(
         decoration: BoxDecoration(
@@ -74,6 +74,9 @@ class CreativeTemplate implements InvoiceTemplate {
             _buildItems(invoice),
             const SizedBox(height: 24),
             _buildTotals(invoice),
+            
+            // Signature VoxIn pour utilisateurs gratuits
+            if (!isPremium) buildVoxInSignature(),
           ],
         ),
       ),
@@ -346,7 +349,7 @@ class CreativeTemplate implements InvoiceTemplate {
   Future<void>? generatePDF(InvoiceModel invoice) => null;
 
   @override
-  Widget build(BuildContext context, InvoiceModel invoice) {
-    return buildInvoice(context, invoice);
+  Widget build(BuildContext context, InvoiceModel invoice, {bool isPremium = false}) {
+    return buildInvoice(context, invoice, isPremium: isPremium);
   }
 }

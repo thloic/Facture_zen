@@ -21,9 +21,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> with SingleTi
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     
-    // Charger les notifications au démarrage
+    // Charger les notifications au démarrage ET démarrer l'écoute en temps réel
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<NotificationViewModel>().loadNotifications();
+      final viewModel = context.read<NotificationViewModel>();
+      viewModel.loadNotifications();
+      viewModel.startListening();
     });
   }
 

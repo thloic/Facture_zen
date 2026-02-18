@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../models/notification_model.dart';
 import '../../../common/services/firebase_notification_service.dart';
@@ -9,6 +10,7 @@ class NotificationViewModel extends ChangeNotifier {
   List<NotificationModel> _notifications = [];
   bool _isLoading = false;
   String? _errorMessage;
+  StreamSubscription<List<NotificationModel>>? _notificationSubscription;
 
   NotificationViewModel({FirebaseNotificationService? notificationService})
       : _notificationService = notificationService ?? FirebaseNotificationService();
@@ -108,7 +110,10 @@ class NotificationViewModel extends ChangeNotifier {
 
   /// Écouter les notifications en temps réel
   void startListening() {
-    _notificationService.watchUserNotifications().listen(
+    // Annuler l'ancien abonnement s'il existe
+    _notificationSubscription?.cancel();
+    
+    _notificationSubscription = _notificationService.watchUserNotifications().listen(
       (notifications) {
         _notifications = notifications;
         notifyListeners();
@@ -119,6 +124,18 @@ class NotificationViewModel extends ChangeNotifier {
         debugPrint('❌ Erreur stream notifications: $error');
       },
     );
+  }
+  
+  /// Arrêter l'écoute des notifications
+  void stopListening() {
+    _notificationSubscription?.cancel();
+    _notificationSubscription = null;
+  }
+
+  @override
+  void dispose() {
+    stopListening();
+    super.dispose();
   }
 
   void _setLoading(bool value) {

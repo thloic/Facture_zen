@@ -50,7 +50,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
 
     if (success && mounted) {
-      // Navigation vers l'écran de configuration du PIN
+      // Attendre un court instant pour que Firebase Auth propage l'utilisateur
+      await Future.delayed(const Duration(milliseconds: 500));
+      
+      // Afficher un message de succès
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('✅ Inscription réussie ! Configurez votre code PIN'),
+          backgroundColor: Color(0xFF10B981),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      
+      // Rediriger vers la configuration du PIN pour sécuriser le compte
       Navigator.pushReplacementNamed(context, '/pin-setup');
     }
   }

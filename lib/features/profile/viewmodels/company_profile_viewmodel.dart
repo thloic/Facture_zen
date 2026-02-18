@@ -41,6 +41,7 @@ class CompanyProfileViewModel extends ChangeNotifier {
   // ============================================================================
 
   /// Charge le profil existant depuis Firebase
+  /// Vérifie d'abord users/{uid}/profile, puis users/{uid} pour compatibilité
   Future<void> loadProfile() async {
     _isLoading = true;
     _errorMessage = null;
@@ -54,12 +55,22 @@ class CompanyProfileViewModel extends ChangeNotifier {
         throw Exception('Utilisateur non connecté');
       }
 
-      // Récupération depuis Firebase Realtime Database
-      final snapshot = await _databaseRef
+      // 1. D'abord chercher dans users/{uid}/profile (nouveau format)
+      var snapshot = await _databaseRef
           .child('users')
           .child(userId)
           .child('profile')
           .get();
+
+      if (!snapshot.exists) {
+        debugPrint('📭 [COMPANY PROFILE VM] Pas de profil dans /profile, vérification racine...');
+        
+        // 2. Chercher dans users/{uid} directement (format inscription)
+        snapshot = await _databaseRef
+            .child('users')
+            .child(userId)
+            .get();
+      }
 
       if (snapshot.exists) {
         final data = snapshot.value as Map<dynamic, dynamic>;

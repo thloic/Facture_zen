@@ -207,7 +207,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                           SizedBox(width: responsive.getAdaptiveSpacing(8)),
                           Flexible(
                             child: Text(
-                              'Limite de ${widget.remainingInvoices} factures atteinte',
+                              'Limite de 3 factures atteinte',
                               style: TextStyle(
                                 fontSize: responsive.getAdaptiveTextSize(14),
                                 color: Colors.orange.shade900,
@@ -307,20 +307,24 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                         )
                             : Row(
                           mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(
                               Icons.lock_open,
-                              size: responsive.getAdaptiveSize(20),
+                              size: responsive.getAdaptiveSize(18),
                             ),
                             SizedBox(
-                                width: responsive.getAdaptiveSpacing(8)),
-                            Text(
-                              'S\'abonner maintenant',
-                              style: TextStyle(
-                                fontSize:
-                                responsive.getAdaptiveTextSize(16),
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white,
+                                width: responsive.getAdaptiveSpacing(6)),
+                            Flexible(
+                              child: Text(
+                                'S\'abonner maintenant',
+                                style: TextStyle(
+                                  fontSize:
+                                  responsive.getAdaptiveTextSize(14),
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                           ],
@@ -535,7 +539,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                                   Container(
                                     padding: EdgeInsets.symmetric(
                                       horizontal:
-                                      responsive.getAdaptiveSpacing(10),
+                                      responsive.getAdaptiveSpacing(8),
                                       vertical:
                                       responsive.getAdaptiveSpacing(5),
                                     ),
@@ -547,18 +551,19 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                                       planInfo.badge,
                                       style: TextStyle(
                                         fontSize: responsive
-                                            .getAdaptiveTextSize(11),
+                                            .getAdaptiveTextSize(10),
                                         fontWeight: FontWeight.bold,
                                         color: Colors.white,
                                         letterSpacing: 0.5,
                                       ),
+                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
                                   if (planInfo.isPopular)
                                     Container(
                                       padding: EdgeInsets.symmetric(
                                         horizontal:
-                                        responsive.getAdaptiveSpacing(10),
+                                        responsive.getAdaptiveSpacing(8),
                                         vertical:
                                         responsive.getAdaptiveSpacing(5),
                                       ),
@@ -572,20 +577,23 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                                           Icon(
                                             Icons.star,
                                             size:
-                                            responsive.getAdaptiveSize(12),
+                                            responsive.getAdaptiveSize(11),
                                             color: Colors.white,
                                           ),
                                           SizedBox(
                                               width: responsive
-                                                  .getAdaptiveSpacing(4)),
-                                          Text(
-                                            'POPULAIRE',
-                                            style: TextStyle(
-                                              fontSize: responsive
-                                                  .getAdaptiveTextSize(10),
-                                              fontWeight: FontWeight.bold,
-                                              color: Colors.white,
-                                              letterSpacing: 0.5,
+                                                  .getAdaptiveSpacing(3)),
+                                          Flexible(
+                                            child: Text(
+                                              'POPULAIRE',
+                                              style: TextStyle(
+                                                fontSize: responsive
+                                                    .getAdaptiveTextSize(9),
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.white,
+                                                letterSpacing: 0.5,
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
                                             ),
                                           ),
                                         ],

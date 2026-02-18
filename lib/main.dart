@@ -14,6 +14,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'common/services/auth_service.dart';
 import 'common/services/pin_service.dart';
 import 'common/services/firebase_invoice_service.dart';
+import 'common/services/tracking_service.dart';
 import 'features/profile/services/firebase_profile_service.dart';
 import 'features/auth/viewmodels/login_viewmodel.dart';
 import 'features/auth/viewmodels/register_viewmodel.dart';
@@ -49,6 +50,11 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  
+  // Initialiser le tracking (Google Ads + Facebook Ads)
+  // Demande la permission ATT sur iOS et active Facebook App Events
+  await TrackingService().initialize();
+  
   runApp(const MyApp());
 }
 
@@ -157,7 +163,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
           create: (_) => InvoiceHistoryViewModel(invoiceService: invoiceService),
         ),
         ChangeNotifierProvider(create: (_) => NotificationViewModel()),
-        ChangeNotifierProvider(create: (_) => ProfileViewModel()),
         ChangeNotifierProvider(create: (_) => CompanyProfileViewModel()),
       ],
       child: MaterialApp(

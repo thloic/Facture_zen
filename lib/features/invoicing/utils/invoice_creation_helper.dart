@@ -73,6 +73,18 @@ class InvoiceCreationHelper {
       if (invoiceId != null && context.mounted) {
         ToastUtils.showSuccess(context, '✅ Facture créée avec succès !');
         debugPrint('✅ Facture créée : $invoiceId');
+        
+        // 🎯 Rediriger automatiquement vers home après succès
+        Future.delayed(const Duration(milliseconds: 800), () {
+          if (context.mounted) {
+            Navigator.pushNamedAndRemoveUntil(
+              context,
+              '/home',
+              (route) => false,
+            );
+          }
+        });
+        
         return invoiceId;
       } else {
         if (context.mounted) {
