@@ -130,12 +130,14 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
           onTemplateSelected: (template) {
             setState(() {
               _selectedTemplate = template;
+              print("selectedTemplate ${_selectedTemplate}");
             });
           },
           onPreviewTap: (template) {
              // Déjà en preview, on peut juste changer la sélection
              setState(() {
               _selectedTemplate = template;
+              print("selectedTemplateTwice ${_selectedTemplate}");
             });
           },
         ),

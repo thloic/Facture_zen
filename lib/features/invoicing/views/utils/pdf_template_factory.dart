@@ -1,4 +1,5 @@
-import 'package:pdf/pdf.dart';
+
+import 'package:facture_zen/features/invoicing/views/utils/pdf_modern_generator.dart';
 import 'package:pdf/widgets.dart' as pw;
 import '../../models/invoice_model.dart';
 import '../../templates/invoice_template_base.dart';
@@ -32,7 +33,9 @@ class PdfTemplateFactory {
         return PdfMinimalGenerator.generateWithLogo(invoice, logoImage, isPremium: isPremium);
 
       case InvoiceTemplateType.elegant:
-        return PdfElegantGenerator.generateWithLogo(invoice, logoImage, isPremium: isPremium);
+        return PdfElegantGenerator.generate(invoice);
+      case InvoiceTemplateType.modern:
+        return PdfModernGenerator.generate(invoice);
 
       case InvoiceTemplateType.professional:
       case InvoiceTemplateType.compact:
