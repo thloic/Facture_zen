@@ -433,7 +433,10 @@ class _HomeScreenState extends State<HomeScreen> {
             buttonText: 'Créer un devis',
             icon: Icons.request_quote_outlined,
             backgroundColor: const Color(0xFF6B8AFF),
-            onTap: () {},
+            onTap: () {
+              Navigator.pushNamed(context, '/record');
+            },
+
           ),
         ],
       ),

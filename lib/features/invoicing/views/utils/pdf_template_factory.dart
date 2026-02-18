@@ -8,6 +8,10 @@ import 'pdf_corporate_generator.dart';
 import 'pdf_creative_generator.dart';
 import 'pdf_minimal_generator.dart';
 import 'pdf_elegant_generator.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+
+import '../../models/invoice_model.dart';
 
 /// Factory pour générer les PDFs selon le template choisi
 class PdfTemplateFactory {
@@ -33,9 +37,10 @@ class PdfTemplateFactory {
         return PdfMinimalGenerator.generateWithLogo(invoice, logoImage, isPremium: isPremium);
 
       case InvoiceTemplateType.elegant:
-        return PdfElegantGenerator.generate(invoice);
+        return PdfElegantGenerator.generateWithLogo(invoice, logoImage, isPremium: isPremium);
+      
       case InvoiceTemplateType.modern:
-        return PdfModernGenerator.generate(invoice);
+        return PdfModernGenerator.generateWithLogo(invoice, logoImage, isPremium: isPremium);
 
       case InvoiceTemplateType.professional:
       case InvoiceTemplateType.compact:
