@@ -934,7 +934,7 @@ class _InvoiceHistoryScreenState extends State<InvoiceHistoryScreen> {
           // Recharger la liste
           await context.read<InvoiceHistoryViewModel>().loadInvoices();
           
-          ToastUtils.showSuccess(context, '✅ Numéro de facture modifié avec succès');
+          ToastUtils.showSuccess(context, 'Numéro de facture modifié avec succès');
         }
       } catch (e) {
         if (mounted) {
@@ -1171,7 +1171,7 @@ class _InvoiceHistoryScreenState extends State<InvoiceHistoryScreen> {
                           );
                           
                           if (mounted) {
-                            ToastUtils.showSuccess(context, '✅ Facture supprimée avec succès');
+                            ToastUtils.showSuccess(context, 'Facture supprimée avec succès');
                           }
                         },
                         text: 'Supprimer',

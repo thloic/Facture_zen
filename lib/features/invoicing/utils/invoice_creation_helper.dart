@@ -71,7 +71,7 @@ class InvoiceCreationHelper {
 
       // 6. Afficher le résultat
       if (invoiceId != null && context.mounted) {
-        ToastUtils.showSuccess(context, '✅ Facture créée avec succès !');
+        ToastUtils.showSuccess(context, 'Facture créée avec succès');
         debugPrint('✅ Facture créée : $invoiceId');
         
         // 🎯 Rediriger automatiquement vers home après succès
