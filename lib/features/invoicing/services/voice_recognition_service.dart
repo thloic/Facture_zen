@@ -33,12 +33,25 @@ class VoiceRecognitionService {
   Future<bool> _checkPermissions() async {
     final status = await Permission.microphone.status;
 
-    if (status.isDenied || status.isPermanentlyDenied) {
-      final result = await Permission.microphone.request();
-      return result.isGranted;
+    // Si permission déjà accordée
+    if (status.isGranted) {
+      return true;
     }
 
-    return status.isGranted;
+    // Si permission refusée de manière permanente
+    if (status.isPermanentlyDenied) {
+      debugPrint('🔒 Permission microphone refusée de manière permanente');
+      debugPrint('📱 L\'utilisateur doit activer le microphone dans Réglages → FactureZen');
+      return false;
+    }
+
+    // Si permission refusée (ne pas demander à nouveau)
+    if (status.isDenied) {
+      debugPrint('❌ Permission microphone refusée');
+      return false;
+    }
+
+    return false;
   }
 
   /// Démarre l'enregistrement audio

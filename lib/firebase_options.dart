@@ -29,11 +29,12 @@ class DefaultFirebaseOptions {
 
   // Configuration iOS
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'REMPLACE_PAR_TON_API_KEY_IOS',
-    appId: 'REMPLACE_PAR_TON_APP_ID_IOS',
-    messagingSenderId: 'REMPLACE_PAR_TON_SENDER_ID',
-    projectId: 'facturezen',
+    apiKey: 'AIzaSyBiS7H_6ipVVOsT6tsBtgVi6WlReCW_zUc',
+    appId: '1:664151721016:ios:60650982293da7184152cd',
+    messagingSenderId: '664151721016',
+    projectId: 'facturezen-558b0',
     databaseURL: 'https://facturezen-558b0-default-rtdb.firebaseio.com',
     iosBundleId: 'com.example.factureZen',
+    storageBucket: 'facturezen-558b0.firebasestorage.app',
   );
 }

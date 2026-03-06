@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'dart:io';
 import '../viewmodels/login_viewmodel.dart';
 import '../../../common/widgets/primary_button.dart';
 import '../../../common/widgets/custom_text_field.dart';
@@ -79,6 +80,35 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } else {
       final error = context.read<LoginViewModel>().errorMessage ?? 'Erreur de connexion Google';
+      ToastUtils.show(context, message: error, isError: true);
+    }
+  }
+
+  /// Gère la connexion avec Apple
+  Future<void> _handleAppleSignIn() async {
+    context.read<LoginViewModel>().clearError();
+
+    final success = await context.read<LoginViewModel>().signInWithApple();
+
+    if (!mounted) return;
+
+    if (success) {
+      ToastUtils.show(context, message: 'Connexion avec Apple réussie !', isError: false);
+      
+      // Vérifier si un PIN est configuré
+      final pinService = PinService();
+      final hasPin = await pinService.hasPin();
+      
+      if (hasPin) {
+        // PIN déjà configuré, demander le PIN pour sécurité
+        Navigator.pushReplacementNamed(context, '/pin-login');
+      } else {
+        // Première connexion Apple, configurer le PIN
+        debugPrint('🔐 Première connexion Apple - Redirection vers configuration PIN');
+        Navigator.pushReplacementNamed(context, '/pin-setup');
+      }
+    } else {
+      final error = context.read<LoginViewModel>().errorMessage ?? 'Erreur de connexion Apple';
       ToastUtils.show(context, message: error, isError: true);
     }
   }
@@ -177,8 +207,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
                             SizedBox(height: responsive.getAdaptiveSpacing(24)),
 
-                            // Bouton de connexion avec Google
-                            _buildGoogleSignInButton(responsive, viewModel),
+                            // Boutons de connexion sociale (Google et Apple)
+                            _buildSocialSignInButtons(responsive, viewModel),
 
                             const Spacer(),
 
@@ -302,28 +332,52 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  /// Widget - Bouton de connexion avec Google
-  Widget _buildGoogleSignInButton(
+  /// Widget - Boutons de connexion sociale (Google et Apple côte à côte)
+  Widget _buildSocialSignInButtons(
     ResponsiveUtils responsive,
     LoginViewModel viewModel,
   ) {
-    return Center(
-      child: GestureDetector(
-        onTap: viewModel.isLoading ? null : _handleGoogleSignIn,
-        child: Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            border: Border.all(color: const Color(0xFFE5E7EB), width: 1.5),
-            shape: BoxShape.circle,
-            color: Colors.white,
-          ),
-          child: Image.asset(
-            'assets/images/icons8-google-48.png',
-            height: 32,
-            width: 32,
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        // Bouton Google
+        GestureDetector(
+          onTap: viewModel.isLoading ? null : _handleGoogleSignIn,
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              border: Border.all(color: const Color(0xFFE5E7EB), width: 1.5),
+              shape: BoxShape.circle,
+              color: Colors.white,
+            ),
+            child: Image.asset(
+              'assets/images/icons8-google-48.png',
+              height: 32,
+              width: 32,
+            ),
           ),
         ),
-      ),
+        
+        // Bouton Apple (visible seulement sur iOS)
+        if (Platform.isIOS) ...[SizedBox(width: responsive.getAdaptiveSpacing(20)),
+        
+        GestureDetector(
+          onTap: viewModel.isLoading ? null : _handleAppleSignIn,
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              border: Border.all(color: const Color(0xFFE5E7EB), width: 1.5),
+              shape: BoxShape.circle,
+              color: Colors.white,
+            ),
+            child: const Icon(
+              Icons.apple,
+              size: 32,
+              color: Color(0xFF000000),
+            ),
+          ),
+        ),],
+      ],
     );
   }
 }

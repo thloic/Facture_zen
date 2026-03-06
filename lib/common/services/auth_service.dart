@@ -6,6 +6,12 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
+import 'dart:math';
+import 'dart:convert';
+import 'package:crypto/crypto.dart';
+import '../../revenue_cat_util.dart' as revenue_cat;
+
 
 /// AuthService
 /// Service d'authentification Firebase
@@ -128,7 +134,33 @@ class AuthService {
   /// Déconnexion
   Future<void> signOut() async {
     try {
-      await Future.wait([_auth.signOut(), _googleSignIn.signOut()]);
+      // Déconnecter RevenueCat en premier
+      try {
+        await revenue_cat.login(null);
+        debugPrint('✅ RevenueCat logged out');
+      } catch (e) {
+        debugPrint('⚠️ Failed to logout RevenueCat: $e');
+        // Non-bloquant: on continue même si RevenueCat échoue
+      }
+      
+      // Déconnecter Firebase Auth
+      try {
+        await _auth.signOut();
+        debugPrint('✅ Firebase Auth logged out');
+      } catch (e) {
+        debugPrint('⚠️ Failed to logout Firebase: $e');
+        // Non-bloquant: on continue même si Firebase échoue
+      }
+
+      // Déconnecter Google Sign In
+      try {
+        await _googleSignIn.signOut();
+        debugPrint('✅ Google Sign In logged out');
+      } catch (e) {
+        debugPrint('⚠️ Failed to logout Google: $e');
+        // Non-bloquant: on continue même si Google échoue
+      }
+
       debugPrint('✅ Déconnexion réussie');
     } catch (e) {
       debugPrint('❌ Erreur déconnexion: $e');
@@ -211,6 +243,140 @@ class AuthService {
       debugPrint('❌ Erreur connexion Google: $e');
       throw Exception(
         'Impossible de vous connecter avec Google. Vérifiez votre connexion internet et réessayez.',
+      );
+    }
+  }
+
+  /// Génère un nonce aléatoire sécurisé pour Apple Sign In
+  String _generateNonce([int length = 32]) {
+    const charset =
+        '0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._';
+    final random = Random.secure();
+    return List.generate(length, (_) => charset[random.nextInt(charset.length)])
+        .join();
+  }
+
+  /// Retourne le SHA256 hash d'un string
+  String _sha256ofString(String input) {
+    final bytes = utf8.encode(input);
+    final digest = sha256.convert(bytes);
+    return digest.toString();
+  }
+
+  /// Connexion avec Apple
+  /// @return L'utilisateur connecté ou null en cas d'erreur
+  Future<User?> signInWithApple() async {
+    try {
+      debugPrint('🍎 Tentative de connexion avec Apple');
+
+      // Générer un nonce pour la sécurité
+      final rawNonce = _generateNonce();
+      final nonce = _sha256ofString(rawNonce);
+      debugPrint('🔐 Nonce généré (SHA256): $nonce');
+      debugPrint('🔐 Nonce brut (pour Firebase): $rawNonce');
+
+      // Déclencher le flux d'authentification Apple
+      final appleCredential = await SignInWithApple.getAppleIDCredential(
+        scopes: [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+        nonce: nonce,
+      );
+
+      debugPrint('✅ Credentials Apple reçus');
+      debugPrint('📱 identityToken: ${appleCredential.identityToken}');
+      debugPrint('📱 authorizationCode: ${appleCredential.authorizationCode}');
+      debugPrint('📱 email: ${appleCredential.email}');
+
+      // Vérifier que nous avons un identityToken valide
+      if (appleCredential.identityToken == null) {
+        debugPrint(
+          '❌ identityToken is null - Apple credentials incomplete',
+        );
+        throw Exception(
+          'Unable to retrieve Apple authentication token. Please try again.',
+        );
+      }
+
+      // Créer les credentials Firebase
+      debugPrint('🔄 Création des credentials Firebase...');
+      final oauthCredential = OAuthProvider("apple.com").credential(
+        idToken: appleCredential.identityToken!,
+        rawNonce: rawNonce,
+      );
+      debugPrint('✅ Credentials Firebase créés');
+
+      // Se connecter à Firebase avec les credentials Apple
+      debugPrint('🔐 Authentification auprès de Firebase...');
+      final UserCredential userCredential = await _auth.signInWithCredential(
+        oauthCredential,
+      );
+      final user = userCredential.user;
+
+      if (user != null) {
+        debugPrint('✅ Connexion Firebase réussie: ${user.uid}');
+
+        // Vérifier si c'est un nouvel utilisateur
+        if (userCredential.additionalUserInfo?.isNewUser ?? false) {
+          debugPrint('🆕 Nouvel utilisateur Apple, création du profil...');
+
+          // Récupérer le nom depuis Apple (peut être null si l'utilisateur refuse)
+          String displayName = user.displayName ?? '';
+          if (displayName.isEmpty &&
+              appleCredential.givenName != null &&
+              appleCredential.familyName != null) {
+            displayName =
+                '${appleCredential.givenName} ${appleCredential.familyName}';
+          }
+
+          // Créer le profil dans Realtime Database pour les nouveaux utilisateurs
+          try {
+            await _database.child('users').child(user.uid).set({
+              'email': user.email ?? appleCredential.email ?? '',
+              'companyName': displayName.isNotEmpty
+                  ? displayName
+                  : 'Entreprise',
+              'companyAddress': 'Adresse non renseignée',
+              'createdAt': ServerValue.timestamp,
+              'updatedAt': ServerValue.timestamp,
+              'authProvider': 'apple',
+            });
+            debugPrint('✅ Profil créé dans Realtime Database');
+          } catch (dbError) {
+            debugPrint('❌ Erreur création profil: $dbError');
+          }
+        } else {
+          // Mettre à jour la date de dernière connexion pour les utilisateurs existants
+          try {
+            await _database.child('users').child(user.uid).update({
+              'lastLoginAt': ServerValue.timestamp,
+            });
+            debugPrint('✅ Date de connexion mise à jour');
+          } catch (dbError) {
+            debugPrint('⚠️ Impossible de mettre à jour lastLoginAt: $dbError');
+          }
+        }
+      }
+
+      return user;
+    } on SignInWithAppleAuthorizationException catch (e) {
+      debugPrint('❌ Erreur Apple Sign In: ${e.code} - ${e.message}');
+      if (e.code == AuthorizationErrorCode.canceled) {
+        debugPrint('⚠️ Connexion Apple annulée par l\'utilisateur');
+        return null;
+      }
+      throw Exception(
+        'Impossible de vous connecter avec Apple. Veuillez réessayer.',
+      );
+    } on FirebaseAuthException catch (e) {
+      debugPrint('❌ Erreur Firebase Auth: ${e.code} - ${e.message}');
+      debugPrint('📋 Détails erreur: ${e.toString()}');
+      throw _handleAuthException(e);
+    } catch (e) {
+      debugPrint('❌ Erreur connexion Apple: $e');
+      throw Exception(
+        'Impossible de vous connecter avec Apple. Vérifiez votre connexion internet et réessayez.',
       );
     }
   }

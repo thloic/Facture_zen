@@ -64,13 +64,23 @@ class SubscriptionSyncService {
         SubscriptionPlan? highestPlan;
 
         for (var entitlementId in activeEntitlements.keys) {
-          final plan = PLAN_LIMITS[entitlementId];
+          // Normaliser l'ID: "Zen Basic" → "zen_basic"
+          final normalizedId = entitlementId
+              .toLowerCase()
+              .replaceAll(' ', '_')
+              .replaceAll('-', '_');
+          
+          debugPrint('📦 Checking entitlement: $entitlementId → $normalizedId');
+          final plan = PLAN_LIMITS[normalizedId];
 
           if (plan != null) {
+            debugPrint('✅ Plan found: ${plan.name}');
             if (highestPlan == null ||
                 plan.monthlyInvoiceLimit > highestPlan.monthlyInvoiceLimit) {
               highestPlan = plan;
             }
+          } else {
+            debugPrint('❌ Plan not found for: $normalizedId');
           }
         }
 

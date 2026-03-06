@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../../../common/services/auth_service.dart';
 import '../../../common/services/tracking_service.dart';
+import '../../../revenue_cat_util.dart' as revenue_cat;
 
 /// RegisterViewModel
 /// Gère l'état et la logique de présentation de l'écran d'inscription
@@ -64,6 +65,15 @@ class RegisterViewModel extends ChangeNotifier {
 
       if (user != null) {
         debugPrint('✅ Inscription réussie pour: ${user.email}');
+        
+        // Lier l'utilisateur à RevenueCat (non-bloquant)
+        try {
+          await revenue_cat.login(user.uid);
+          debugPrint('✅ RevenueCat login successful');
+        } catch (e) {
+          debugPrint('⚠️ RevenueCat login failed (non-critical): $e');
+          // Continue - the user can still use the app
+        }
         
         // Tracker l'inscription (Google Ads + Facebook Ads)
         await TrackingService().logSignUp(method: 'email');

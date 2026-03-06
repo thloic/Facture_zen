@@ -2,32 +2,65 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<!-- App Tracking Transparency (ATT) - OBLIGATOIRE pour iOS 14+ -->
-	<key>NSUserTrackingUsageDescription</key>
-	<string>Nous utilisons ces données pour améliorer votre expérience et vous proposer des publicités personnalisées.</string>
-	
-	<!-- Facebook SDK Configuration -->
-	<!-- À REMPLACER par votre vrai App ID Facebook -->
-	<key>FacebookAppID</key>
-	<string>1189357973187739</string>
-	<key>FacebookClientToken</key>
-	<string>VOTRE_FACEBOOK_CLIENT_TOKEN</string>
-	<key>FacebookDisplayName</key>
-	<string>FactureZen</string>
+	<key>CADisableMinimumFrameDurationOnPhone</key>
+	<true/>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>CFBundleDisplayName</key>
+	<string>Facture Zen</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>facture_zen</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>$(FLUTTER_BUILD_NAME)</string>
+	<key>CFBundleSignature</key>
+	<string>????</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>fb1189357973187739</string>
+				<string>com.googleusercontent.apps.664151721016-3s79lng02103cudc9h9fec64caj7r9rq</string>
 			</array>
 		</dict>
 	</array>
-	
-	<!-- SKAdNetwork IDs pour Facebook + Google Ads -->
+	<key>CFBundleVersion</key>
+	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<key>GIDClientID</key>
+	<string>664151721016-3s79lng02103cudc9h9fec64caj7r9rq.apps.googleusercontent.com</string>
+	<key>FacebookAppID</key>
+	<string>1189357973187739</string>
+	<key>FacebookClientToken</key>
+	<string>VOTRE_FACEBOOK_CLIENT_TOKEN</string>
+	<key>FacebookDisplayName</key>
+	<string>FactureZen</string>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>app-Prefs</string>
+		<string>app-Preferences</string>
+	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>FactureZen utilise la caméra pour scanner vos documents et factures.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>FactureZen utilise le microphone pour l'enregistrement vocal des factures.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>FactureZen utilise la reconnaissance vocale pour transcrire vos factures dictées.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>FactureZen accède à vos photos pour importer des documents et factures.</string>
+	<key>NSUserTrackingUsageDescription</key>
+	<string>Nous utilisons vos données pour vous proposer des publicités personnalisées et améliorer votre expérience.</string>
 	<key>SKAdNetworkItems</key>
 	<array>
-		<!-- Facebook SKAdNetwork IDs -->
 		<dict>
 			<key>SKAdNetworkIdentifier</key>
 			<string>v9wttpbfk9.skadnetwork</string>
@@ -36,12 +69,10 @@
 			<key>SKAdNetworkIdentifier</key>
 			<string>n38lu8286q.skadnetwork</string>
 		</dict>
-		<!-- Google Ads SKAdNetwork ID -->
 		<dict>
 			<key>SKAdNetworkIdentifier</key>
 			<string>cstr6suwn9.skadnetwork</string>
 		</dict>
-		<!-- Autres réseaux partenaires fréquents -->
 		<dict>
 			<key>SKAdNetworkIdentifier</key>
 			<string>4dzt52r2t5.skadnetwork</string>
@@ -111,30 +142,28 @@
 			<string>hs6bdukanm.skadnetwork</string>
 		</dict>
 	</array>
-	
-	<key>NSPhotoLibraryUsageDescription</key>
-<string>Nous avons besoin d'accéder à vos photos pour ajouter le logo de votre entreprise</string>
-	<key>CFBundleDevelopmentRegion</key>
-	<string>$(DEVELOPMENT_LANGUAGE)</string>
-	<key>CFBundleDisplayName</key>
-	<string>Facture Zen</string>
-	<key>CFBundleExecutable</key>
-	<string>$(EXECUTABLE_NAME)</string>
-	<key>CFBundleIdentifier</key>
-	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
-	<key>CFBundleInfoDictionaryVersion</key>
-	<string>6.0</string>
-	<key>CFBundleName</key>
-	<string>facture_zen</string>
-	<key>CFBundlePackageType</key>
-	<string>APPL</string>
-	<key>CFBundleShortVersionString</key>
-	<string>$(FLUTTER_BUILD_NAME)</string>
-	<key>CFBundleSignature</key>
-	<string>????</string>
-	<key>CFBundleVersion</key>
-	<string>$(FLUTTER_BUILD_NUMBER)</string>
-	<key>LSRequiresIPhoneOS</key>
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<false/>
+		<key>UISceneConfigurations</key>
+		<dict>
+			<key>UIWindowSceneSessionRoleApplication</key>
+			<array>
+				<dict>
+					<key>UISceneClassName</key>
+					<string>UIWindowScene</string>
+					<key>UISceneConfigurationName</key>
+					<string>flutter</string>
+					<key>UISceneDelegateClassName</key>
+					<string>FlutterSceneDelegate</string>
+					<key>UISceneStoryboardFile</key>
+					<string>Main</string>
+				</dict>
+			</array>
+		</dict>
+	</dict>
+	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
@@ -153,9 +182,5 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
-	<key>CADisableMinimumFrameDurationOnPhone</key>
-	<true/>
-	<key>UIApplicationSupportsIndirectInputEvents</key>
-	<true/>
 </dict>
 </plist>

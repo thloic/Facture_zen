@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../../../common/services/auth_service.dart';
 import '../../../common/services/tracking_service.dart';
+import '../../../revenue_cat_util.dart' as revenue_cat;
 
 class LoginViewModel extends ChangeNotifier {
   final AuthService _authService;
@@ -27,6 +28,15 @@ class LoginViewModel extends ChangeNotifier {
       final user = await _authService.signIn(email: email, password: password);
 
       if (user != null) {
+        // Lier l'utilisateur à RevenueCat (non-bloquant)
+        try {
+          await revenue_cat.login(user.uid);
+          debugPrint('✅ RevenueCat login successful');
+        } catch (e) {
+          debugPrint('⚠️ RevenueCat login failed (non-critical): $e');
+          // Continue - the user can still use the app
+        }
+        
         // Tracker la connexion (Google Ads)
         await TrackingService().logLogin(method: 'email');
         await TrackingService().setUserId(user.uid);
@@ -95,6 +105,15 @@ class LoginViewModel extends ChangeNotifier {
       final user = await _authService.signInWithGoogle();
 
       if (user != null) {
+        // Lier l'utilisateur à RevenueCat (non-bloquant)
+        try {
+          await revenue_cat.login(user.uid);
+          debugPrint('✅ RevenueCat login successful');
+        } catch (e) {
+          debugPrint('⚠️ RevenueCat login failed (non-critical): $e');
+          // Continue - the user can still use the app
+        }
+        
         // Tracker la connexion Google (Google Ads + Facebook Ads)
         await TrackingService().logLogin(method: 'google');
         await TrackingService().setUserId(user.uid);
@@ -103,6 +122,42 @@ class LoginViewModel extends ChangeNotifier {
         return true;
       } else {
         _errorMessage = 'Connexion Google annulée';
+        _setLoading(false);
+        return false;
+      }
+    } catch (e) {
+      _errorMessage = e.toString();
+      _setLoading(false);
+      return false;
+    }
+  }
+
+  /// Connexion avec Apple
+  Future<bool> signInWithApple() async {
+    _errorMessage = null;
+    _setLoading(true);
+
+    try {
+      final user = await _authService.signInWithApple();
+
+      if (user != null) {
+        // Lier l'utilisateur à RevenueCat (non-bloquant)
+        try {
+          await revenue_cat.login(user.uid);
+          debugPrint('✅ RevenueCat login successful');
+        } catch (e) {
+          debugPrint('⚠️ RevenueCat login failed (non-critical): $e');
+          // Continue - the user can still use the app
+        }
+        
+        // Tracker la connexion Apple (Google Ads + Facebook Ads)
+        await TrackingService().logLogin(method: 'apple');
+        await TrackingService().setUserId(user.uid);
+        
+        _setLoading(false);
+        return true;
+      } else {
+        _errorMessage = 'Connexion Apple annulée';
         _setLoading(false);
         return false;
       }

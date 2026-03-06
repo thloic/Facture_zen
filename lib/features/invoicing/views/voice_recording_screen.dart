@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'dart:io';
 import '../../../common/widgets/curved_bottom_nav.dart';
 import '../viewmodels/voice_recording_viewmodel.dart';
 import '../../../common/widgets/app_logo.dart';
@@ -80,6 +83,107 @@ class _VoiceRecordingScreenState extends State<VoiceRecordingScreen>
       _pulseController.reset();
       _waveController.stop();
       _waveController.reset();
+    }
+  }
+
+  /// Gère le clic sur le bouton microphone
+  /// Vérifie la permission avant de commencer l'enregistrement
+  Future<void> _handleMicrophoneClick(VoiceRecordingViewModel viewModel) async {
+    // Si déjà en enregistrement, juste mettre en pause
+    if (viewModel.isRecording) {
+      await viewModel.toggleRecording();
+      return;
+    }
+
+    // Vérifier la permission au premier clic
+    final hasPermission = await viewModel.requestMicrophonePermission();
+
+    if (hasPermission) {
+      // ✅ Permission accordée → démarrer l'enregistrement
+      debugPrint('✅ Permission acceptée, démarrage enregistrement');
+      await viewModel.toggleRecording();
+    } else if (viewModel.permissionDenied) {
+      // ❌ Permission refusée → afficher dialogue avec bénéfices
+      if (mounted) {
+        _showMicrophoneDialog();
+      }
+    }
+  }
+
+  /// Affiche un dialogue contextualisé avec les bénéfices du microphone
+  void _showMicrophoneDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: const Text('Permission Microphone'),
+          content: const Text(
+            'Activez le microphone pour enregistrer vos factures à la voix.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Annuler'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.pop(dialogContext);
+                await _openMicrophoneSettings();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF5B5FC7),
+              ),
+              child: const Text(
+                'Autoriser',
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  /// Ouvre directement les paramètres du microphone sur iOS
+  Future<void> _openMicrophoneSettings() async {
+    try {
+      if (Platform.isIOS) {
+        // Sur iOS 16+, ouvrir automatiquement est très limité
+        // Essayer tout de même avec openAppSettings()
+        debugPrint('Ouverture des parametres de l\'app...');
+        final bool opened = await openAppSettings();
+        debugPrint('openAppSettings result: $opened');
+        
+        if (opened) {
+          debugPrint('Parametres ouverts');
+          if (mounted) {
+            Future.delayed(const Duration(milliseconds: 500), () {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Microphone: Activez le microphone pour Facture Zen'),
+                    duration: Duration(seconds: 3),
+                  ),
+                );
+              }
+            });
+          }
+        }
+      } else {
+        // Android
+        await openAppSettings();
+      }
+    } catch (e) {
+      debugPrint('Exception: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Parametres > Facture Zen > Microphone'),
+            duration: Duration(seconds: 4),
+          ),
+        );
+      }
     }
   }
 
@@ -384,7 +488,7 @@ class _VoiceRecordingScreenState extends State<VoiceRecordingScreen>
         _buildActionButton(
           icon: viewModel.isRecording ? Icons.pause : Icons.mic,
           size: 80,
-          onPressed: viewModel.toggleRecording,
+          onPressed: () => _handleMicrophoneClick(viewModel),
           backgroundColor: const Color(0xFF5B5FC7),
           iconColor: Colors.white,
           hasShadow: true,

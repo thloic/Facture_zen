@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.0+5
+version: 1.0.0+8
 
 environment:
   sdk: ^3.9.2
@@ -48,6 +48,8 @@ dependencies:
   printing: ^5.14.2
   flutter_dotenv: ^5.2.1
   google_sign_in: ^6.2.2
+  sign_in_with_apple: ^7.0.1
+  crypto: ^3.0.6
   flutter_secure_storage: ^9.2.2
   shared_preferences: ^2.3.3
   google_fonts: ^8.0.0
@@ -63,6 +65,7 @@ dependencies:
   firebase_analytics: ^12.1.2
   facebook_app_events: ^0.19.2
   app_tracking_transparency: ^2.0.6
+  url_launcher: ^6.3.0
 
 dev_dependencies:
   flutter_test:
@@ -89,16 +92,16 @@ flutter:
 
   # Assets
   assets:
-    - .env
     - assets/images/
+    - .env
 
 # Configuration de l'icône de l'application
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: "assets/images/logo.jpeg"
+  image_path: "assets/images/logo-removebg-preview.png"
   min_sdk_android: 21
-  remove_alpha_ios: true
+  remove_alpha_ios: false
 
   # To add assets to your application, add an assets section, like this:
   # assets:

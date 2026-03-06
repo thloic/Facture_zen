@@ -38,8 +38,8 @@ Future initialize(
     await Purchases.configure(configuration);
 
     if (loadDataAfterLaunch) {
-      loadCustomerInfo();
-      loadOfferings();
+      await loadCustomerInfo();
+      await loadOfferings();
     } else {
       await loadCustomerInfo();
       await loadOfferings();

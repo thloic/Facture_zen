@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'dart:async';
 import '../services/voice_recognition_service.dart';
 import '../../../common/services/tracking_service.dart';
@@ -43,6 +44,53 @@ class VoiceRecordingViewModel extends ChangeNotifier {
       : _voiceService = voiceService ?? VoiceRecognitionService() {
     // Initialiser le stream d'amplitude
     _amplitudeStream = _voiceService.amplitudeStream;
+  }
+
+  /// Propriété pour exposer si la permission a été refusée
+  bool _permissionDenied = false;
+  bool get permissionDenied => _permissionDenied;
+
+  /// Demande la permission microphone au clic du bouton
+  /// Retourne true si accordée, false sinon
+  Future<bool> requestMicrophonePermission() async {
+    final status = await Permission.microphone.status;
+    debugPrint('🎤 Statut permission microphone: $status');
+    
+    // Si déjà accordée, pas besoin de redemander
+    if (status.isGranted) {
+      debugPrint('✅ Permission microphone déjà accordée');
+      _permissionDenied = false;
+      notifyListeners();
+      return true;
+    }
+
+    // Si permanentlyDenied, on ne peut que rediriger vers les réglages
+    // Le popup iOS a déjà été montré et refusé
+    if (status.isPermanentlyDenied) {
+      debugPrint('🔒 Permission microphone permanentlyDenied - popup déjà refusé');
+      _permissionDenied = true;
+      notifyListeners();
+      return false;
+    }
+
+    // Demander la permission (affiche le popup iOS natif si jamais montré)
+    debugPrint('🎤 Demande de permission microphone au clic...');
+    final result = await Permission.microphone.request();
+    debugPrint('🎤 Résultat request: $result');
+    
+    _permissionDenied = !result.isGranted;
+    notifyListeners();
+    
+    if (result.isGranted) {
+      debugPrint('✅ Permission microphone accordée');
+      return true;
+    } else if (result.isDenied) {
+      debugPrint('❌ Permission microphone refusée (denied)');
+    } else if (result.isPermanentlyDenied) {
+      debugPrint('🔒 Permission microphone refusée de manière permanente');
+    }
+    
+    return false;
   }
 
   /// Démarre ou met en pause l'enregistrement

@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:facture_zen/features/home/viewmodels/home_viewmodel.dart';
 import 'package:facture_zen/features/home/views/home_screen.dart';
 import 'package:facture_zen/features/invoicing/views/invoice_history_screen.dart';
@@ -42,11 +44,15 @@ void main() async {
   await dotenv.load(fileName: ".env");
 
   await revenue_cat.initialize(
-    "App Store API Key",
-    dotenv.env['REVENUE_CAT_PLAY_STORE_KEY'] ?? '',
-    debugLogEnabled: true,
-    loadDataAfterLaunch: true,
-  );
+  Platform.isAndroid 
+    ? dotenv.env['REVENUE_CAT_PLAY_STORE_KEY'] ?? '' 
+    : dotenv.env['REVENUE_CAT_APP_STORE_KEY'] ?? '',
+  Platform.isAndroid 
+    ? dotenv.env['REVENUE_CAT_PLAY_STORE_KEY'] ?? '' 
+    : dotenv.env['REVENUE_CAT_APP_STORE_KEY'] ?? '',
+  debugLogEnabled: true,
+  loadDataAfterLaunch: true,
+);
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
@@ -248,6 +254,15 @@ class AppInitializer extends StatelessWidget {
     debugPrint('🔐 AppInitializer - isAuthenticated: $isAuthenticated (user: ${user?.email})');
 
     if (isAuthenticated) {
+      // Synchroniser l'utilisateur avec RevenueCat au démarrage
+      try {
+        await revenue_cat.login(user.uid);
+        debugPrint('✅ RevenueCat synchronized with user: ${user.uid}');
+      } catch (e) {
+        debugPrint('⚠️ Failed to sync RevenueCat on startup: $e');
+        // Non-bloquant: on continue même si RevenueCat échoue
+      }
+      
       // Utilisateur connecté - d'abord vérifier si un PIN est configuré
       final hasPin = await pinService.hasPin();
       debugPrint('🔐 AppInitializer - hasPin: $hasPin');

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../../common/widgets/curved_bottom_nav.dart';
 import '../../invoicing/services/subscription_sync_service.dart';
@@ -793,8 +792,10 @@ class ProfileScreen extends StatelessWidget {
                               // Effectuer la déconnexion
                               await viewModel.logout();
 
-                              // Fermer l'application
-                              SystemNavigator.pop();
+                              // Naviguer vers l'écran de login
+                              if (context.mounted) {
+                                navigator.pushReplacementNamed('/login');
+                              }
                             },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFFEF4444),
