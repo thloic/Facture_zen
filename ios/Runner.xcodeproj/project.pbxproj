@@ -19,6 +19,20 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		12412EF52F69C5A100B10C8B /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 126A23822F53606000107DA8 /* Pods.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 7B7C06D35B3BC2BD649AAA1A489E49DA;
+			remoteInfo = url_launcher_ios;
+		};
+		12412EF72F69C5A100B10C8B /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 126A23822F53606000107DA8 /* Pods.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = DBA6F34C072B134D3BE38983776DD1C3;
+			remoteInfo = "url_launcher_ios-url_launcher_ios_privacy";
+		};
 		124C15B42F54325F00558942 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 126A23822F53606000107DA8 /* Pods.xcodeproj */;
@@ -821,6 +835,8 @@
 				124C16632F54325F00558942 /* sign_in_with_apple.framework */,
 				124C16652F54325F00558942 /* sqflite_darwin.framework */,
 				124C16672F54325F00558942 /* sqflite_darwin_privacy.bundle */,
+				12412EF62F69C5A100B10C8B /* url_launcher_ios.framework */,
+				12412EF82F69C5A100B10C8B /* url_launcher_ios_privacy.bundle */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -986,6 +1002,20 @@
 /* End PBXProject section */
 
 /* Begin PBXReferenceProxy section */
+		12412EF62F69C5A100B10C8B /* url_launcher_ios.framework */ = {
+			isa = PBXReferenceProxy;
+			fileType = wrapper.framework;
+			path = url_launcher_ios.framework;
+			remoteRef = 12412EF52F69C5A100B10C8B /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		12412EF82F69C5A100B10C8B /* url_launcher_ios_privacy.bundle */ = {
+			isa = PBXReferenceProxy;
+			fileType = wrapper.cfbundle;
+			path = url_launcher_ios_privacy.bundle;
+			remoteRef = 12412EF72F69C5A100B10C8B /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
 		124C15B52F54325F00558942 /* absl.framework */ = {
 			isa = PBXReferenceProxy;
 			fileType = wrapper.framework;
