@@ -65,7 +65,7 @@ class RegisterViewModel extends ChangeNotifier {
 
       if (user != null) {
         debugPrint('✅ Inscription réussie pour: ${user.email}');
-        
+
         // Lier l'utilisateur à RevenueCat (non-bloquant)
         try {
           await revenue_cat.login(user.uid);
@@ -74,11 +74,12 @@ class RegisterViewModel extends ChangeNotifier {
           debugPrint('⚠️ RevenueCat login failed (non-critical): $e');
           // Continue - the user can still use the app
         }
-        
-        // Tracker l'inscription (Google Ads + Facebook Ads)
-        await TrackingService().logSignUp(method: 'email');
+
+        // Associer l'ID utilisateur AVANT de logger l'inscription (Google Ads + Facebook Ads)
         await TrackingService().setUserId(user.uid);
-        
+        await TrackingService().setUserData(email: email, firstName: firstName, lastName: lastName);
+        await TrackingService().logSignUp(method: 'email');
+
         _setLoading(false);
         return true;
       } else {

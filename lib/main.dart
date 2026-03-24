@@ -8,6 +8,7 @@ import 'package:facture_zen/features/invoicing/views/voice_recording_screen.dart
 import 'package:facture_zen/features/profile/views/profile_screenn.dart';
 import 'package:facture_zen/features/notifications/views/notifications_screen.dart';
 import 'package:facture_zen/revenue_cat_util.dart' as revenue_cat;
+import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -36,6 +37,8 @@ import 'features/profile/views/company_profile_setup_screen.dart';
 import 'features/notifications/viewmodels/notification_viewmodel.dart';
 import 'firebase_options.dart';
 
+import 'common/services/analytics_service.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -43,24 +46,25 @@ void main() async {
   // Charger les variables d'environnement (.env)
   await dotenv.load(fileName: ".env");
 
-  await revenue_cat.initialize(
-  Platform.isAndroid 
-    ? dotenv.env['REVENUE_CAT_PLAY_STORE_KEY'] ?? '' 
-    : dotenv.env['REVENUE_CAT_APP_STORE_KEY'] ?? '',
-  Platform.isAndroid 
-    ? dotenv.env['REVENUE_CAT_PLAY_STORE_KEY'] ?? '' 
-    : dotenv.env['REVENUE_CAT_APP_STORE_KEY'] ?? '',
-  debugLogEnabled: true,
-  loadDataAfterLaunch: true,
-);
+  // Initialiser Firebase AVANT tout le reste
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  
+  // S'assurer que la collecte Analytics est activée (important pour first_open)
+  await FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(true);
+
+  // Initialiser RevenueCat APRÈS Firebase
+  await revenue_cat.initialize(
+    dotenv.env['REVENUE_CAT_APP_STORE_KEY'] ?? '', // iOS
+    dotenv.env['REVENUE_CAT_PLAY_STORE_KEY'] ?? '', // Android
+    debugLogEnabled: true,
+    loadDataAfterLaunch: true,
+  );
+
   // Initialiser le tracking (Google Ads + Facebook Ads)
   // Demande la permission ATT sur iOS et active Facebook App Events
   await TrackingService().initialize();
-  
+
   runApp(const MyApp());
 }
 
@@ -195,6 +199,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
           '/settings': (context) => const ProfileScreen(),
           '/notifications': (context) => const NotificationsScreen(),
         },
+        navigatorObservers: [AnalyticsService().observer],
       ),
     );
   }
@@ -266,6 +271,7 @@ class AppInitializer extends StatelessWidget {
       // Utilisateur connecté - d'abord vérifier si un PIN est configuré
       final hasPin = await pinService.hasPin();
       debugPrint('🔐 AppInitializer - hasPin: $hasPin');
+      
       
       if (hasPin) {
         // PIN configuré - aller à l'écran de connexion par PIN

@@ -36,11 +36,11 @@ class LoginViewModel extends ChangeNotifier {
           debugPrint('⚠️ RevenueCat login failed (non-critical): $e');
           // Continue - the user can still use the app
         }
-        
-        // Tracker la connexion (Google Ads)
-        await TrackingService().logLogin(method: 'email');
+
+        // Associer l'ID utilisateur AVANT de logger la connexion (Google Ads)
         await TrackingService().setUserId(user.uid);
-        
+        await TrackingService().logLogin(method: 'email');
+
         _setLoading(false);
         return true;
       } else {
@@ -113,11 +113,14 @@ class LoginViewModel extends ChangeNotifier {
           debugPrint('⚠️ RevenueCat login failed (non-critical): $e');
           // Continue - the user can still use the app
         }
-        
-        // Tracker la connexion Google (Google Ads + Facebook Ads)
-        await TrackingService().logLogin(method: 'google');
+
+        // Associer l'ID utilisateur AVANT de logger la connexion Google (Google Ads + Facebook Ads)
         await TrackingService().setUserId(user.uid);
-        
+
+        // Envoyer sign_up si c'est la première connexion (création de compte via Google)
+        await TrackingService().logSignUp(method: 'google');
+        await TrackingService().logLogin(method: 'google');
+
         _setLoading(false);
         return true;
       } else {
@@ -149,11 +152,14 @@ class LoginViewModel extends ChangeNotifier {
           debugPrint('⚠️ RevenueCat login failed (non-critical): $e');
           // Continue - the user can still use the app
         }
-        
-        // Tracker la connexion Apple (Google Ads + Facebook Ads)
-        await TrackingService().logLogin(method: 'apple');
+
+        // Associer l'ID utilisateur AVANT de logger la connexion Apple (Google Ads + Facebook Ads)
         await TrackingService().setUserId(user.uid);
-        
+
+        // Envoyer sign_up si c'est la première connexion (création de compte via Apple)
+        await TrackingService().logSignUp(method: 'apple');
+        await TrackingService().logLogin(method: 'apple');
+
         _setLoading(false);
         return true;
       } else {

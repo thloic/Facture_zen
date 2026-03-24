@@ -28,11 +28,12 @@ class TrackingService {
       _isTrackingAuthorized = true;
     }
 
+    // Configurer le tracking Facebook selon la permission (doit être fait AVANT logActivateApp)
+    await _facebookAnalytics.setAdvertiserTrackingEnabled(_isTrackingAuthorized);
+    // S'assurer que l'autolog est activé (important si désactivé côté Facebook)
+    await _facebookAnalytics.setAutoLogAppEventsEnabled(true);
     // Activer Facebook App Events
     await _facebookAnalytics.logActivateApp();
-
-    // Configurer le tracking Facebook selon la permission
-    await _facebookAnalytics.setAdvertiserTrackingEnabled(_isTrackingAuthorized);
 
     debugPrint('🎯 TrackingService initialized (authorized: $_isTrackingAuthorized)');
   }
@@ -73,7 +74,10 @@ class TrackingService {
 
   /// Tracker une connexion réussie
   Future<void> logLogin({String? method}) async {
-    await _firebaseAnalytics.logLogin(method: method);
+    await Future.wait([
+      _firebaseAnalytics.logLogin(method: method),
+      _facebookAnalytics.logCustomEvent(eventName: 'fb_mobile_complete_login'),
+    ]);
   }
 
   /// ===== ÉVÉNEMENTS D'ACHAT =====
