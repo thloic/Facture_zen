@@ -698,34 +698,18 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                           height: responsive.getAdaptiveSpacing(14)),
                       ...planInfo.features.map(
                             (feature) => Padding(
-                          padding: EdgeInsets.only(
-                            bottom: responsive.getAdaptiveSpacing(10),
-                          ),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Icon(
-                                Icons.check_circle_rounded,
-                                color: const Color(0xFF10B981),
-                                size: responsive.getAdaptiveSize(19),
+                              padding: EdgeInsets.only(
+                                bottom: responsive.getAdaptiveSpacing(10),
                               ),
-                              SizedBox(
-                                  width:
-                                  responsive.getAdaptiveSpacing(10)),
-                              Expanded(
-                                child: Text(
-                                  feature,
-                                  style: TextStyle(
-                                    fontSize: responsive
-                                        .getAdaptiveTextSize(13),
-                                    color: const Color(0xFF1F2937),
-                                    height: 1.4,
-                                  ),
+                              child: Text(
+                                feature,
+                                style: TextStyle(
+                                  fontSize: responsive.getAdaptiveTextSize(13),
+                                  color: const Color(0xFF1F2937),
+                                  height: 1.4,
                                 ),
                               ),
-                            ],
-                          ),
-                        ),
+                            ),
                       ),
                     ],
                   ),

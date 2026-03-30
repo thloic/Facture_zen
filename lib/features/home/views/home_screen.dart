@@ -1,3 +1,4 @@
+import 'package:facture_zen/common/providers/premium_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../viewmodels/home_viewmodel.dart';
@@ -131,6 +132,30 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
+                    Consumer<PremiumProvider>(
+                      builder: (context, premium, _) {
+                        if (premium.isPremium) {
+                          return Container(
+                            margin: const EdgeInsets.only(top: 4),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF5B5FC7).withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: const Color(0xFF5B5FC7).withOpacity(0.3)),
+                            ),
+                            child: Text(
+                              premium.planName,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF5B5FC7),
+                              ),
+                            ),
+                          );
+                        }
+                        return const SizedBox.shrink();
+                      },
+                    ),
               ],
             ),
           ),
@@ -421,8 +446,15 @@ class _HomeScreenState extends State<HomeScreen> {
             buttonText: 'Abonnement',
             icon: Icons.workspace_premium_outlined,
             backgroundColor: const Color(0xFFFF9F66),
-            onTap: () {
-              Navigator.pushNamed(context, '/subscription-screen');
+            onTap: () async {
+              final subscribed = await Navigator.pushNamed(
+                context,
+                '/subscription-screen',
+              );
+              if (subscribed == true && mounted) {
+                // Rafraîchir les données du home (limite factures, etc.)
+                context.read<HomeViewModel>().loadInitialData();
+              }
             },
           ),
 

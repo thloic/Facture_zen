@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart' show ReadContext;
+import '../../../common/providers/premium_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
@@ -38,7 +40,9 @@ class _InvoiceFinalScreenState extends State<InvoiceFinalScreen> {
   UserProfile? _userProfile;
   bool _isLoadingProfile = true;
   Uint8List? _logoBytes; // Cache des bytes du logo pour le PDF
-  bool _isPremium = false; // Statut premium de l'utilisateur
+
+  // Getter premium depuis le provider
+  bool get _isPremium => context.read<PremiumProvider>().isPremium;
 
   @override
   void initState() {
@@ -49,12 +53,7 @@ class _InvoiceFinalScreenState extends State<InvoiceFinalScreen> {
   /// Charge le profil utilisateur pour récupérer le logo
   Future<void> _loadUserProfile() async {
     try {
-      // Vérifier le statut premium
-      final remainingInvoices = await _invoiceService.getRemainingInvoices();
-      _isPremium = remainingInvoices == -1; // -1 = illimité = premium
-      
       final profile = await _profileService.getUserProfile();
-      
       // Précharger les bytes du logo pour le PDF
       if (profile?.companyLogo != null && profile!.companyLogo!.isNotEmpty) {
         try {
@@ -67,7 +66,6 @@ class _InvoiceFinalScreenState extends State<InvoiceFinalScreen> {
           debugPrint('⚠️ Erreur préchargement logo: $e');
         }
       }
-      
       if (mounted) {
         setState(() {
           _userProfile = profile;
@@ -210,12 +208,15 @@ class _InvoiceFinalScreenState extends State<InvoiceFinalScreen> {
       // Limite atteinte → Afficher le paywall
       debugPrint('⚠️ Limite de factures atteinte ($remainingInvoices restantes)');
       if (mounted) {
-        Navigator.push(
+        final subscribed = await Navigator.push<bool>(
           context,
           MaterialPageRoute(
-            builder: (context) => SubscriptionScreen(remainingInvoices: remainingInvoices),
+            builder: (context) => SubscriptionScreen(
+              remainingInvoices: remainingInvoices,
+            ),
           ),
         );
+        // PremiumProvider se met à jour automatiquement via RevenueCat
       }
       return; // ❌ Ne pas générer le PDF
     }

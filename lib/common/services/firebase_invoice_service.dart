@@ -21,7 +21,11 @@ class FirebaseInvoiceService {
   /// Limite gratuite de factures
   static const int FREE_INVOICE_LIMIT = 3;
   /// Nouveau : compteur global jamais décrémenté
-  static const String TOTAL_INVOICES_CREATED_KEY = 'totalInvoicesCreated';
+  static const String TOTAL_INVOICES_CREATED_KEY = 'totalInvoicesCreated'; // garder pour historique
+  static String get _monthlyCountKey {
+    final now = DateTime.now();
+    return 'invoiceCount_${now.year}_${now.month}'; // ex: invoiceCount_2026_3
+  }
 
   /// Récupère l'utilisateur actuel
   User? get currentUser => _auth.currentUser;
@@ -166,20 +170,21 @@ class FirebaseInvoiceService {
 
       final userData = Map<String, dynamic>.from(snapshot.value as Map);
       final isPremium = userData['isPremium'] as bool? ?? false;
-
-      // ✅ NOUVEAU : Utiliser la limite du plan
+      // Limite du plan (Firebase mis à jour par syncSubscriptionStatus)
       final monthlyLimit = userData['monthlyInvoiceLimit'] as int? ?? FREE_INVOICE_LIMIT;
-      final totalInvoicesCreated = userData[TOTAL_INVOICES_CREATED_KEY] as int? ?? 0;
+      // ✅ Compteur MENSUEL — se remet à zéro chaque mois automatiquement
+      final monthlyCount = userData[_monthlyCountKey] as int? ?? 0;
 
-      // Si premium, vérifier la limite du plan
       if (isPremium) {
-        // Pour les plans premium, vérifier la limite mensuelle
-        // (tu pourrais ajouter un compteur mensuel qui se réinitialise)
-        return totalInvoicesCreated < monthlyLimit;
+        final canCreate = monthlyCount < monthlyLimit;
+        debugPrint('🔒 Premium check: $monthlyCount/$monthlyLimit factures ce mois');
+        return canCreate;
       }
 
-      // Pour le plan gratuit, utiliser FREE_INVOICE_LIMIT
-      return totalInvoicesCreated < FREE_INVOICE_LIMIT;
+      // Plan gratuit
+      final canCreate = monthlyCount < FREE_INVOICE_LIMIT;
+      debugPrint('🔒 Free check: $monthlyCount/$FREE_INVOICE_LIMIT factures ce mois');
+      return canCreate;
 
     } catch (e) {
       debugPrint('❌ Erreur canCreateInvoice: $e');
@@ -269,11 +274,14 @@ class FirebaseInvoiceService {
 
       final userData = Map<String, dynamic>.from(snapshot.value as Map);
       final isPremium = userData['isPremium'] as bool? ?? false;
+      final monthlyCount = userData[_monthlyCountKey] as int? ?? 0;
 
-      if (isPremium) return -1; // -1 = illimité
+      if (isPremium) {
+        final monthlyLimit = userData['monthlyInvoiceLimit'] as int? ?? FREE_INVOICE_LIMIT;
+        return (monthlyLimit - monthlyCount).clamp(0, monthlyLimit);
+      }
 
-      final totalInvoicesCreated = userData[TOTAL_INVOICES_CREATED_KEY] as int? ?? 0;
-      return (FREE_INVOICE_LIMIT - totalInvoicesCreated).clamp(0, FREE_INVOICE_LIMIT);
+      return (FREE_INVOICE_LIMIT - monthlyCount).clamp(0, FREE_INVOICE_LIMIT);
 
     } catch (e) {
       debugPrint('❌ Erreur getRemainingInvoices: $e');
@@ -799,8 +807,12 @@ class FirebaseInvoiceService {
 
   /// Incrémente le compteur global de factures créées (jamais décrémenté)
   Future<void> _incrementTotalInvoicesCreated(String userId) async {
-    final userRef = _database.ref('users/$userId/$TOTAL_INVOICES_CREATED_KEY');
-    await userRef.set(ServerValue.increment(1));
+    // Garder le compteur global historique
+    final totalRef = _database.ref('users/$userId/$TOTAL_INVOICES_CREATED_KEY');
+    await totalRef.set(ServerValue.increment(1));
+    // ✅ Incrémenter le compteur mensuel
+    final monthlyRef = _database.ref('users/$userId/$_monthlyCountKey');
+    await monthlyRef.set(ServerValue.increment(1));
   }
 
   /// Incrémente le compteur de factures

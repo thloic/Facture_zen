@@ -10,31 +10,22 @@ class SubscriptionSyncService {
 
   /// ✅ Map des limites de factures selon l'entitlement
   static const Map<String, SubscriptionPlan> PLAN_LIMITS = {
-    'zen_gratuit': SubscriptionPlan(
-      name: 'Zen Gratuit',
-      monthlyInvoiceLimit: 3,
-      allowedTemplatesCount: 2, // ✅ NOUVEAU
-      isPremium: false,
-    ),
-    'zen_basic': SubscriptionPlan(
-      name: 'Zen Basic',
-      monthlyInvoiceLimit: 100,
-      allowedTemplatesCount: 7, // ✅ NOUVEAU
-      isPremium: true,
-    ),
-    'zen_pro': SubscriptionPlan(
-      name: 'Zen Pro',
-      monthlyInvoiceLimit: 300,
-      allowedTemplatesCount: -1, // -1 = illimité ✅ NOUVEAU
-      isPremium: true,
-    ),
-    'zen_enterprise': SubscriptionPlan(
-      name: 'Zen Enterprise',
-      monthlyInvoiceLimit: 750,
-      allowedTemplatesCount: -1, // -1 = illimité ✅ NOUVEAU
-      isPremium: true,
-    ),
+    'zen_gratuit':    SubscriptionPlan(name: 'Zen Gratuit',    monthlyInvoiceLimit: 3,   allowedTemplatesCount: 2,  isPremium: false),
+    'zen_basic':      SubscriptionPlan(name: 'Zen Basic',      monthlyInvoiceLimit: 15,  allowedTemplatesCount: 7,  isPremium: true),
+    'zen_pro':        SubscriptionPlan(name: 'Zen Pro',        monthlyInvoiceLimit: 300, allowedTemplatesCount: -1, isPremium: true),
+    'zen_entreprise': SubscriptionPlan(name: 'Zen Entreprise', monthlyInvoiceLimit: 750, allowedTemplatesCount: -1, isPremium: true),
+    'rent_up_pro':    SubscriptionPlan(name: 'Zen Pro',        monthlyInvoiceLimit: 300, allowedTemplatesCount: -1, isPremium: true),
   };
+
+  String _resolvePlanKey(String normalizedId) {
+    if (normalizedId.contains('basic'))     return 'zen_basic';
+    if (normalizedId == 'zen_pro')          return 'zen_pro';
+    if (normalizedId == 'rent_up_pro')      return 'rent_up_pro';
+    if (normalizedId.contains('pro'))       return 'zen_pro';
+    if (normalizedId.contains('entreprise') || 
+        normalizedId.contains('enterprise')) return 'zen_entreprise';
+    return normalizedId;
+  }
 
   /// ✅ Synchroniser le statut d'abonnement avec Firebase
   Future<void> syncSubscriptionStatus() async {
@@ -69,9 +60,9 @@ class SubscriptionSyncService {
               .toLowerCase()
               .replaceAll(' ', '_')
               .replaceAll('-', '_');
-          
-          debugPrint('📦 Checking entitlement: $entitlementId → $normalizedId');
-          final plan = PLAN_LIMITS[normalizedId];
+          final planKey = _resolvePlanKey(normalizedId);
+          debugPrint('📦 Checking entitlement: $entitlementId → $normalizedId → $planKey');
+          final plan = PLAN_LIMITS[planKey];
 
           if (plan != null) {
             debugPrint('✅ Plan found: ${plan.name}');
@@ -80,7 +71,7 @@ class SubscriptionSyncService {
               highestPlan = plan;
             }
           } else {
-            debugPrint('❌ Plan not found for: $normalizedId');
+            debugPrint('❌ Plan not found for: $planKey');
           }
         }
 
@@ -180,7 +171,14 @@ class SubscriptionSyncService {
       SubscriptionPlan? highestPlan;
 
       for (var entitlementId in customerInfo.entitlements.active.keys) {
-        final plan = PLAN_LIMITS[entitlementId];
+        // ✅ Même normalisation que syncSubscriptionStatus()
+        final normalizedId = entitlementId
+            .toLowerCase()
+            .replaceAll(' ', '_')
+            .replaceAll('-', '_');
+        final planKey = _resolvePlanKey(normalizedId);
+        debugPrint('🔍 getCurrentPlan: $entitlementId → $planKey');
+        final plan = PLAN_LIMITS[planKey];
 
         if (plan != null) {
           if (highestPlan == null ||

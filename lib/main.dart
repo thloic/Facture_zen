@@ -37,6 +37,8 @@ import 'features/profile/views/company_profile_setup_screen.dart';
 import 'features/notifications/viewmodels/notification_viewmodel.dart';
 import 'firebase_options.dart';
 
+
+import 'common/providers/premium_provider.dart';
 import 'common/services/analytics_service.dart';
 
 void main() async {
@@ -150,6 +152,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     
     return MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (_) => PremiumProvider()), // ← AJOUTER ICI
         Provider<AuthService>.value(value: authService),
         Provider<FirebaseInvoiceService>.value(value: invoiceService),
         ChangeNotifierProvider(

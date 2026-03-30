@@ -59,59 +59,76 @@ class SubscriptionViewModel extends ChangeNotifier {
     debugPrint('   Type: ${package.packageType}');
 
     // Déterminer le plan selon l'identifiant et le type
-    if (identifier.contains('pro') || identifier.contains('premium')) {
+    // ILLIMITÉ (1000+ factures) — 79,99 €
+    if (identifier.contains('illimit') || identifier.contains('unlimit')) {
+      return PlanInfo(
+        badge: 'ILLIMITÉ',
+        badgeColor: const Color(0xFFFFD700),
+        title: 'ILLIMITÉ',
+        subtitle: '1000 factures/mois',
+        features: [
+          '1000 factures/mois',
+          'Modèles de facture illimités',
+          'Transcription vocale IA',
+          'Export PDF instantané',
+          'Chatbot assistance 24h/24 7j/7',
+          'Historique de vos factures',
+        ],
+        isPopular: false,
+      );
+    }
+    // PRO (500 factures) — 49,99 €
+    if (identifier.contains('pro')) {
       return PlanInfo(
         badge: 'PRO',
         badgeColor: const Color(0xFF5B5FC7),
-        title: _cleanTitle(title, 'Pro'),
-        subtitle: description.isNotEmpty
-            ? description
-            : 'Fonctionnalités vocales avancées pour entreprises',
+        title: 'PRO',
+        subtitle: '500 factures/mois',
         features: [
-          '300 factures / mois',
-          'Reconnaissance vocale + API',
-          'Stats + support chat',
-
+          '500 factures/mois',
+          '5 modèles de facture',
+          'Transcription vocale IA',
+          'Export PDF instantané',
+          'Chatbot assistance 24h/24 7j/7',
+          'Historique de vos factures',
         ],
-        isPopular: true,
-      );
-    } else if (identifier.contains('basic') || identifier.contains('standard')) {
-      return PlanInfo(
-        badge: 'BASIC',
-        badgeColor: const Color(0xFF10B981),
-        title: _cleanTitle(title, 'Basic'),
-        subtitle: description.isNotEmpty
-            ? description
-            : 'Pour les petites équipes et l\'utilisation régulière',
-        features: [
-          '100 factures / mois',
-          'SVI DTMF + enregistrement',
-          'Support email',
-
-        ],
-        isPopular: package.packageType == PackageType.monthly,
-      );
-    } else {
-      // Fallback: déterminer selon le type de package
-      final bool isAnnual = package.packageType == PackageType.annual;
-
-      return PlanInfo(
-        badge: isAnnual ? 'ANNUEL' : 'MENSUEL',
-        badgeColor: isAnnual ? const Color(0xFFFFD700) : const Color(0xFF5B5FC7),
-        title: _cleanTitle(title, isAnnual ? 'Annuel' : 'Mensuel'),
-        subtitle: description.isNotEmpty
-            ? description
-            : (isAnnual ? 'Économisez avec l\'abonnement annuel' : 'Flexibilité mensuelle'),
-        features: [
-          '750 factures / mois',
-          'Paiement vocal PCI-DSS + SVI custom',
-          '99,99% SLA + support 24/7',
-
-          if (isAnnual) '2 mois offerts',
-        ],
-        isPopular: isAnnual,
+        isPopular: false,
       );
     }
+    // ESSENTIEL (200 factures) — 19,99 € (le plus recommandé)
+    if (identifier.contains('essentiel') || identifier.contains('essential')) {
+      return PlanInfo(
+        badge: 'ESSENTIEL',
+        badgeColor: const Color(0xFF10B981),
+        title: 'ESSENTIEL',
+        subtitle: '200 factures/mois',
+        features: [
+          '200 factures/mois',
+          '4 modèles de facture',
+          'Transcription vocale IA',
+          'Export PDF instantané',
+          'Chatbot assistance 24h/24 7j/7',
+          'Historique de vos factures',
+        ],
+        isPopular: true, // Le plus recommandé
+      );
+    }
+    // START (80 factures) — 9,99 €
+    return PlanInfo(
+      badge: 'START',
+      badgeColor: Colors.orange,
+      title: 'START',
+      subtitle: '80 factures/mois',
+      features: [
+        '80 factures/mois',
+        '3 modèles de facture',
+        'Transcription vocale IA',
+        'Export PDF instantané',
+        'Chatbot assistance 24h/24 7j/7',
+        'Historique de vos factures',
+      ],
+      isPopular: false,
+    );
   }
 
   /// Nettoyer le titre du produit
@@ -280,7 +297,6 @@ class SubscriptionViewModel extends ChangeNotifier {
 
       if (success) {
         debugPrint('✅ Purchase completed successfully!');
-        
         // 📊 Tracker l'achat (Google Ads + Facebook Ads)
         final price = _selectedPackage!.storeProduct.price;
         final currency = _selectedPackage!.storeProduct.currencyCode;
@@ -293,6 +309,8 @@ class SubscriptionViewModel extends ChangeNotifier {
 
         // ✅ SYNCHRONISER avec Firebase après l'achat
         await _syncService.syncSubscriptionStatus();
+        // PremiumProvider se met à jour automatiquement via le listener RevenueCat
+        // Pas besoin de faire quoi que ce soit d'autre ici ✅
         debugPrint('✅ Subscription synced with Firebase');
       } else {
         _errorMessage = 'L\'achat n\'a pas pu être finalisé';
