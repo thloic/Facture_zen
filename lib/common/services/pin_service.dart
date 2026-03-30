@@ -8,16 +8,59 @@ import 'package:flutter/foundation.dart';
 class PinService {
   static const String _pinKey = 'user_pin';
   static const String _hasPinKey = 'has_pin_configured';
-  
+  static const String _pinEnabledKey = 'pin_enabled'; // ✅ NOUVEAU
+
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
-  
+
   /// Configure les options de stockage sécurisé pour Android
   AndroidOptions _getAndroidOptions() => const AndroidOptions(
-    encryptedSharedPreferences: true,
-  );
+        encryptedSharedPreferences: true,
+      );
+
+  // ─────────────────────────────────────────────
+  // ✅ Gestion de l'activation du PIN
+  // ─────────────────────────────────────────────
+
+  /// Retourne true si le PIN est activé dans les paramètres
+  Future<bool> isPinEnabled() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      // Par défaut : désactivé (false) — le client veut que ce soit facultatif
+      return prefs.getBool(_pinEnabledKey) ?? false;
+    } catch (e) {
+      debugPrint('❌ Erreur isPinEnabled : $e');
+      return false;
+    }
+  }
+
+  /// Active ou désactive le PIN dans les paramètres
+  /// - Si on désactive : supprime le PIN stocké
+  /// - Si on active : le PIN sera créé via PinSetupScreen
+  Future<bool> setPinEnabled(bool enabled) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_pinEnabledKey, enabled);
+
+      // Si on désactive le PIN, on supprime le PIN existant
+      if (!enabled) {
+        await deletePin();
+        debugPrint('✅ PIN désactivé et supprimé');
+      } else {
+        debugPrint('✅ PIN activé (configuration requise)');
+      }
+
+      return true;
+    } catch (e) {
+      debugPrint('❌ Erreur setPinEnabled : $e');
+      return false;
+    }
+  }
+
+  // ─────────────────────────────────────────────
+  // Méthodes existantes
+  // ─────────────────────────────────────────────
 
   /// Sauvegarde le code PIN de manière sécurisée
-  /// @param pin Code PIN à 4 chiffres
   Future<bool> savePin(String pin) async {
     try {
       if (pin.length != 4 || !_isNumeric(pin)) {
@@ -25,19 +68,17 @@ class PinService {
         return false;
       }
 
-      // Hasher le PIN avant de le stocker (simple hash pour l'exemple)
       final hashedPin = _hashPin(pin);
-      
-      // Stocker dans flutter_secure_storage
+
       await _secureStorage.write(
         key: _pinKey,
         value: hashedPin,
         aOptions: _getAndroidOptions(),
       );
 
-      // Marquer que le PIN est configuré dans shared_preferences
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_hasPinKey, true);
+      await prefs.setBool(_pinEnabledKey, true); // ✅ Activer automatiquement après setup
 
       debugPrint('✅ PIN sauvegardé avec succès');
       return true;
@@ -48,7 +89,6 @@ class PinService {
   }
 
   /// Vérifie si le PIN entré correspond au PIN stocké
-  /// @param pin Code PIN à vérifier
   Future<bool> verifyPin(String pin) async {
     try {
       if (pin.length != 4 || !_isNumeric(pin)) {
@@ -69,12 +109,7 @@ class PinService {
       final hashedPin = _hashPin(pin);
       final isValid = hashedPin == storedHashedPin;
 
-      if (isValid) {
-        debugPrint('✅ PIN correct');
-      } else {
-        debugPrint('❌ PIN incorrect');
-      }
-
+      debugPrint(isValid ? '✅ PIN correct' : '❌ PIN incorrect');
       return isValid;
     } catch (e) {
       debugPrint('❌ Erreur lors de la vérification du PIN : $e');
@@ -82,35 +117,45 @@ class PinService {
     }
   }
 
-  /// Vérifie si un PIN est configuré
+  /// Vérifie si un PIN est configuré ET activé
   Future<bool> hasPin() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final hasPinConfigured = prefs.getBool(_hasPinKey) ?? false;
-      debugPrint('🔐 PinService.hasPin() - SharedPreferences has_pin_configured: $hasPinConfigured');
-      
-      // Double vérification : aussi vérifier dans secure storage
+      // ✅ Si le PIN est désactivé dans les paramètres, on retourne false directement
+      final enabled = await isPinEnabled();
+      if (!enabled) {
+        debugPrint('🔐 PinService.hasPin() - PIN désactivé dans les paramètres');
+        return false;
+      }
+
+      // Vérifier si le PIN existe dans SecureStorage (source de vérité)
       final storedPin = await _secureStorage.read(
         key: _pinKey,
         aOptions: _getAndroidOptions(),
       );
-      debugPrint('🔐 PinService.hasPin() - SecureStorage PIN exists: ${storedPin != null}');
       
-      // Si le PIN existe dans secure storage, mettre à jour SharedPreferences
-      if (storedPin != null && !hasPinConfigured) {
-        debugPrint('🔐 Réparation: PIN existe dans SecureStorage mais pas dans SharedPreferences');
-        await prefs.setBool(_hasPinKey, true);
-        return true;
+      if (storedPin == null) {
+        debugPrint('🔐 PinService.hasPin() - Aucun PIN dans SecureStorage');
+        return false;
       }
+
+      // Réparation : PIN existe dans SecureStorage mais pas dans SharedPreferences
+      final prefs = await SharedPreferences.getInstance();
+      final hasPinConfigured = prefs.getBool(_hasPinKey) ?? false;
       
-      return storedPin != null;
+      if (!hasPinConfigured) {
+        debugPrint('🔐 Réparation: PIN existe mais flag has_pin_configured est false');
+        await prefs.setBool(_hasPinKey, true);
+      }
+
+      debugPrint('🔐 PinService.hasPin() - PIN présent et activé ✅');
+      return true;
     } catch (e) {
       debugPrint('❌ Erreur lors de la vérification de l\'existence du PIN : $e');
       return false;
     }
   }
 
-  /// Supprime le PIN (lors de la déconnexion complète)
+  /// Supprime le PIN (lors de la déconnexion ou désactivation)
   Future<bool> deletePin() async {
     try {
       await _secureStorage.delete(
@@ -130,13 +175,10 @@ class PinService {
   }
 
   /// Hash simple du PIN (pour ne pas stocker en clair)
-  /// Dans une vraie app, utiliser bcrypt ou argon2
   String _hashPin(String pin) {
-    // Hash simple : on multiplie chaque chiffre par sa position et on somme
-    // Puis on convertit en string avec un salt
     int hash = 0;
     for (int i = 0; i < pin.length; i++) {
-      hash += int.parse(pin[i]) * (i + 1) * 137; // 137 est notre "salt"
+      hash += int.parse(pin[i]) * (i + 1) * 137;
     }
     return 'PIN_${hash}_HASH';
   }

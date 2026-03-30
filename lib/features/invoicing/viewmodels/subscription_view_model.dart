@@ -48,89 +48,98 @@ class SubscriptionViewModel extends ChangeNotifier {
   }
 
   /// ✅ Obtenir les informations d'un plan selon le package
-  PlanInfo getPlanInfo(Package package) {
-    final identifier = package.identifier.toLowerCase();
-    final title = package.storeProduct.title;
-    final description = package.storeProduct.description;
+  // lib/features/subscription/viewmodels/subscription_view_model.dart
 
-    debugPrint('📦 Analyzing package: $identifier');
-    debugPrint('   Title: $title');
-    debugPrint('   Description: $description');
-    debugPrint('   Type: ${package.packageType}');
+/// Obtenir les informations d'un plan selon le package
+PlanInfo getPlanInfo(Package package) {
+  final identifier = package.identifier.toLowerCase();
+  final title = package.storeProduct.title.toLowerCase();
+  final description = package.storeProduct.description.toLowerCase();
 
-    // Déterminer le plan selon l'identifiant et le type
-    // ILLIMITÉ (1000+ factures) — 79,99 €
-    if (identifier.contains('illimit') || identifier.contains('unlimit')) {
-      return PlanInfo(
-        badge: 'ILLIMITÉ',
-        badgeColor: const Color(0xFFFFD700),
-        title: 'ILLIMITÉ',
-        subtitle: '1000 factures/mois',
-        features: [
-          '1000 factures/mois',
-          'Modèles de facture illimités',
-          'Transcription vocale IA',
-          'Export PDF instantané',
-          'Chatbot assistance 24h/24 7j/7',
-          'Historique de vos factures',
-        ],
-        isPopular: false,
-      );
-    }
-    // PRO (500 factures) — 49,99 €
-    if (identifier.contains('pro')) {
-      return PlanInfo(
-        badge: 'PRO',
-        badgeColor: const Color(0xFF5B5FC7),
-        title: 'PRO',
-        subtitle: '500 factures/mois',
-        features: [
-          '500 factures/mois',
-          '5 modèles de facture',
-          'Transcription vocale IA',
-          'Export PDF instantané',
-          'Chatbot assistance 24h/24 7j/7',
-          'Historique de vos factures',
-        ],
-        isPopular: false,
-      );
-    }
-    // ESSENTIEL (200 factures) — 19,99 € (le plus recommandé)
-    if (identifier.contains('essentiel') || identifier.contains('essential')) {
-      return PlanInfo(
-        badge: 'ESSENTIEL',
-        badgeColor: const Color(0xFF10B981),
-        title: 'ESSENTIEL',
-        subtitle: '200 factures/mois',
-        features: [
-          '200 factures/mois',
-          '4 modèles de facture',
-          'Transcription vocale IA',
-          'Export PDF instantané',
-          'Chatbot assistance 24h/24 7j/7',
-          'Historique de vos factures',
-        ],
-        isPopular: true, // Le plus recommandé
-      );
-    }
-    // START (80 factures) — 9,99 €
+  debugPrint('📦 Analyzing package: $identifier');
+  debugPrint('   Title: $title');
+  debugPrint('   Description: $description');
+
+  // ✅ ILLIMITÉ / ENTREPRISE (1000+ factures) — 79,99 €
+  if (identifier.contains('illimit') || 
+      identifier.contains('unlimit') || 
+      identifier.contains('entreprise') ||
+      identifier.contains('enterprise')) {
     return PlanInfo(
-      badge: 'START',
-      badgeColor: Colors.orange,
-      title: 'START',
-      subtitle: '80 factures/mois',
+      badge: 'ILLIMITÉ',
+      badgeColor: const Color(0xFFFFD700),
+      title: 'ILLIMITÉ',
+      subtitle: 'Factures illimitées',
       features: [
-        '80 factures/mois',
-        '3 modèles de facture',
+        'Factures illimitées',
+        'Modèles de facture illimités',
         'Transcription vocale IA',
         'Export PDF instantané',
-        'Chatbot assistance 24h/24 7j/7',
+        'Chatbot assistance 24/7',
+        'Historique de vos factures',
+        'Support prioritaire 7j/7',
+      ],
+      isPopular: false,
+    );
+  }
+  
+  // ✅ PRO (500 factures) — 49,99 €
+  if (identifier.contains('pro')) {
+    return PlanInfo(
+      badge: 'PRO',
+      badgeColor: const Color(0xFF5B5FC7),
+      title: 'PRO',
+      subtitle: '500 factures',
+      features: [
+        '500 factures/mois',
+        '5 modèles de facture',
+        'Transcription vocale IA',
+        'Export PDF instantané',
+        'Chatbot assistance 24/7',
         'Historique de vos factures',
       ],
       isPopular: false,
     );
   }
-
+  
+  // ✅ ESSENTIEL (200 factures) — 19,99 €
+  if (identifier.contains('essentiel') || 
+      identifier.contains('essential') ||
+      identifier.contains('basic')) {  // ← Ajouter basic ici
+    return PlanInfo(
+      badge: 'ESSENTIEL',
+      badgeColor: const Color(0xFF10B981),
+      title: 'ESSENTIEL',
+      subtitle: '200 factures',
+      features: [
+        '200 factures/mois',
+        '4 modèles de facture',
+        'Transcription vocale IA',
+        'Export PDF instantané',
+        'Chatbot assistance 24/7',
+        'Historique de vos factures',
+      ],
+      isPopular: true,
+    );
+  }
+  
+  // ✅ START (80 factures) — 9,99 € (par défaut)
+  return PlanInfo(
+    badge: 'START',
+    badgeColor: Colors.orange,
+    title: 'START',
+    subtitle: '80 factures',
+    features: [
+      '80 factures/mois',
+      '3 modèles de facture',
+      'Transcription vocale IA',
+      'Export PDF instantané',
+      'Chatbot assistance 24/7',
+      'Historique de vos factures',
+    ],
+    isPopular: false,
+  );
+}
   /// Nettoyer le titre du produit
   String _cleanTitle(String title, String fallback) {
     // Supprimer les préfixes communs de l'App Store/Play Store
@@ -212,22 +221,28 @@ class SubscriptionViewModel extends ChangeNotifier {
 
   /// Sélectionner un package
   void selectPackage(Package package) {
-    _selectedPackage = package;
-    _errorMessage = null;
-    debugPrint('✅ Package selected: ${package.identifier}');
-    
-    // 📊 Tracker l'ajout au panier (Google Ads + Facebook Ads)
-    final price = package.storeProduct.price;
-    final currency = package.storeProduct.currencyCode;
-    TrackingService().logAddToCart(
-      productId: package.identifier,
-      price: price,
-      currency: currency,
-    );
-    
-    notifyListeners();
-  }
-
+  // ✅ LOGS DE DEBUG
+  debugPrint('🔍 PACKAGE SELECTED:');
+  debugPrint('   Identifier: ${package.identifier}');
+  debugPrint('   Product ID: ${package.storeProduct.identifier}'); 
+  debugPrint('   Price: ${package.storeProduct.priceString}');
+  debugPrint('   Title: ${package.storeProduct.title}');
+  
+  _selectedPackage = package;
+  _errorMessage = null;
+  debugPrint('✅ Package selected: ${package.identifier}');
+  
+  // 📊 Tracker l'ajout au panier (Google Ads + Facebook Ads)
+  final price = package.storeProduct.price;
+  final currency = package.storeProduct.currencyCode;
+  TrackingService().logAddToCart(
+    productId: package.identifier,
+    price: price,
+    currency: currency,
+  );
+  
+  notifyListeners();
+}
   /// Vérifier si un package est sélectionné
   bool isPackageSelected(Package package) {
     return _selectedPackage?.identifier == package.identifier;

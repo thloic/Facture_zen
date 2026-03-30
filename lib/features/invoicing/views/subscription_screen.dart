@@ -29,6 +29,109 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     });
   }
 
+  // ✅ Fonction pour mapper les noms des offres selon l'ID RevenueCat
+  String _getDisplayPlanName(String productId, String originalTitle) {
+    switch (productId) {
+      case 'zen-basic-monthly':
+        return 'ESSENTIEL';
+      case 'zen-pro-monthly':
+        return 'PRO';
+      case 'zen-entreprise-monthly':
+        return 'ILLIMITÉ';
+      default:
+        return originalTitle;
+    }
+  }
+
+  // ✅ Fonction pour mapper les descriptions
+  String _getDisplayDescription(String productId, String originalDescription) {
+    switch (productId) {
+      case 'zen-basic-monthly':
+        return '200 factures / mois';
+      case 'zen-pro-monthly':
+        return '500 factures / mois';
+      case 'zen-entreprise-monthly':
+        return 'Factures illimitées';
+      default:
+        return originalDescription;
+    }
+  }
+
+  // ✅ Fonction pour mapper les badges
+  String _getDisplayBadge(String productId, String originalBadge) {
+    switch (productId) {
+      case 'zen-basic-monthly':
+        return 'ESSENTIEL';
+      case 'zen-pro-monthly':
+        return 'PRO';
+      case 'zen-entreprise-monthly':
+        return 'ILLIMITÉ';
+      default:
+        return originalBadge;
+    }
+  }
+
+  // ✅ Fonction pour déterminer si c'est l'offre populaire
+  bool _isPopular(String productId) {
+    // Par exemple, l'offre PRO est populaire
+    return productId == 'zen-pro-monthly';
+  }
+
+  // ✅ Fonction pour les couleurs des badges
+  Color _getBadgeColor(String productId) {
+    switch (productId) {
+      case 'zen-basic-monthly':
+        return const Color(0xFF10B981); // Vert
+      case 'zen-pro-monthly':
+        return const Color(0xFF5B5FC7); // Violet
+      case 'zen-entreprise-monthly':
+        return const Color(0xFFF59E0B); // Orange
+      default:
+        return const Color(0xFF9CA3AF); // Gris
+    }
+  }
+
+  // ✅ Fonction pour les fonctionnalités détaillées
+  List<String> _getFeatures(String productId) {
+    switch (productId) {
+      case 'zen-basic-monthly':
+        return [
+          '✓ 200 factures par mois',
+          '✓ 3 modèles de facture',
+          '✓ Transcription vocale IA',
+          '✓ Export PDF instantané',
+          '✓ Chatbot assistance 24/7',
+          '✓ Historique de vos factures',
+        ];
+      case 'zen-pro-monthly':
+        return [
+          '✓ 500 factures par mois',
+          '✓ 5 modèles de facture',
+          '✓ Transcription vocale IA',
+          '✓ Export PDF instantané',
+          '✓ Chatbot assistance 24/7',
+          '✓ Historique de vos factures',
+          '✓ Support prioritaire',
+        ];
+      case 'zen-entreprise-monthly':
+        return [
+          '✓ Factures illimitées',
+          '✓ Modèles de facture illimités',
+          '✓ Transcription vocale IA',
+          '✓ Export PDF instantané',
+          '✓ Chatbot assistance 24/7',
+          '✓ Historique de vos factures',
+          '✓ Support prioritaire 7j/7',
+          '✓ API personnalisée',
+        ];
+      default:
+        return [
+          '✓ Factures incluses',
+          '✓ Support inclus',
+        ];
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final responsive = ResponsiveUtils(context);
@@ -250,9 +353,11 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                         final package = entry.value;
                         final isSelected = viewModel.isPackageSelected(package);
                         final isExpanded = _expandedIndex == index;
+                        final productId = package.identifier;
 
                         return _buildSubscriptionCard(
                           package: package,
+                          productId: productId,
                           index: index,
                           isSelected: isSelected,
                           isExpanded: isExpanded,
@@ -430,6 +535,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
 
   Widget _buildSubscriptionCard({
     required Package package,
+    required String productId,
     required int index,
     required bool isSelected,
     required bool isExpanded,
@@ -437,9 +543,16 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     required SubscriptionViewModel viewModel,
     required double screenWidth,
   }) {
-    final planInfo = viewModel.getPlanInfo(package);
     final price = viewModel.getPackagePrice(package);
     final billingPeriod = viewModel.getPackageBillingPeriod(package);
+    
+    // ✅ Utiliser les noms d'affichage personnalisés
+    final displayName = _getDisplayPlanName(productId, '');
+    final displayDescription = _getDisplayDescription(productId, '');
+    final displayBadge = _getDisplayBadge(productId, '');
+    final isPopular = _isPopular(productId);
+    final badgeColor = _getBadgeColor(productId);
+    final features = _getFeatures(productId);
 
     // Calculer les tailles adaptatives pour éviter les overflow
     final cardPadding = responsive.getAdaptiveSpacing(14);
@@ -544,11 +657,11 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                                       responsive.getAdaptiveSpacing(5),
                                     ),
                                     decoration: BoxDecoration(
-                                      color: planInfo.badgeColor,
+                                      color: badgeColor,
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Text(
-                                      planInfo.badge,
+                                      displayBadge,
                                       style: TextStyle(
                                         fontSize: responsive
                                             .getAdaptiveTextSize(10),
@@ -559,7 +672,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
-                                  if (planInfo.isPopular)
+                                  if (isPopular)
                                     Container(
                                       padding: EdgeInsets.symmetric(
                                         horizontal:
@@ -604,9 +717,9 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                               SizedBox(
                                   height: responsive.getAdaptiveSpacing(10)),
                               Text(
-                                planInfo.title,
+                                displayName,
                                 style: TextStyle(
-                                  fontSize: responsive.getAdaptiveTextSize(17),
+                                  fontSize: responsive.getAdaptiveTextSize(20),
                                   fontWeight: FontWeight.bold,
                                   color: const Color(0xFF1F2937),
                                   letterSpacing: -0.3,
@@ -617,7 +730,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                               SizedBox(
                                   height: responsive.getAdaptiveSpacing(5)),
                               Text(
-                                planInfo.subtitle,
+                                displayDescription,
                                 style: TextStyle(
                                   fontSize: responsive.getAdaptiveTextSize(12),
                                   color: Colors.grey.shade600,
@@ -696,7 +809,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                       ),
                       SizedBox(
                           height: responsive.getAdaptiveSpacing(14)),
-                      ...planInfo.features.map(
+                      ...features.map(
                             (feature) => Padding(
                               padding: EdgeInsets.only(
                                 bottom: responsive.getAdaptiveSpacing(10),

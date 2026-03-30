@@ -39,14 +39,14 @@ class PremiumProvider extends ChangeNotifier {
 
         if (keys.any((k) => k.contains('entreprise') || k.contains('enterprise'))) {
           _planName = 'Zen Entreprise';
-          _invoiceLimit = 750;
+          _invoiceLimit = 1000;
         } else if (keys.any((k) => k == 'rent_up_pro' || k.contains('pro'))) {
           // Couvre "zen_pro" ET "rent_up_pro"
           _planName = 'Zen Pro';
-          _invoiceLimit = 300;
+          _invoiceLimit = 500;
         } else if (keys.any((k) => k.contains('basic'))) {
           _planName = 'Zen Basic';
-          _invoiceLimit = 15;
+          _invoiceLimit = 200;
         } else {
           _planName = 'Zen Gratuit';
           _invoiceLimit = 3;

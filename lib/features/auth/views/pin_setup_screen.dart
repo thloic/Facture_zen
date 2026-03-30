@@ -5,7 +5,8 @@ import '../../../common/utils/responsive_utils.dart';
 
 /// PinSetupScreen
 /// Écran de configuration du code PIN à 4 chiffres
-/// Affiché après la première inscription
+/// ✅ Le bouton "Passer" a été retiré : le PIN est désormais
+///    activé uniquement depuis les Paramètres (toggle volontaire).
 class PinSetupScreen extends StatefulWidget {
   const PinSetupScreen({Key? key}) : super(key: key);
 
@@ -15,7 +16,7 @@ class PinSetupScreen extends StatefulWidget {
 
 class _PinSetupScreenState extends State<PinSetupScreen> {
   final PinService _pinService = PinService();
-  
+
   String _pin = '';
   String _confirmPin = '';
   bool _isConfirmationStep = false;
@@ -28,12 +29,11 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
 
     setState(() {
       _errorMessage = null;
-      
+
       if (_isConfirmationStep) {
         if (_confirmPin.length < 4) {
           _confirmPin += digit;
-          
-          // Vérifier automatiquement quand 4 chiffres sont entrés
+
           if (_confirmPin.length == 4) {
             _verifyAndSavePin();
           }
@@ -41,13 +41,14 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
       } else {
         if (_pin.length < 4) {
           _pin += digit;
-          
-          // Passer à la confirmation quand 4 chiffres sont entrés
+
           if (_pin.length == 4) {
             Future.delayed(const Duration(milliseconds: 300), () {
-              setState(() {
-                _isConfirmationStep = true;
-              });
+              if (mounted) {
+                setState(() {
+                  _isConfirmationStep = true;
+                });
+              }
             });
           }
         }
@@ -61,7 +62,7 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
 
     setState(() {
       _errorMessage = null;
-      
+
       if (_isConfirmationStep) {
         if (_confirmPin.isNotEmpty) {
           _confirmPin = _confirmPin.substring(0, _confirmPin.length - 1);
@@ -88,10 +89,15 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
 
     try {
       final success = await _pinService.savePin(_pin);
-      
+
       if (success && mounted) {
-        // PIN créé avec succès, rediriger vers l'accueil
-        Navigator.pushReplacementNamed(context, '/home');
+        // ✅ Revenir à l'écran précédent (Paramètres) plutôt que de pousser /home
+        // car PinSetupScreen peut être appelé depuis les Paramètres OU depuis l'onboarding
+        if (Navigator.canPop(context)) {
+          Navigator.pop(context, true); // true = PIN créé avec succès
+        } else {
+          Navigator.pushReplacementNamed(context, '/home');
+        }
       } else {
         setState(() {
           _errorMessage = 'Erreur lors de la sauvegarde du PIN';
@@ -118,9 +124,13 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
     });
   }
 
-  /// Passer cette étape (pour l'instant)
-  void _skip() {
-    Navigator.pushReplacementNamed(context, '/home');
+  /// ✅ Annuler (disponible uniquement en étape 1, appelé depuis AppBar ou bouton retour)
+  void _cancel() {
+    // On désactive le PIN si l'utilisateur annule avant de terminer
+    _pinService.setPinEnabled(false);
+    if (Navigator.canPop(context)) {
+      Navigator.pop(context, false); // false = annulé
+    }
   }
 
   @override
@@ -128,21 +138,30 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
     final responsive = ResponsiveUtils(context);
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
-    
-    // Calculer la taille des boutons en fonction de l'écran
-    final keypadWidth = (screenWidth - responsive.horizontalPadding * 2).clamp(200.0, 300.0);
-    final buttonSize = (keypadWidth - 32) / 3; // 3 colonnes avec espacement
+
+    final keypadWidth =
+        (screenWidth - responsive.horizontalPadding * 2).clamp(200.0, 300.0);
+    final buttonSize = (keypadWidth - 32) / 3;
 
     return Scaffold(
       backgroundColor: Colors.white,
+      // ✅ AppBar avec bouton retour/annuler (uniquement étape 1)
+      appBar: _isConfirmationStep
+          ? null
+          : AppBar(
+              backgroundColor: Colors.white,
+              elevation: 0,
+              leading: IconButton(
+                icon: const Icon(Icons.close, color: Color(0xFF6B7280)),
+                onPressed: _cancel,
+              ),
+            ),
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
             return SingleChildScrollView(
               child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  minHeight: constraints.maxHeight,
-                ),
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
                 child: IntrinsicHeight(
                   child: Padding(
                     padding: EdgeInsets.symmetric(
@@ -153,19 +172,21 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
                       children: [
                         // Logo
                         AppLogo(fontSize: responsive.getAdaptiveTextSize(24)),
-                        
+
                         SizedBox(height: screenHeight * 0.04),
 
                         // Titre et instruction
                         Text(
-                          _isConfirmationStep ? 'Confirmez votre code PIN' : 'Créez votre code PIN',
+                          _isConfirmationStep
+                              ? 'Confirmez votre code PIN'
+                              : 'Créez votre code PIN',
                           style: TextStyle(
                             fontSize: responsive.getAdaptiveTextSize(22),
                             fontWeight: FontWeight.bold,
                             color: const Color(0xFF1F2937),
                           ),
                         ),
-                        
+
                         SizedBox(height: screenHeight * 0.01),
 
                         Text(
@@ -198,7 +219,7 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
 
                         SizedBox(height: screenHeight * 0.04),
 
-                        // Clavier numérique centré avec taille fixe
+                        // Clavier numérique
                         Center(
                           child: SizedBox(
                             width: keypadWidth,
@@ -210,20 +231,7 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
 
                         SizedBox(height: screenHeight * 0.02),
 
-                        // Bouton passer
-                        if (!_isConfirmationStep)
-                          TextButton(
-                            onPressed: _skip,
-                            child: Text(
-                              'Passer pour l\'instant',
-                              style: TextStyle(
-                                color: const Color(0xFF6B7280),
-                                fontSize: responsive.getAdaptiveTextSize(14),
-                              ),
-                            ),
-                          ),
-
-                        // Bouton recommencer (en mode confirmation)
+                        // ✅ Bouton "Recommencer" uniquement en étape de confirmation
                         if (_isConfirmationStep)
                           TextButton(
                             onPressed: _restart,
@@ -236,7 +244,10 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
                               ),
                             ),
                           ),
-                        
+
+                        // ✅ SUPPRIMÉ : bouton "Passer pour l'instant"
+                        // Le PIN est maintenant activé volontairement depuis les Paramètres
+
                         SizedBox(height: screenHeight * 0.02),
                       ],
                     ),
@@ -250,15 +261,14 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
     );
   }
 
-  /// Widget - Affichage des 4 points du PIN
   Widget _buildPinDisplay(ResponsiveUtils responsive) {
     final currentPin = _isConfirmationStep ? _confirmPin : _pin;
-    
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: List.generate(4, (index) {
         final isFilled = index < currentPin.length;
-        
+
         return Container(
           margin: const EdgeInsets.symmetric(horizontal: 12),
           width: 16,
@@ -267,7 +277,9 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
             shape: BoxShape.circle,
             color: isFilled ? const Color(0xFF5B5FC7) : Colors.transparent,
             border: Border.all(
-              color: isFilled ? const Color(0xFF5B5FC7) : const Color(0xFFD1D5DB),
+              color: isFilled
+                  ? const Color(0xFF5B5FC7)
+                  : const Color(0xFFD1D5DB),
               width: 2,
             ),
           ),
@@ -276,66 +288,49 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
     );
   }
 
-  /// Widget - Clavier numérique 3x4
   Widget _buildNumericKeypad(ResponsiveUtils responsive, double buttonSize) {
-    final spacing = 12.0;
-    
+    const spacing = 12.0;
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Ligne 1: 1, 2, 3
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            _buildKeypadButton('1', responsive, buttonSize),
-            SizedBox(width: spacing),
-            _buildKeypadButton('2', responsive, buttonSize),
-            SizedBox(width: spacing),
-            _buildKeypadButton('3', responsive, buttonSize),
-          ],
-        ),
-        SizedBox(height: spacing),
-        // Ligne 2: 4, 5, 6
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            _buildKeypadButton('4', responsive, buttonSize),
-            SizedBox(width: spacing),
-            _buildKeypadButton('5', responsive, buttonSize),
-            SizedBox(width: spacing),
-            _buildKeypadButton('6', responsive, buttonSize),
-          ],
-        ),
-        SizedBox(height: spacing),
-        // Ligne 3: 7, 8, 9
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            _buildKeypadButton('7', responsive, buttonSize),
-            SizedBox(width: spacing),
-            _buildKeypadButton('8', responsive, buttonSize),
-            SizedBox(width: spacing),
-            _buildKeypadButton('9', responsive, buttonSize),
-          ],
-        ),
-        SizedBox(height: spacing),
-        // Ligne 4: vide, 0, effacer
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            SizedBox(width: buttonSize, height: buttonSize), // Espace vide
-            SizedBox(width: spacing),
-            _buildKeypadButton('0', responsive, buttonSize),
-            SizedBox(width: spacing),
-            _buildDeleteButton(responsive, buttonSize),
-          ],
-        ),
+        Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+          _buildKeypadButton('1', responsive, buttonSize),
+          const SizedBox(width: spacing),
+          _buildKeypadButton('2', responsive, buttonSize),
+          const SizedBox(width: spacing),
+          _buildKeypadButton('3', responsive, buttonSize),
+        ]),
+        const SizedBox(height: spacing),
+        Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+          _buildKeypadButton('4', responsive, buttonSize),
+          const SizedBox(width: spacing),
+          _buildKeypadButton('5', responsive, buttonSize),
+          const SizedBox(width: spacing),
+          _buildKeypadButton('6', responsive, buttonSize),
+        ]),
+        const SizedBox(height: spacing),
+        Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+          _buildKeypadButton('7', responsive, buttonSize),
+          const SizedBox(width: spacing),
+          _buildKeypadButton('8', responsive, buttonSize),
+          const SizedBox(width: spacing),
+          _buildKeypadButton('9', responsive, buttonSize),
+        ]),
+        const SizedBox(height: spacing),
+        Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+          SizedBox(width: buttonSize, height: buttonSize),
+          const SizedBox(width: spacing),
+          _buildKeypadButton('0', responsive, buttonSize),
+          const SizedBox(width: spacing),
+          _buildDeleteButton(responsive, buttonSize),
+        ]),
       ],
     );
   }
 
-  /// Widget - Bouton du clavier numérique
-  Widget _buildKeypadButton(String digit, ResponsiveUtils responsive, double size) {
+  Widget _buildKeypadButton(
+      String digit, ResponsiveUtils responsive, double size) {
     return SizedBox(
       width: size,
       height: size,
@@ -355,7 +350,9 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
                 style: TextStyle(
                   fontSize: size * 0.4,
                   fontWeight: FontWeight.w600,
-                  color: _isLoading ? const Color(0xFFD1D5DB) : const Color(0xFF1F2937),
+                  color: _isLoading
+                      ? const Color(0xFFD1D5DB)
+                      : const Color(0xFF1F2937),
                 ),
               ),
             ),
@@ -365,7 +362,6 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
     );
   }
 
-  /// Widget - Bouton effacer
   Widget _buildDeleteButton(ResponsiveUtils responsive, double size) {
     return SizedBox(
       width: size,
@@ -384,7 +380,9 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
               child: Icon(
                 Icons.backspace_outlined,
                 size: size * 0.4,
-                color: _isLoading ? const Color(0xFFD1D5DB) : const Color(0xFF6B7280),
+                color: _isLoading
+                    ? const Color(0xFFD1D5DB)
+                    : const Color(0xFF6B7280),
               ),
             ),
           ),

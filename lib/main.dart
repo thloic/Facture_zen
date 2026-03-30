@@ -37,16 +37,15 @@ import 'features/profile/views/company_profile_setup_screen.dart';
 import 'features/notifications/viewmodels/notification_viewmodel.dart';
 import 'firebase_options.dart';
 
-
 import 'common/providers/premium_provider.dart';
 import 'common/services/analytics_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-
   // Charger les variables d'environnement (.env)
   await dotenv.load(fileName: ".env");
+  print('📁 .env chargé, GEMINI_API_KEY existe: [1m${dotenv.env['GEMINI_API_KEY'] != null}[0m');
 
   // Initialiser Firebase AVANT tout le reste
   await Firebase.initializeApp(
@@ -109,38 +108,34 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     }
   }
 
-  /// Vérifie si un PIN est configuré et force la navigation vers l'écran de PIN
+  /// BLOC 1 - Vérifie si un PIN est configuré ET activé, puis force la navigation
   /// SEULEMENT si l'utilisateur est toujours connecté
   Future<void> _checkPinOnResume() async {
-    // Attendre un peu pour que le widget tree soit stable
     await Future.delayed(const Duration(milliseconds: 300));
 
     final authService = AuthService();
     final pinService = PinService();
 
-    // 1. Vérifier si l'utilisateur est TOUJOURS connecté (pas déconnecté)
     final isAuthenticated = authService.isAuthenticated;
     debugPrint('🔐 Resume - isAuthenticated: $isAuthenticated');
-    
-    // 2. Si déconnecté, ne rien faire (l'app reste sur l'écran de login)
+
     if (!isAuthenticated) {
       debugPrint('🔐 Resume - Utilisateur non authentifié, pas de PIN demandé');
       return;
     }
 
-    // 3. Si connecté ET a un PIN configuré → demander le PIN
+    // ✅ hasPin() vérifie désormais isPinEnabled() en interne
     final hasPin = await pinService.hasPin();
-    debugPrint('🔐 Resume - hasPin: $hasPin');
-    
+    debugPrint('🔐 Resume - hasPin (enabled + configured): $hasPin');
+
     if (hasPin) {
       debugPrint('🔐 Resume - Navigation forcée vers /pin-login');
-      // Forcer la navigation vers l'écran de PIN en supprimant tout l'historique
       _navigatorKey.currentState?.pushNamedAndRemoveUntil(
         '/pin-login',
-        (route) => false, // Supprimer toutes les routes précédentes
+        (route) => false,
       );
     } else {
-      debugPrint('🔐 Resume - Pas de PIN configuré, pas de redirection');
+      debugPrint('🔐 Resume - PIN désactivé ou non configuré, pas de redirection');
     }
   }
 
@@ -250,55 +245,37 @@ class AppInitializer extends StatelessWidget {
     );
   }
 
-  /// Détermine la route initiale en fonction de l'état
+  /// BLOC 2 - Détermine la route initiale en fonction de l'état
   Future<String> _determineInitialRoute() async {
     final authService = AuthService();
     final pinService = PinService();
 
-    // ⚠️ IMPORTANT: Attendre que Firebase Auth ait restauré l'état de l'utilisateur
-    // Le premier événement du stream contient l'état actuel après restauration
     final user = await authService.authStateChanges.first;
     final isAuthenticated = user != null;
     debugPrint('🔐 AppInitializer - isAuthenticated: $isAuthenticated (user: ${user?.email})');
 
     if (isAuthenticated) {
-      // Synchroniser l'utilisateur avec RevenueCat au démarrage
       try {
         await revenue_cat.login(user.uid);
         debugPrint('✅ RevenueCat synchronized with user: ${user.uid}');
       } catch (e) {
         debugPrint('⚠️ Failed to sync RevenueCat on startup: $e');
-        // Non-bloquant: on continue même si RevenueCat échoue
       }
-      
-      // Utilisateur connecté - d'abord vérifier si un PIN est configuré
+
+      // ✅ hasPin() vérifie isPinEnabled() + PIN configuré en interne
       final hasPin = await pinService.hasPin();
-      debugPrint('🔐 AppInitializer - hasPin: $hasPin');
-      
-      
+      debugPrint('🔐 AppInitializer - hasPin (enabled + configured): $hasPin');
+
       if (hasPin) {
-        // PIN configuré - aller à l'écran de connexion par PIN
         debugPrint('🔐 AppInitializer - Navigation vers /pin-login');
         return '/pin-login';
       }
 
-      // Pas de PIN - vérifier si le profil entreprise existe
-      final profileService = FirebaseProfileService();
-      final hasProfile = await profileService.hasProfile();
-      debugPrint('📋 AppInitializer - hasProfile: $hasProfile');
-
-      // Si pas de profil, rediriger vers la configuration
-      if (!hasProfile) {
-        debugPrint('📋 AppInitializer - Redirection vers configuration profil');
-        return '/company-profile-setup';
-      }
-
-      // Profil existe et pas de PIN - aller directement à l'accueil
-      debugPrint('🔐 AppInitializer - Navigation vers /home (pas de PIN)');
+      // Pas de PIN actif — aller directement sur /home, même si le profil entreprise n'est pas configuré
+      debugPrint('🔐 AppInitializer - Navigation vers /home (profil entreprise ignoré)');
       return '/home';
     } else {
-      // Utilisateur non connecté - aller à l'écran de login
-      debugPrint('🔐 AppInitializer - Navigation vers /login (non authentifié)');
+      debugPrint('🔐 AppInitializer - Navigation vers /login');
       return '/login';
     }
   }
