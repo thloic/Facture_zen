@@ -29,13 +29,13 @@ class SubscriptionViewModel extends ChangeNotifier {
   String getPackageBillingPeriod(Package package) {
     switch (package.packageType) {
       case PackageType.monthly:
-        return '/mois';
+        return '';
       case PackageType.annual:
-        return '/an';
+        return '';
       case PackageType.weekly:
         return '/semaine';
       case PackageType.lifetime:
-        return 'à vie';
+        return '';
       case PackageType.twoMonth:
         return '/2 mois';
       case PackageType.threeMonth:
@@ -52,19 +52,15 @@ class SubscriptionViewModel extends ChangeNotifier {
 
 /// Obtenir les informations d'un plan selon le package
 PlanInfo getPlanInfo(Package package) {
-  final identifier = package.identifier.toLowerCase();
-  final title = package.storeProduct.title.toLowerCase();
-  final description = package.storeProduct.description.toLowerCase();
+  final identifier = package.identifier;
+  final productId = package.storeProduct.identifier;
+  
+  debugPrint('📦 Analyzing package:');
+  debugPrint('   Identifier: $identifier');
+  debugPrint('   Product ID: $productId');
 
-  debugPrint('📦 Analyzing package: $identifier');
-  debugPrint('   Title: $title');
-  debugPrint('   Description: $description');
-
-  // ✅ ILLIMITÉ / ENTREPRISE (1000+ factures) — 79,99 €
-  if (identifier.contains('illimit') || 
-      identifier.contains('unlimit') || 
-      identifier.contains('entreprise') ||
-      identifier.contains('enterprise')) {
+  // ✅ Mapper par product ID (plus fiable)
+  if (productId.contains('enterprise') || identifier.contains('lifetime')) {
     return PlanInfo(
       badge: 'ILLIMITÉ',
       badgeColor: const Color(0xFFFFD700),
@@ -83,8 +79,8 @@ PlanInfo getPlanInfo(Package package) {
     );
   }
   
-  // ✅ PRO (500 factures) — 49,99 €
-  if (identifier.contains('pro')) {
+  // ✅ PRO (500 factures) — 49,99 $
+  if (productId.contains('pro') || identifier.contains('annual')) {
     return PlanInfo(
       badge: 'PRO',
       badgeColor: const Color(0xFF5B5FC7),
@@ -98,40 +94,20 @@ PlanInfo getPlanInfo(Package package) {
         'Chatbot assistance 24/7',
         'Historique de vos factures',
       ],
-      isPopular: false,
+      isPopular: true,  // ✅ PRO est populaire
     );
   }
   
-  // ✅ ESSENTIEL (200 factures) — 19,99 €
-  if (identifier.contains('essentiel') || 
-      identifier.contains('essential') ||
-      identifier.contains('basic')) {  // ← Ajouter basic ici
-    return PlanInfo(
-      badge: 'ESSENTIEL',
-      badgeColor: const Color(0xFF10B981),
-      title: 'ESSENTIEL',
-      subtitle: '200 factures',
-      features: [
-        '200 factures/mois',
-        '4 modèles de facture',
-        'Transcription vocale IA',
-        'Export PDF instantané',
-        'Chatbot assistance 24/7',
-        'Historique de vos factures',
-      ],
-      isPopular: true,
-    );
-  }
-  
-  // ✅ START (80 factures) — 9,99 € (par défaut)
+  // ✅ ESSENTIEL (200 factures) — 19,99 $
+  // Par défaut, tout ce qui n'est pas Pro ou Enterprise
   return PlanInfo(
-    badge: 'START',
-    badgeColor: Colors.orange,
-    title: 'START',
-    subtitle: '80 factures',
+    badge: 'ESSENTIEL',
+    badgeColor: const Color(0xFF10B981),
+    title: 'ESSENTIEL',
+    subtitle: '200 factures',
     features: [
-      '80 factures/mois',
-      '3 modèles de facture',
+      '200 factures/mois',
+      '4 modèles de facture',
       'Transcription vocale IA',
       'Export PDF instantané',
       'Chatbot assistance 24/7',

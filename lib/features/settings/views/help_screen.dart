@@ -82,7 +82,7 @@ class HelpScreen extends StatelessWidget {
           _buildContactCard(
             icon: Icons.email_outlined,
             title: 'Email',
-            subtitle: 'contact@voxia.fr.',
+            subtitle: 'support@voxin-app.com.',
             responsive: responsive,
           ),
 

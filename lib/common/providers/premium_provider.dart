@@ -17,7 +17,6 @@ class PremiumProvider extends ChangeNotifier {
 
   Future<void> _init() async {
     await refresh();
-    // Écoute RevenueCat en temps réel — se déclenche automatiquement après un achat
     Purchases.addCustomerInfoUpdateListener((info) async {
       rc_util.customerInfo = info;
       await refresh();
@@ -33,27 +32,36 @@ class PremiumProvider extends ChangeNotifier {
       final active = info.entitlements.active;
       _isPremium = active.isNotEmpty;
 
-      // Normaliser les clés (RevenueCat peut renvoyer "Zen Basic" ou "zen_basic")
       final keys = active.keys.map((k) =>
-          k.toLowerCase().replaceAll(' ', '_').replaceAll('-', '_')).toSet();
+          k.toLowerCase()
+           .replaceAll(' ', '_')
+           .replaceAll('-', '_')).toSet();
 
-        if (keys.any((k) => k.contains('entreprise') || k.contains('enterprise'))) {
-          _planName = 'Zen Entreprise';
-          _invoiceLimit = 1000;
-        } else if (keys.any((k) => k == 'rent_up_pro' || k.contains('pro'))) {
-          // Couvre "zen_pro" ET "rent_up_pro"
-          _planName = 'Zen Pro';
-          _invoiceLimit = 500;
-        } else if (keys.any((k) => k.contains('basic'))) {
-          _planName = 'Zen Basic';
-          _invoiceLimit = 200;
-        } else {
-          _planName = 'Zen Gratuit';
-          _invoiceLimit = 3;
+      debugPrint('🔑 Active entitlement keys: $keys');
+
+      // ✅ CORRIGÉ : limites alignées sur le cahier des charges
+      if (keys.any((k) => k.contains('entreprise') || k.contains('enterprise'))) {
+        _planName = 'Zen Entreprise';
+        _invoiceLimit = 750;
+      } else if (keys.any((k) => k.contains('pro'))) {
+        _planName = 'Zen Pro';
+        _invoiceLimit = 500;
+      } else if (keys.any((k) => k.contains('basic'))) {
+        _planName = 'Zen Basic';
+        _invoiceLimit = 200;
+      } else if (_isPremium) {
+        // ✅ AJOUTÉ : fallback si entitlement actif mais non reconnu
+        debugPrint('⚠️ Entitlement non reconnu: $keys');
+        _planName = 'Zen Basic';
+        _invoiceLimit = 200;
+      } else {
+        _planName = 'Zen Gratuit';
+        _invoiceLimit = 3;
       }
 
       notifyListeners();
-      debugPrint('✅ PremiumProvider: $_planName | premium: $_isPremium | limite: $_invoiceLimit');
+      debugPrint(
+          '✅ PremiumProvider: $_planName | premium: $_isPremium | limite: $_invoiceLimit');
     } catch (e) {
       debugPrint('❌ PremiumProvider.refresh: $e');
     }

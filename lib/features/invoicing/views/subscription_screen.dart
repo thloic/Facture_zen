@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../viewmodels/subscription_view_model.dart';
 import '../../../common/utils/responsive_utils.dart';
 import '../services/revenue_cat_service.dart' show Package;
+import '../../../common/providers/premium_provider.dart';
 
 /// Écran d'abonnement amélioré (limite atteinte)
 class SubscriptionScreen extends StatefulWidget {
@@ -27,109 +28,6 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<SubscriptionViewModel>().loadOfferings();
     });
-  }
-
-  // ✅ Fonction pour mapper les noms des offres selon l'ID RevenueCat
-  String _getDisplayPlanName(String productId, String originalTitle) {
-    switch (productId) {
-      case 'zen-basic-monthly':
-        return 'ESSENTIEL';
-      case 'zen-pro-monthly':
-        return 'PRO';
-      case 'zen-entreprise-monthly':
-        return 'ILLIMITÉ';
-      default:
-        return originalTitle;
-    }
-  }
-
-  // ✅ Fonction pour mapper les descriptions
-  String _getDisplayDescription(String productId, String originalDescription) {
-    switch (productId) {
-      case 'zen-basic-monthly':
-        return '200 factures / mois';
-      case 'zen-pro-monthly':
-        return '500 factures / mois';
-      case 'zen-entreprise-monthly':
-        return 'Factures illimitées';
-      default:
-        return originalDescription;
-    }
-  }
-
-  // ✅ Fonction pour mapper les badges
-  String _getDisplayBadge(String productId, String originalBadge) {
-    switch (productId) {
-      case 'zen-basic-monthly':
-        return 'ESSENTIEL';
-      case 'zen-pro-monthly':
-        return 'PRO';
-      case 'zen-entreprise-monthly':
-        return 'ILLIMITÉ';
-      default:
-        return originalBadge;
-    }
-  }
-
-  // ✅ Fonction pour déterminer si c'est l'offre populaire
-  bool _isPopular(String productId) {
-    // Par exemple, l'offre PRO est populaire
-    return productId == 'zen-pro-monthly';
-  }
-
-  // ✅ Fonction pour les couleurs des badges
-  Color _getBadgeColor(String productId) {
-    switch (productId) {
-      case 'zen-basic-monthly':
-        return const Color(0xFF10B981); // Vert
-      case 'zen-pro-monthly':
-        return const Color(0xFF5B5FC7); // Violet
-      case 'zen-entreprise-monthly':
-        return const Color(0xFFF59E0B); // Orange
-      default:
-        return const Color(0xFF9CA3AF); // Gris
-    }
-  }
-
-  // ✅ Fonction pour les fonctionnalités détaillées
-  List<String> _getFeatures(String productId) {
-    switch (productId) {
-      case 'zen-basic-monthly':
-        return [
-          '✓ 200 factures par mois',
-          '✓ 3 modèles de facture',
-          '✓ Transcription vocale IA',
-          '✓ Export PDF instantané',
-          '✓ Chatbot assistance 24/7',
-          '✓ Historique de vos factures',
-        ];
-      case 'zen-pro-monthly':
-        return [
-          '✓ 500 factures par mois',
-          '✓ 5 modèles de facture',
-          '✓ Transcription vocale IA',
-          '✓ Export PDF instantané',
-          '✓ Chatbot assistance 24/7',
-          '✓ Historique de vos factures',
-          '✓ Support prioritaire',
-        ];
-      case 'zen-entreprise-monthly':
-        return [
-          '✓ Factures illimitées',
-          '✓ Modèles de facture illimités',
-          '✓ Transcription vocale IA',
-          '✓ Export PDF instantané',
-          '✓ Chatbot assistance 24/7',
-          '✓ Historique de vos factures',
-          '✓ Support prioritaire 7j/7',
-          '✓ API personnalisée',
-        ];
-      default:
-        return [
-          '✓ Factures incluses',
-          '✓ Support inclus',
-        ];
-    }
   }
 
   @override
@@ -285,43 +183,46 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
 
                     SizedBox(height: responsive.getAdaptiveSpacing(10)),
 
-                    // Message avec meilleur formatage
-                    Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: responsive.getAdaptiveSpacing(16),
-                        vertical: responsive.getAdaptiveSpacing(12),
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.orange.shade50,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: Colors.orange.shade200,
-                          width: 1,
+                    // ✅ Message de limite de 3 factures (SEULEMENT si plan gratuit ET limite atteinte)
+                    if (widget.remainingInvoices <= 0)
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: responsive.getAdaptiveSpacing(16),
+                          vertical: responsive.getAdaptiveSpacing(12),
                         ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.info_outline,
-                            color: Colors.orange.shade700,
-                            size: responsive.getAdaptiveSize(20),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.shade50,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Colors.orange.shade200,
+                            width: 1,
                           ),
-                          SizedBox(width: responsive.getAdaptiveSpacing(8)),
-                          Flexible(
-                            child: Text(
-                              'Limite de 3 factures atteinte',
-                              style: TextStyle(
-                                fontSize: responsive.getAdaptiveTextSize(14),
-                                color: Colors.orange.shade900,
-                                fontWeight: FontWeight.w500,
-                              ),
-                              textAlign: TextAlign.center,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.info_outline,
+                              color: Colors.orange.shade700,
+                              size: responsive.getAdaptiveSize(20),
                             ),
-                          ),
-                        ],
-                      ),
-                    ),
+                            SizedBox(width: responsive.getAdaptiveSpacing(8)),
+                            Flexible(
+                              child: Text(
+                                'Limite de 3 factures atteinte',
+                                style: TextStyle(
+                                  fontSize: responsive.getAdaptiveTextSize(14),
+                                  color: Colors.orange.shade900,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    else
+                      const SizedBox.shrink(),
 
                     SizedBox(height: responsive.getAdaptiveSpacing(28)),
 
@@ -353,11 +254,9 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                         final package = entry.value;
                         final isSelected = viewModel.isPackageSelected(package);
                         final isExpanded = _expandedIndex == index;
-                        final productId = package.identifier;
 
                         return _buildSubscriptionCard(
                           package: package,
-                          productId: productId,
                           index: index,
                           isSelected: isSelected,
                           isExpanded: isExpanded,
@@ -535,7 +434,6 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
 
   Widget _buildSubscriptionCard({
     required Package package,
-    required String productId,
     required int index,
     required bool isSelected,
     required bool isExpanded,
@@ -546,17 +444,89 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     final price = viewModel.getPackagePrice(package);
     final billingPeriod = viewModel.getPackageBillingPeriod(package);
     
-    // ✅ Utiliser les noms d'affichage personnalisés
-    final displayName = _getDisplayPlanName(productId, '');
-    final displayDescription = _getDisplayDescription(productId, '');
-    final displayBadge = _getDisplayBadge(productId, '');
-    final isPopular = _isPopular(productId);
-    final badgeColor = _getBadgeColor(productId);
-    final features = _getFeatures(productId);
+    // ✅ CORRECTION : Utiliser le vrai Product ID de l'App Store
+    final realProductId = package.storeProduct.identifier;
+    
+    debugPrint('🔍 Building card: packageId=${package.identifier}, realProductId=$realProductId');
+    
+    // ✅ Mapper par REAL PRODUCT ID
+    String displayName;
+    String displayDescription;
+    String displayBadge;
+    bool isPopular;
+    Color badgeColor;
+    List<String> features;
+    
+    if (realProductId.contains('enterprise')) {
+      displayName = 'ILLIMITÉ';
+      displayDescription = 'Factures illimitées';
+      displayBadge = 'ILLIMITÉ';
+      isPopular = false;
+      badgeColor = const Color(0xFFF59E0B);
+      features = [
+        'Factures illimitées',
+        'Modèles de facture illimités',
+        'Transcription vocale IA',
+        'Export PDF instantané',
+        'Chatbot assistance 24/7',
+        'Historique de vos factures',
+        'Support prioritaire 7j/7',
+      ];
+    } else if (realProductId.contains('pro')) {
+      displayName = 'PRO';
+      displayDescription = '500 factures';
+      displayBadge = 'PRO';
+      isPopular = true;  // POPULAIRE
+      badgeColor = const Color(0xFF5B5FC7);
+      features = [
+        '500 factures/mois',
+        '5 modèles de facture',
+        'Transcription vocale IA',
+        'Export PDF instantané',
+        'Chatbot assistance 24/7',
+        'Historique de vos factures',
+        'Support prioritaire',
+      ];
+    } else {
+      // basic par défaut
+      displayName = 'ESSENTIEL';
+      displayDescription = '200 factures';
+      displayBadge = 'ESSENTIEL';
+      isPopular = false;
+      badgeColor = const Color(0xFF10B981);
+      features = [
+        '200 factures/mois',
+        '4 modèles de facture',
+        'Transcription vocale IA',
+        'Export PDF instantané',
+        'Chatbot assistance 24/7',
+        'Historique de vos factures',
+      ];
+    }
 
     // Calculer les tailles adaptatives pour éviter les overflow
     final cardPadding = responsive.getAdaptiveSpacing(14);
     final availableWidth = screenWidth - (responsive.horizontalPadding * 2);
+
+    // Détecter si ce package correspond au plan actif de l'utilisateur
+    final premiumProvider = context.read<PremiumProvider>();
+    final isPremiumUser = premiumProvider.isPremium;
+    final activePlanName = premiumProvider.planName.toLowerCase();
+    bool isActivePlan = false;
+    if (isPremiumUser) {
+      if (realProductId.contains('enterprise') && activePlanName.contains('entreprise')) {
+        isActivePlan = true;
+      } else if (realProductId.contains('pro') && activePlanName.contains('pro')) {
+        isActivePlan = true;
+      } else if (!realProductId.contains('enterprise') && !realProductId.contains('pro') &&
+          (activePlanName.contains('basic') || activePlanName.contains('essentiel'))) {
+        isActivePlan = true;
+      }
+    }
+
+    // Calculer si cette carte doit être grisée (ne pas griser le plan actif)
+    final hasSelection = viewModel.selectedPackage != null;
+    final shouldGray = hasSelection && !isSelected && !isActivePlan;
 
     return Padding(
       padding: EdgeInsets.only(bottom: responsive.getAdaptiveSpacing(14)),
@@ -567,9 +537,11 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
             _expandedIndex = isExpanded ? null : index;
           });
         },
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOut,
+        child: Opacity(
+          opacity: shouldGray ? 0.5 : 1.0,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
           decoration: BoxDecoration(
             border: Border.all(
               color: isSelected
@@ -712,6 +684,41 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                                         ],
                                       ),
                                     ),
+                                  // Badge VOTRE PLAN si plan actif
+                                  if (isActivePlan)
+                                    Container(
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: responsive.getAdaptiveSpacing(8),
+                                        vertical: responsive.getAdaptiveSpacing(5),
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF10B981),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            Icons.check_circle,
+                                            size: responsive.getAdaptiveSize(11),
+                                            color: Colors.white,
+                                          ),
+                                          SizedBox(width: responsive.getAdaptiveSpacing(3)),
+                                          Flexible(
+                                            child: Text(
+                                              'VOTRE PLAN',
+                                              style: TextStyle(
+                                                fontSize: responsive.getAdaptiveTextSize(9),
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.white,
+                                                letterSpacing: 0.5,
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
                                 ],
                               ),
                               SizedBox(
@@ -739,6 +746,31 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                               ),
+                              // Afficher factures restantes si c'est le plan actif
+                              if (isActivePlan) ...[  
+                                SizedBox(height: responsive.getAdaptiveSpacing(6)),
+                                Container(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: responsive.getAdaptiveSpacing(8),
+                                    vertical: responsive.getAdaptiveSpacing(4),
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF10B981).withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(
+                                      color: const Color(0xFF10B981).withOpacity(0.3),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    '${widget.remainingInvoices} facture${widget.remainingInvoices > 1 ? 's' : ''} restante${widget.remainingInvoices > 1 ? 's' : ''} ce mois',
+                                    style: TextStyle(
+                                      fontSize: responsive.getAdaptiveTextSize(11),
+                                      color: const Color(0xFF059669),
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                         ),
@@ -830,6 +862,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                     : const SizedBox.shrink(),
               ),
             ],
+          ),
           ),
         ),
       ),

@@ -11,9 +11,10 @@ class ChatFallbackService {
     
     'prix abonnement': 
         '💰 Nos offres :\n\n'
-        '• Gratuit : 5 devis/mois\n'
-        '• Premium : devis illimités, templates pro\n'
-        '• Tarifs à partir de 9,99€/mois\n\n'
+        '• Gratuit : 3 factures/mois\n'
+        '• ESSENTIEL : 200 factures/mois (19,99€)\n'
+        '• PRO : 500 factures/mois (49,99€)\n'
+        '• ILLIMITÉ : factures illimitées (79,99€)\n\n'
         'Voir détails dans l\'onglet "Abonnement"',
     
     'supprimer devis': 

@@ -772,7 +772,7 @@ class _CompanyProfileSetupScreenState extends State<CompanyProfileSetupScreen> w
               child: _buildModernTextField(
                 controller: _companyEmailController,
                 label: 'Email',
-                hint: 'contact@entreprise.fr',
+                hint: 'contact@voxin-app.com',
                 icon: Icons.email_rounded,
                 keyboardType: TextInputType.emailAddress,
                 validator: _validateEmail,

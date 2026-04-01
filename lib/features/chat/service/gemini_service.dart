@@ -52,7 +52,7 @@ Tu es l'assistant virtuel de VoxIn, une application mobile qui permet de génér
 RÈGLES IMPORTANTES :
 1. Réponds de manière **courte et concise** (max 3-4 phrases)
 2. Utilise un ton **professionnel mais amical**
-3. Si tu ne connais pas la réponse, suggère de contacter contact@voxia.fr
+3. Si tu ne connais pas la réponse, suggère de contacter support@voxin-app.com
 4. Pour les problèmes techniques, demande à l'utilisateur de vérifier :
    - Autorisations de l'application
    - Connexion internet
@@ -153,7 +153,7 @@ Future<String> sendMessage(String message) async {
     return "Je rencontre une difficulté technique. 🤔\n\n"
         "En attendant, vous pouvez :\n"
         "• Consulter notre FAQ dans l'app\n"
-        "• Contacter notre support : contact@voxia.fr\n\n"
+        "• Contacter notre support : support@voxin-app.com\n\n"
         "Nous revenons vers vous rapidement !";
   }
 

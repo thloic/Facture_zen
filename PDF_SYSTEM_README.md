@@ -59,7 +59,7 @@ final invoice = InvoiceModel(
   companyName: 'Mon Entreprise',
   companyAddress: '456 Avenue Test\n75002 Paris',
   companyPhone: '+33 1 23 45 67 89',
-  companyEmail: 'contact@entreprise.fr',
+  companyEmail: 'contact@voxin-app.com',
   taxRate: 20.0,
 );
 

@@ -11,10 +11,10 @@ class SubscriptionSyncService {
   /// ✅ Map des limites de factures selon l'entitlement
   static const Map<String, SubscriptionPlan> PLAN_LIMITS = {
     'zen_gratuit':    SubscriptionPlan(name: 'Zen Gratuit',    monthlyInvoiceLimit: 3,   allowedTemplatesCount: 2,  isPremium: false),
-    'zen_basic':      SubscriptionPlan(name: 'Zen Basic',      monthlyInvoiceLimit: 15,  allowedTemplatesCount: 7,  isPremium: true),
-    'zen_pro':        SubscriptionPlan(name: 'Zen Pro',        monthlyInvoiceLimit: 300, allowedTemplatesCount: -1, isPremium: true),
+    'zen_basic':      SubscriptionPlan(name: 'Zen Basic',      monthlyInvoiceLimit: 200, allowedTemplatesCount: 7,  isPremium: true),
+    'zen_pro':        SubscriptionPlan(name: 'Zen Pro',        monthlyInvoiceLimit: 500, allowedTemplatesCount: -1, isPremium: true),
     'zen_entreprise': SubscriptionPlan(name: 'Zen Entreprise', monthlyInvoiceLimit: 750, allowedTemplatesCount: -1, isPremium: true),
-    'rent_up_pro':    SubscriptionPlan(name: 'Zen Pro',        monthlyInvoiceLimit: 300, allowedTemplatesCount: -1, isPremium: true),
+    'rent_up_pro':    SubscriptionPlan(name: 'Zen Pro',        monthlyInvoiceLimit: 500, allowedTemplatesCount: -1, isPremium: true),
   };
 
   String _resolvePlanKey(String normalizedId) {

@@ -224,7 +224,7 @@ InvoiceModel(
   companyName: '',
   companyAddress: '',
   companyPhone: '',
-  companyEmail: '',
+  companyEmail: 'contact@voxin-app.com',
   companySiret: '',
 )
 ```
@@ -242,7 +242,7 @@ companyAddress: ''
 companyName: 'SARL'
 companyAddress: '10 rue'
 companyPhone: '+336985231456'
-companyEmail: 'contact@sarl.fr'
+companyEmail: 'support@voxin-app.com'
 companySiret: '12364507'
 ```
 

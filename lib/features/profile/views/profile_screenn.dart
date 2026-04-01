@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../../common/widgets/curved_bottom_nav.dart';
 import '../../invoicing/services/subscription_sync_service.dart';
 import '../../invoicing/views/subscription_screen.dart';
+import '../../../common/services/firebase_invoice_service.dart';
 import '../viewmodels/profile_viewmodel.dart';
 import '../../../common/utils/responsive_utils.dart';
 import '../../auth/views/login_screen.dart';
@@ -660,10 +661,12 @@ class ProfileScreen extends StatelessWidget {
     BuildContext context,
     ProfileViewModel viewModel,
   ) async {
+    final remaining = await FirebaseInvoiceService().getRemainingInvoices();
+    if (!context.mounted) return;
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => const SubscriptionScreen(remainingInvoices: 0),
+        builder: (context) => SubscriptionScreen(remainingInvoices: remaining),
       ),
     );
 

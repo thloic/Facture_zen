@@ -89,7 +89,7 @@ class ChatViewModel extends ChangeNotifier {
         _messages[index] = ChatMessage(
           id: DateTime.now().millisecondsSinceEpoch.toString(),
           content: '❌ Désolé, je rencontre un problème technique.\n\n'
-              'Contactez contact@voxia.fr pour une assistance.',
+              'Contactez support@voxin-app.com pour une assistance.',
           type: MessageType.error,
           timestamp: DateTime.now(),
         );
@@ -155,7 +155,7 @@ class ChatViewModel extends ChangeNotifier {
 
   String _getDefaultResponse() {
     return "Je ne peux pas répondre pour le moment. 🤔\n\n"
-        "Contactez notre support : contact@voxia.fr";
+        "Contactez notre support : support@voxin-app.com";
   }
 
   void clearMessages() {

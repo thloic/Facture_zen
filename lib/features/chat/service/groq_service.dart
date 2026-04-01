@@ -87,7 +87,7 @@ class GroqService {
         lowerMsg.contains('assistance') || 
         lowerMsg.contains('support') ||
         lowerMsg.contains('joindre')) {
-      return "Pour contacter l'assistance humaine, envoyez un email à contact@voxia.fr. Nous vous répondrons dans les meilleurs délais.";
+      return "Pour contacter l'assistance humaine, envoyez un email à support@voxin-app.com. Nous vous répondrons dans les meilleurs délais.";
     }
     
     // Création facture/devis
@@ -106,7 +106,7 @@ class GroqService {
         lowerMsg.contains('tarif') || 
         lowerMsg.contains('prix') ||
         lowerMsg.contains('premium')) {
-      return "Nos offres : START à 9,99€/mois (80 factures), ESSENTIEL à 19,99€/mois (200 factures), PRO à 49,99€/mois (500 factures), ILLIMITÉ à 79,99€/mois (1000+ factures). Vous pouvez souscrire dans l'onglet Abonnement.";
+      return "Nos offres : Gratuit (3 factures/mois), ESSENTIEL à 19,99€/mois (200 factures), PRO à 49,99€/mois (500 factures), ILLIMITÉ à 79,99€/mois (factures illimitées). Vous pouvez souscrire dans l'onglet Abonnement.";
     }
     
     // Micro / reconnaissance vocale
@@ -149,20 +149,20 @@ REGLES STRICTES :
 - Reponds en 3-4 phrases maximum
 - Sois court et precis
 - N'utilise pas d'emojis
-- Si tu ne connais pas la reponse, dis : "Je ne peux pas repondre a cette question. Contactez notre support a contact@voxia.fr"
+- Si tu ne connais pas la reponse, dis : "Je ne peux pas repondre a cette question. Contactez notre support a support@voxin-app.com"
 
 FONCTIONNALITES DE VOXIN :
 - Navigation : l'application a 4 onglets en bas : Accueil, Facturation, Historique, Profil
 - Facture/Devis vocal : accessible dans l'onglet Facturation, bouton microphone
 - Historique : accessible dans l'onglet Historique, liste tous les documents
-- Abonnements : START 9,99€ (80 factures), ESSENTIEL 19,99€ (200 factures), PRO 49,99€ (500 factures), ILLIMITE 79,99€ (1000+ factures)
+- Abonnements : Gratuit (3 factures), ESSENTIEL 19,99€ (200 factures), PRO 49,99€ (500 factures), ILLIMITE 79,99€ (illimitees)
 - Personnalisation : logo et infos entreprise dans l'onglet Profil
 - Partage : disponible depuis l'ecran de confirmation ou l'historique
 
 EXEMPLES DE REPONSES :
 - Comment creer une facture ? → "Pour generer une facture, allez sur l'onglet Facturation (deuxieme onglet en bas). Cliquez sur le bouton microphone et dictez les informations. La facture sera generee automatiquement."
-- Tarifs ? → "Nos offres : START 9,99€ (80 factures), ESSENTIEL 19,99€ (200 factures). Souscrivez dans l'onglet Abonnement."
-- Probleme technique ? → "Contactez notre support a contact@voxia.fr pour obtenir de l'aide."
+- Tarifs ? → "Nos offres : Gratuit (3 factures), ESSENTIEL 19,99€ (200 factures), PRO 49,99€ (500 factures). Souscrivez dans l'onglet Abonnement."
+- Probleme technique ? → "Contactez notre support a support@voxin-app.com pour obtenir de l'aide."
 ''';
   }
 
@@ -323,7 +323,7 @@ EXEMPLES DE REPONSES :
   }
 
   String _getFallbackResponse() {
-    return "Je rencontre une difficulte technique. Contactez notre support : contact@voxia.fr";
+    return "Je rencontre une difficulte technique. Contactez notre support : support@voxin-app.com";
   }
 
   void resetConversation() {

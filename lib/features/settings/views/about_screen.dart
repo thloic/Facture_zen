@@ -164,7 +164,7 @@ class AboutScreen extends StatelessWidget {
                     const Icon(Icons.email_outlined, color: Color(0xFF5B5FC7), size: 20),
                     SizedBox(width: responsive.getAdaptiveSpacing(8)),
                     Text(
-                      'contact@voxia.fr',
+                      'contact@voxin-app.com',
                       style: TextStyle(
                         fontSize: responsive.getAdaptiveTextSize(14),
                         color: const Color(0xFF6B7280),
@@ -178,7 +178,7 @@ class AboutScreen extends StatelessWidget {
                     const Icon(Icons.language, color: Color(0xFF5B5FC7), size: 20),
                     SizedBox(width: responsive.getAdaptiveSpacing(8)),
                     Text(
-                      'www.facturezen.com',
+                      'https://www.voxin-app.com/',
                       style: TextStyle(
                         fontSize: responsive.getAdaptiveTextSize(14),
                         color: const Color(0xFF6B7280),

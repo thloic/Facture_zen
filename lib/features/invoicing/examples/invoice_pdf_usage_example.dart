@@ -38,7 +38,7 @@ class InvoicePdfExample {
         companyName: 'Mon Entreprise',
         companyAddress: '456 Avenue Test\n75002 Paris',
         companyPhone: '+33 1 23 45 67 89',
-        companyEmail: 'contact@entreprise.fr',
+        companyEmail: 'contact@voxin-app.com',
         companySiret: '123 456 789 00012',
         taxRate: 20.0, // TVA 20%
         discountRate: 10.0, // Réduction 10%
