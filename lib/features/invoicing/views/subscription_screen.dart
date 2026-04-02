@@ -226,6 +226,70 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
 
                     SizedBox(height: responsive.getAdaptiveSpacing(28)),
 
+                    // Bannière promotion — visible si :
+                    //   • une Offering non-default est active sur RevenueCat Dashboard
+                    //   • OU un prix introductif / essai gratuit est configuré sur
+                    //     App Store Connect ou Play Console
+                    if (viewModel.isPromoActive)
+                      Container(
+                        width: double.infinity,
+                        margin: EdgeInsets.only(
+                          bottom: responsive.getAdaptiveSpacing(16),
+                        ),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: responsive.getAdaptiveSpacing(16),
+                          vertical: responsive.getAdaptiveSpacing(12),
+                        ),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFFFF6B35), Color(0xFFFF4500)],
+                            begin: Alignment.centerLeft,
+                            end: Alignment.centerRight,
+                          ),
+                          borderRadius: BorderRadius.circular(14),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFFFF4500).withOpacity(0.3),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          children: [
+                            Text(
+                              '🎉',
+                              style: TextStyle(
+                                fontSize: responsive.getAdaptiveTextSize(22),
+                              ),
+                            ),
+                            SizedBox(width: responsive.getAdaptiveSpacing(10)),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Offre promotionnelle en cours',
+                                    style: TextStyle(
+                                      fontSize: responsive.getAdaptiveTextSize(13),
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  Text(
+                                    viewModel.currentPromoLabel,
+                                    style: TextStyle(
+                                      fontSize: responsive.getAdaptiveTextSize(11),
+                                      color: Colors.white.withOpacity(0.85),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
                     // Liste des offres avec accordions améliorés
                     if (packages.isEmpty)
                       Container(
@@ -719,6 +783,46 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                                         ],
                                       ),
                                     ),
+                                  // Badge PROMOTION — affiché si :
+                                  //   • RevenueCat Dashboard : offering non-default active
+                                  //   • OU App Store Connect / Play Console : introductory
+                                  //     price ou essai gratuit configuré sur ce package
+                                  if (viewModel.isPromoActive)
+                                    Container(
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: responsive.getAdaptiveSpacing(8),
+                                        vertical: responsive.getAdaptiveSpacing(5),
+                                      ),
+                                      decoration: BoxDecoration(
+                                        gradient: const LinearGradient(
+                                          colors: [Color(0xFFFF6B35), Color(0xFFFF4500)],
+                                        ),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            Icons.local_offer,
+                                            size: responsive.getAdaptiveSize(11),
+                                            color: Colors.white,
+                                          ),
+                                          SizedBox(width: responsive.getAdaptiveSpacing(3)),
+                                          Flexible(
+                                            child: Text(
+                                              'PROMOTION',
+                                              style: TextStyle(
+                                                fontSize: responsive.getAdaptiveTextSize(9),
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.white,
+                                                letterSpacing: 0.5,
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
                                 ],
                               ),
                               SizedBox(
@@ -782,14 +886,36 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                           crossAxisAlignment: CrossAxisAlignment.end,
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text(
-                              price,
-                              style: TextStyle(
-                                fontSize: responsive.getAdaptiveTextSize(20),
-                                fontWeight: FontWeight.bold,
-                                color: const Color(0xFF5B5FC7),
+                            // Si intro discount depuis le store : afficher le prix promo en vert
+                            if (viewModel.getPackageIntroDiscount(package) != null) ...[
+                              Text(
+                                viewModel.getPackageIntroDiscount(package)!.price == 0.0
+                                    ? 'GRATUIT'
+                                    : viewModel.getPackageIntroDiscount(package)!.priceString,
+                                style: TextStyle(
+                                  fontSize: responsive.getAdaptiveTextSize(20),
+                                  fontWeight: FontWeight.bold,
+                                  color: const Color(0xFF10B981),
+                                ),
                               ),
-                            ),
+                              Text(
+                                'puis $price',
+                                style: TextStyle(
+                                  fontSize: responsive.getAdaptiveTextSize(10),
+                                  color: Colors.grey.shade500,
+                                  decoration: TextDecoration.none,
+                                ),
+                              ),
+                            ] else ...[
+                              Text(
+                                price,
+                                style: TextStyle(
+                                  fontSize: responsive.getAdaptiveTextSize(20),
+                                  fontWeight: FontWeight.bold,
+                                  color: const Color(0xFF5B5FC7),
+                                ),
+                              ),
+                            ],
                             Text(
                               billingPeriod,
                               style: TextStyle(

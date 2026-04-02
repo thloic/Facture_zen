@@ -2,6 +2,8 @@
 
 import '../services/revenue_cat_service.dart';
 import 'package:flutter/material.dart';
+import 'package:purchases_flutter/models/introductory_price.dart';
+import 'package:purchases_flutter/models/period_unit.dart';
 
 import '../../../common/services/tracking_service.dart';
 import '../services/subscription_sync_service.dart';
@@ -19,6 +21,76 @@ class SubscriptionViewModel extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
   Package? get selectedPackage => _selectedPackage;
   List<Package>? get allPackages => _allPackages;
+
+  // ─── Détection de promotions ───────────────────────────────────────────────
+  //
+  // SOURCE 1 : RevenueCat Dashboard → "Set as Current"
+  //   Quand tu crées une Offering "promo_avril" et la mets en Current,
+  //   offerings.current?.identifier retourne "promo_avril" au lieu de "default".
+  //
+  // SOURCE 2 : App Store Connect / Play Console → prix introductif ou essai gratuit
+  //   Quand tu configures un "introductory price" ou "free trial" sur un produit
+  //   dans App Store Connect (iOS) ou Play Console (Android), RevenueCat synchronise
+  //   automatiquement : storeProduct.introductoryPrice devient non-null.
+  //   La sync est automatique — aucune action manuelle dans RevenueCat.
+  //   • Essai gratuit : introductoryPrice.price == 0.0
+  //   • Prix réduit   : introductoryPrice.price > 0.0
+  //
+  // Ce getter retourne true si l'UNE OU L'AUTRE source détecte une promo.
+  bool get isPromoActive {
+    // Source 1 : offering non-default activée sur RevenueCat Dashboard
+    final currentId = _revenueCatService.offerings?.current?.identifier;
+    if (currentId != null && currentId != 'default') return true;
+
+    // Source 2 : introductory price ou essai gratuit configuré dans le store
+    return (_allPackages ?? []).any(
+      (p) => p.storeProduct.introductoryPrice != null,
+    );
+  }
+
+  /// Retourne un label lisible pour la promo détectée.
+  /// Priorise le nom de l'offering RevenueCat ; sinon affiche le détail du store.
+  String get currentPromoLabel {
+    final currentId = _revenueCatService.offerings?.current?.identifier ?? '';
+    if (currentId.isNotEmpty && currentId != 'default') {
+      // ex: "promo_avril" → "Promo Avril"
+      return currentId
+          .replaceAll('_', ' ')
+          .split(' ')
+          .map((w) => w.isNotEmpty ? '${w[0].toUpperCase()}${w.substring(1)}' : '')
+          .join(' ');
+    }
+
+    // Sinon, décrire la promo venant du store (intro price / free trial)
+    final pkg = _allPackages?.firstWhere(
+      (p) => p.storeProduct.introductoryPrice != null,
+      orElse: () => _allPackages!.first,
+    );
+    final intro = pkg?.storeProduct.introductoryPrice;
+    if (intro == null) return 'Offre spéciale';
+
+    if (intro.price == 0.0) {
+      // Essai gratuit : affiche la durée (ex: "P7D" → lisible via periodNumberOfUnits)
+      return 'Essai gratuit ${intro.periodNumberOfUnits} ${_periodLabel(intro.periodUnit)}';
+    }
+    return 'Prix introductif · ${intro.priceString}';
+  }
+
+  String _periodLabel(PeriodUnit unit) {
+    switch (unit) {
+      case PeriodUnit.day:   return 'jour(s)';
+      case PeriodUnit.week:  return 'semaine(s)';
+      case PeriodUnit.month: return 'mois';
+      case PeriodUnit.year:  return 'an(s)';
+      default:               return '';
+    }
+  }
+
+  /// Retourne les détails de la promo du package (pour affichage sur la carte).
+  /// null si le package n'a pas de promo store.
+  IntroductoryPrice? getPackageIntroDiscount(Package package) {
+    return package.storeProduct.introductoryPrice;
+  }
 
   /// Obtenir le prix formaté d'un package spécifique
   String getPackagePrice(Package package) {
@@ -174,25 +246,16 @@ PlanInfo getPlanInfo(Package package) {
     }
   }
 
-  /// Trouver le meilleur package par défaut (annuel si disponible, sinon mensuel)
+  /// Trouver le meilleur package par défaut (Pro = populaire)
   Package _findBestDefaultPackage(List<Package> packages) {
-    // 1. Chercher un package annuel
-    final annual = packages.firstWhere(
-          (p) => p.packageType == PackageType.annual,
-      orElse: () => packages.first,
-    );
-
-    if (annual.packageType == PackageType.annual) {
-      return annual;
+    // Sélectionner le package Pro par défaut (le plus populaire)
+    try {
+      return packages.firstWhere(
+        (p) => p.storeProduct.identifier.contains('pro'),
+      );
+    } catch (_) {
+      return packages.first;
     }
-
-    // 2. Chercher un package mensuel
-    final monthly = packages.firstWhere(
-          (p) => p.packageType == PackageType.monthly,
-      orElse: () => packages.first,
-    );
-
-    return monthly;
   }
 
   /// Sélectionner un package

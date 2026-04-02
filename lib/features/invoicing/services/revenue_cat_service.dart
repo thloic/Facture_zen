@@ -22,42 +22,26 @@ class RevenueCatService {
   // lib/features/subscription/services/revenue_cat_service.dart
 
 List<Package> get allAvailablePackages {
-  final allPackages = <Package>[];
-  if (offerings == null) return allPackages;
+  if (offerings == null) return [];
 
-  // ✅ FORCER l'offering "default" au lieu de "current"
-  final defaultOffering = offerings!.all['default'] ?? offerings!.current;
+  // ✅ offerings.current retourne automatiquement le bon Offering selon :
+  // - Default Offering du Dashboard
+  // - Targeting Rules (audiences, pays, version app)
+  // - Experiments (A/B tests)
+  // - Scheduled Rules (promos planifiées)
+  final currentOff = offerings!.current;
 
-  if (defaultOffering == null) {
-    debugPrint('⚠️ Default offering introuvable');
-    return allPackages;
+  if (currentOff == null) {
+    debugPrint('⚠️ Current offering introuvable');
+    return [];
   }
 
-  debugPrint('🔍 Loading packages from offering: ${defaultOffering.identifier}');
-  
-  // Package mensuel
-  final monthlyPackage = defaultOffering.monthly;
-  if (monthlyPackage != null) {
-    allPackages.add(monthlyPackage);
-    debugPrint('✅ Added (monthly): ${monthlyPackage.identifier} → ${monthlyPackage.storeProduct.identifier}');
+  final packages = currentOff.availablePackages;
+  debugPrint('🔍 Loading ${packages.length} packages from offering: ${currentOff.identifier}');
+  for (final pkg in packages) {
+    debugPrint('✅ Package: ${pkg.identifier} → ${pkg.storeProduct.identifier}');
   }
-  
-  // Package annuel
-  final annualPackage = defaultOffering.annual;
-  if (annualPackage != null) {
-    allPackages.add(annualPackage);
-    debugPrint('✅ Added (annual): ${annualPackage.identifier} → ${annualPackage.storeProduct.identifier}');
-  }
-  
-  // Package à vie
-  final lifetimePackage = defaultOffering.lifetime;
-  if (lifetimePackage != null) {
-    allPackages.add(lifetimePackage);
-    debugPrint('✅ Added (lifetime): ${lifetimePackage.identifier} → ${lifetimePackage.storeProduct.identifier}');
-  }
-
-  debugPrint('✅ Total packages loaded: ${allPackages.length}');
-  return allPackages;
+  return packages;
 }
   Offering? get currentOffering => offerings?.current;
 
