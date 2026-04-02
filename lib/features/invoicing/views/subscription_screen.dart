@@ -474,12 +474,12 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       ];
     } else if (realProductId.contains('pro')) {
       displayName = 'PRO';
-      displayDescription = '500 factures';
+      displayDescription = '250 factures';
       displayBadge = 'PRO';
       isPopular = true;  // POPULAIRE
       badgeColor = const Color(0xFF5B5FC7);
       features = [
-        '500 factures/mois',
+        '250 factures/mois',
         '5 modèles de facture',
         'Transcription vocale IA',
         'Export PDF instantané',
@@ -490,12 +490,12 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     } else {
       // basic par défaut
       displayName = 'ESSENTIEL';
-      displayDescription = '200 factures';
+      displayDescription = '100 factures';
       displayBadge = 'ESSENTIEL';
       isPopular = false;
       badgeColor = const Color(0xFF10B981);
       features = [
-        '200 factures/mois',
+        '100 factures/mois',
         '4 modèles de facture',
         'Transcription vocale IA',
         'Export PDF instantané',

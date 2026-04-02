@@ -42,18 +42,18 @@ class PremiumProvider extends ChangeNotifier {
       // ✅ CORRIGÉ : limites alignées sur le cahier des charges
       if (keys.any((k) => k.contains('entreprise') || k.contains('enterprise'))) {
         _planName = 'Zen Entreprise';
-        _invoiceLimit = 750;
+        _invoiceLimit = 5000;
       } else if (keys.any((k) => k.contains('pro'))) {
         _planName = 'Zen Pro';
-        _invoiceLimit = 500;
+        _invoiceLimit = 250;
       } else if (keys.any((k) => k.contains('basic'))) {
         _planName = 'Zen Basic';
-        _invoiceLimit = 200;
+        _invoiceLimit = 100;
       } else if (_isPremium) {
         // ✅ AJOUTÉ : fallback si entitlement actif mais non reconnu
         debugPrint('⚠️ Entitlement non reconnu: $keys');
         _planName = 'Zen Basic';
-        _invoiceLimit = 200;
+        _invoiceLimit = 100;
       } else {
         _planName = 'Zen Gratuit';
         _invoiceLimit = 3;
