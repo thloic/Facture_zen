@@ -12,12 +12,13 @@ class SubscriptionSyncService {
   static const Map<String, SubscriptionPlan> PLAN_LIMITS = {
     'zen_gratuit':    SubscriptionPlan(name: 'Zen Gratuit',    monthlyInvoiceLimit: 3,   allowedTemplatesCount: 2,  isPremium: false),
     'zen_basic':      SubscriptionPlan(name: 'Zen Basic',      monthlyInvoiceLimit: 100, allowedTemplatesCount: 7,  isPremium: true),
-    'zen_pro':        SubscriptionPlan(name: 'Zen Pro',        monthlyInvoiceLimit: 250, allowedTemplatesCount: -1, isPremium: true),
+    'zen_pro':        SubscriptionPlan(name: 'Zen Pro',        monthlyInvoiceLimit: 500, allowedTemplatesCount: -1, isPremium: true),
     'zen_entreprise': SubscriptionPlan(name: 'Zen Entreprise', monthlyInvoiceLimit: 5000, allowedTemplatesCount: -1, isPremium: true),
-    'rent_up_pro':    SubscriptionPlan(name: 'Zen Pro',        monthlyInvoiceLimit: 250, allowedTemplatesCount: -1, isPremium: true),
+    'rent_up_pro':    SubscriptionPlan(name: 'Zen Pro',        monthlyInvoiceLimit: 500, allowedTemplatesCount: -1, isPremium: true),
   };
 
-  String _resolvePlanKey(String normalizedId) {
+  @visibleForTesting
+  String resolvePlanKey(String normalizedId) {
     if (normalizedId.contains('basic'))     return 'zen_basic';
     if (normalizedId == 'zen_pro')          return 'zen_pro';
     if (normalizedId == 'rent_up_pro')      return 'rent_up_pro';
@@ -60,7 +61,7 @@ class SubscriptionSyncService {
               .toLowerCase()
               .replaceAll(' ', '_')
               .replaceAll('-', '_');
-          final planKey = _resolvePlanKey(normalizedId);
+          final planKey = resolvePlanKey(normalizedId);
           debugPrint('📦 Checking entitlement: $entitlementId → $normalizedId → $planKey');
           final plan = PLAN_LIMITS[planKey];
 
@@ -176,7 +177,7 @@ class SubscriptionSyncService {
             .toLowerCase()
             .replaceAll(' ', '_')
             .replaceAll('-', '_');
-        final planKey = _resolvePlanKey(normalizedId);
+        final planKey = resolvePlanKey(normalizedId);
         debugPrint('🔍 getCurrentPlan: $entitlementId → $planKey');
         final plan = PLAN_LIMITS[planKey];
 

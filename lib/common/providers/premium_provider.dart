@@ -45,7 +45,7 @@ class PremiumProvider extends ChangeNotifier {
         _invoiceLimit = 5000;
       } else if (keys.any((k) => k.contains('pro'))) {
         _planName = 'Zen Pro';
-        _invoiceLimit = 250;
+        _invoiceLimit = 500;
       } else if (keys.any((k) => k.contains('basic'))) {
         _planName = 'Zen Basic';
         _invoiceLimit = 100;

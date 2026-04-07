@@ -534,21 +534,23 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
         'Export PDF instantané',
         'Chatbot assistance 24/7',
         'Historique de vos factures',
+        'Sans filigrane VoxIn',
         'Support prioritaire 7j/7',
       ];
     } else if (realProductId.contains('pro')) {
       displayName = 'PRO';
-      displayDescription = '250 factures';
+      displayDescription = '500 factures';
       displayBadge = 'PRO';
       isPopular = true;  // POPULAIRE
       badgeColor = const Color(0xFF5B5FC7);
       features = [
-        '250 factures/mois',
+        '500 factures/mois',
         '5 modèles de facture',
         'Transcription vocale IA',
         'Export PDF instantané',
         'Chatbot assistance 24/7',
         'Historique de vos factures',
+        'Sans filigrane VoxIn',
         'Support prioritaire',
       ];
     } else {

@@ -13,6 +13,7 @@ import 'pdf_viewer_screen.dart';
 import 'invoice_preview_screen.dart';
 import 'template_selector_modal.dart';
 import '../templates/invoice_template_base.dart';
+import '../../../common/providers/premium_provider.dart';
 import 'dart:io';
 
 
@@ -1293,23 +1294,11 @@ class _InvoiceTemplatePreview extends StatefulWidget {
 
 class _InvoiceTemplatePreviewState extends State<_InvoiceTemplatePreview> {
   late InvoiceTemplateType _selectedTemplate;
-  bool _isPremium = false;
-  final FirebaseInvoiceService _invoiceService = FirebaseInvoiceService();
 
   @override
   void initState() {
     super.initState();
     _selectedTemplate = widget.initialTemplate;
-    _loadPremiumStatus();
-  }
-
-  Future<void> _loadPremiumStatus() async {
-    final isPremiumUser = await _invoiceService.isPremiumUser();
-    if (mounted) {
-      setState(() {
-        _isPremium = isPremiumUser;
-      });
-    }
   }
 
   void _showTemplateSelector() {
@@ -1401,7 +1390,7 @@ class _InvoiceTemplatePreviewState extends State<_InvoiceTemplatePreview> {
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(16),
-              child: template.buildInvoice(context, widget.invoice, isPremium: _isPremium),
+              child: template.buildInvoice(context, widget.invoice, isPremium: context.read<PremiumProvider>().isPremium),
             ),
           ),
         ),

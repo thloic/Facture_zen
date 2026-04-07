@@ -10,7 +10,7 @@ class PdfGeneratorService {
   
   /// Génère un PDF à partir d'une facture
   /// Retourne le fichier PDF temporaire
-  Future<File> generateInvoicePdf(InvoiceModel invoice) async {
+  Future<File> generateInvoicePdf(InvoiceModel invoice, {bool isPremium = false}) async {
     try {
       debugPrint('📄 Génération du PDF pour la facture: ${invoice.invoiceNumber}');
       
@@ -22,7 +22,7 @@ class PdfGeneratorService {
           pageFormat: PdfPageFormat.a4,
           margin: const pw.EdgeInsets.all(40),
           build: (pw.Context context) {
-            return _buildInvoicePage(invoice);
+            return _buildInvoicePage(invoice, isPremium: isPremium);
           },
         ),
       );
@@ -45,7 +45,7 @@ class PdfGeneratorService {
   }
 
   /// Construit le contenu de la page de facture
-  pw.Widget _buildInvoicePage(InvoiceModel invoice) {
+  pw.Widget _buildInvoicePage(InvoiceModel invoice, {bool isPremium = false}) {
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
@@ -73,7 +73,7 @@ class PdfGeneratorService {
         if (invoice.notes != null && invoice.notes!.isNotEmpty)
           _buildNotes(invoice.notes!),
         
-        _buildFooter(invoice),
+        _buildFooter(invoice, isPremium: isPremium),
       ],
     );
   }
@@ -386,42 +386,43 @@ class PdfGeneratorService {
   }
 
   /// Pied de page
-  pw.Widget _buildFooter(InvoiceModel invoice) {
+  pw.Widget _buildFooter(InvoiceModel invoice, {bool isPremium = false}) {
     return pw.Column(
       children: [
         pw.SizedBox(height: 20),
         pw.Divider(),
         pw.SizedBox(height: 10),
-        // Signature VoxIn pour utilisateurs gratuits
-        pw.Container(
-          padding: const pw.EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-          decoration: pw.BoxDecoration(
-            color: PdfColors.grey100,
-            borderRadius: pw.BorderRadius.circular(20),
-            border: pw.Border.all(color: PdfColors.grey300),
-          ),
-          child: pw.Row(
-            mainAxisSize: pw.MainAxisSize.min,
-            mainAxisAlignment: pw.MainAxisAlignment.center,
-            children: [
-              pw.Text(
-                'Genere avec ',
-                style: pw.TextStyle(
-                  fontSize: 10,
-                  color: PdfColors.grey600,
+        // Signature VoxIn pour utilisateurs gratuits uniquement
+        if (!isPremium)
+          pw.Container(
+            padding: const pw.EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            decoration: pw.BoxDecoration(
+              color: PdfColors.grey100,
+              borderRadius: pw.BorderRadius.circular(20),
+              border: pw.Border.all(color: PdfColors.grey300),
+            ),
+            child: pw.Row(
+              mainAxisSize: pw.MainAxisSize.min,
+              mainAxisAlignment: pw.MainAxisAlignment.center,
+              children: [
+                pw.Text(
+                  'Genere avec ',
+                  style: pw.TextStyle(
+                    fontSize: 10,
+                    color: PdfColors.grey600,
+                  ),
                 ),
-              ),
-              pw.Text(
-                'VoxIn',
-                style: pw.TextStyle(
-                  fontSize: 11,
-                  fontWeight: pw.FontWeight.bold,
-                  color: PdfColors.grey800,
+                pw.Text(
+                  'VoxIn',
+                  style: pw.TextStyle(
+                    fontSize: 11,
+                    fontWeight: pw.FontWeight.bold,
+                    color: PdfColors.grey800,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
       ],
     );
   }

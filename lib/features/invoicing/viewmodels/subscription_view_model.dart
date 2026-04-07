@@ -38,9 +38,9 @@ class SubscriptionViewModel extends ChangeNotifier {
   //
   // Ce getter retourne true si l'UNE OU L'AUTRE source détecte une promo.
   bool get isPromoActive {
-    // Source 1 : offering non-default activée sur RevenueCat Dashboard
+    // Source 1 : offering avec "promo" dans l'identifier sur RevenueCat Dashboard
     final currentId = _revenueCatService.offerings?.current?.identifier;
-    if (currentId != null && currentId != 'default') return true;
+    if (currentId != null && currentId.toLowerCase().contains('promo')) return true;
 
     // Source 2 : introductory price ou essai gratuit configuré dans le store
     return (_allPackages ?? []).any(
@@ -52,7 +52,7 @@ class SubscriptionViewModel extends ChangeNotifier {
   /// Priorise le nom de l'offering RevenueCat ; sinon affiche le détail du store.
   String get currentPromoLabel {
     final currentId = _revenueCatService.offerings?.current?.identifier ?? '';
-    if (currentId.isNotEmpty && currentId != 'default') {
+    if (currentId.isNotEmpty && currentId.toLowerCase().contains('promo')) {
       // ex: "promo_avril" → "Promo Avril"
       return currentId
           .replaceAll('_', ' ')

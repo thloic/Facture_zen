@@ -20,6 +20,7 @@ import '../utils/invoice_creation_helper.dart';
 import '../viewmodels/invoice_history_viewmodel.dart';
 import '../viewmodels/voice_recording_viewmodel.dart';
 import '../../profile/services/firebase_profile_service.dart';
+import '../../../common/providers/premium_provider.dart';
 
 /// Écran de prévisualisation de la facture avec sélection de templates
 class InvoicePreviewScreen extends StatefulWidget {
@@ -462,7 +463,7 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
         }
       }
 
-      pdf.addPage(PdfTemplateFactory.generatePdfWithLogo(_selectedTemplate, _invoice, logoImage));
+      pdf.addPage(PdfTemplateFactory.generatePdfWithLogo(_selectedTemplate, _invoice, logoImage, isPremium: context.read<PremiumProvider>().isPremium));
 
       // Sauvegarder dans un fichier temporaire
       final tempDir = await getTemporaryDirectory();
@@ -611,7 +612,7 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
                   ),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(16),
-                    child: template.buildInvoice(context, _invoice),
+                    child: template.buildInvoice(context, _invoice, isPremium: context.read<PremiumProvider>().isPremium),
                   ),
                 ),
               ),
