@@ -15,6 +15,17 @@ class PremiumProvider extends ChangeNotifier {
     _init();
   }
 
+  @visibleForTesting
+  PremiumProvider.fake({
+    bool isPremium = false,
+    String planName = 'Zen Gratuit',
+    int invoiceLimit = 3,
+  }) {
+    _isPremium = isPremium;
+    _planName = planName;
+    _invoiceLimit = invoiceLimit;
+  }
+
   Future<void> _init() async {
     await refresh();
     Purchases.addCustomerInfoUpdateListener((info) async {

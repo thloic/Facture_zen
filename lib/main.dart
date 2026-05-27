@@ -62,10 +62,6 @@ void main() async {
     loadDataAfterLaunch: true,
   );
 
-  // Initialiser le tracking (Google Ads + Facebook Ads)
-  // Demande la permission ATT sur iOS et active Facebook App Events
-  await TrackingService().initialize();
-
   runApp(const MyApp());
 }
 
@@ -84,6 +80,12 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    // Initialiser le tracking APRÈS le premier frame pour que la popup ATT iOS
+    // puisse s'afficher correctement (sinon elle échoue silencieusement et
+    // setAdvertiserTrackingEnabled(false) est appelé → 0 install attribué Meta)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      TrackingService().initialize();
+    });
   }
 
   @override

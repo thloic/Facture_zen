@@ -5,8 +5,19 @@ import '../templates/invoice_template_base.dart';
 import 'revenue_cat_service.dart';
 
 class SubscriptionSyncService {
-  final RevenueCatService _revenueCatService = RevenueCatService();
-  final FirebaseInvoiceService _firebaseService = FirebaseInvoiceService();
+  final RevenueCatService _revenueCatService;
+  final FirebaseInvoiceService _firebaseService;
+
+  SubscriptionSyncService()
+      : _revenueCatService = RevenueCatService(),
+        _firebaseService = FirebaseInvoiceService();
+
+  @visibleForTesting
+  SubscriptionSyncService.forTesting({
+    required RevenueCatService revenueCatService,
+    required FirebaseInvoiceService firebaseService,
+  })  : _revenueCatService = revenueCatService,
+        _firebaseService = firebaseService;
 
   /// ✅ Map des limites de factures selon l'entitlement
   static const Map<String, SubscriptionPlan> PLAN_LIMITS = {

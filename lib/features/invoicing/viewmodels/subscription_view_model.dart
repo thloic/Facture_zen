@@ -9,8 +9,33 @@ import '../../../common/services/tracking_service.dart';
 import '../services/subscription_sync_service.dart';
 
 class SubscriptionViewModel extends ChangeNotifier {
-  final RevenueCatService _revenueCatService = RevenueCatService();
-  final SubscriptionSyncService _syncService = SubscriptionSyncService(); // ✅ AJOUTER
+  final RevenueCatService _revenueCatService;
+  final SubscriptionSyncService _syncService;
+
+  SubscriptionViewModel()
+      : _revenueCatService = RevenueCatService(),
+        _syncService = SubscriptionSyncService();
+
+  @visibleForTesting
+  SubscriptionViewModel.forTesting({
+    required RevenueCatService revenueCatService,
+    required SubscriptionSyncService syncService,
+  })  : _revenueCatService = revenueCatService,
+        _syncService = syncService;
+
+  @visibleForTesting
+  SubscriptionViewModel.withState({
+    required RevenueCatService revenueCatService,
+    required SubscriptionSyncService syncService,
+    bool initialIsLoading = false,
+    String? initialErrorMessage,
+    List<Package>? initialPackages,
+  })  : _revenueCatService = revenueCatService,
+        _syncService = syncService {
+    _isLoading = initialIsLoading;
+    _errorMessage = initialErrorMessage;
+    _allPackages = initialPackages;
+  }
 
   bool _isLoading = false;
   String? _errorMessage;
@@ -272,14 +297,19 @@ PlanInfo getPlanInfo(Package package) {
   debugPrint('✅ Package selected: ${package.identifier}');
   
   // 📊 Tracker l'ajout au panier (Google Ads + Facebook Ads)
-  final price = package.storeProduct.price;
-  final currency = package.storeProduct.currencyCode;
-  TrackingService().logAddToCart(
-    productId: package.identifier,
-    price: price,
-    currency: currency,
-  );
-  
+  // Wrapped in try-catch: tracking must never break the selection flow.
+  try {
+    final price = package.storeProduct.price;
+    final currency = package.storeProduct.currencyCode;
+    TrackingService().logAddToCart(
+      productId: package.identifier,
+      price: price,
+      currency: currency,
+    );
+  } catch (e) {
+    debugPrint('⚠️ Add-to-cart tracking error (non-critical): $e');
+  }
+
   notifyListeners();
 }
   /// Vérifier si un package est sélectionné
@@ -352,14 +382,20 @@ PlanInfo getPlanInfo(Package package) {
       if (success) {
         debugPrint('✅ Purchase completed successfully!');
         // 📊 Tracker l'achat (Google Ads + Facebook Ads)
-        final price = _selectedPackage!.storeProduct.price;
-        final currency = _selectedPackage!.storeProduct.currencyCode;
-        await TrackingService().logPurchase(
-          productId: _selectedPackage!.identifier,
-          price: price,
-          currency: currency,
-        );
-        debugPrint('📊 Purchase tracked: ${_selectedPackage!.identifier}');
+        // Wrapped in its own try-catch: a tracking failure must NEVER cause
+        // purchaseSubscription() to return false after a successful payment.
+        try {
+          final price = _selectedPackage!.storeProduct.price;
+          final currency = _selectedPackage!.storeProduct.currencyCode;
+          await TrackingService().logPurchase(
+            productId: _selectedPackage!.identifier,
+            price: price,
+            currency: currency,
+          );
+          debugPrint('📊 Purchase tracked: ${_selectedPackage!.identifier}');
+        } catch (e) {
+          debugPrint('⚠️ Purchase tracking error (non-critical): $e');
+        }
 
         // ✅ SYNCHRONISER avec Firebase après l'achat
         await _syncService.syncSubscriptionStatus();
