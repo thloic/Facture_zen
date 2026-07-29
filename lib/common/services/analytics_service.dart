@@ -14,6 +14,15 @@ class AnalyticsService {
   FirebaseAnalyticsObserver get observer =>
       FirebaseAnalyticsObserver(analytics: _analytics);
 
+  /// Active/désactive la collecte Firebase Analytics selon le consentement
+  /// de l'utilisateur (ATT sur iOS, popup de consentement sur Android).
+  /// Quand désactivée, le SDK Firebase ignore lui-même tous les événements
+  /// (y compris ceux de [observer]), donc aucun garde supplémentaire n'est
+  /// nécessaire par événement.
+  Future<void> setCollectionEnabled(bool enabled) async {
+    await _analytics.setAnalyticsCollectionEnabled(enabled);
+  }
+
   /// ===== ÉVÉNEMENTS D'INSCRIPTION =====
 
   /// Tracker une inscription réussie

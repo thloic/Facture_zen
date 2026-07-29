@@ -8,7 +8,6 @@ import 'package:facture_zen/features/invoicing/views/voice_recording_screen.dart
 import 'package:facture_zen/features/profile/views/profile_screenn.dart';
 import 'package:facture_zen/features/notifications/views/notifications_screen.dart';
 import 'package:facture_zen/revenue_cat_util.dart' as revenue_cat;
-import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -18,6 +17,7 @@ import 'common/services/auth_service.dart';
 import 'common/services/pin_service.dart';
 import 'common/services/firebase_invoice_service.dart';
 import 'common/services/tracking_service.dart';
+import 'common/widgets/tracking_consent_dialog.dart';
 import 'features/profile/services/firebase_profile_service.dart';
 import 'features/auth/viewmodels/login_viewmodel.dart';
 import 'features/auth/viewmodels/register_viewmodel.dart';
@@ -51,8 +51,9 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  // S'assurer que la collecte Analytics est activée (important pour first_open)
-  await FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(true);
+  // La collecte Analytics (Firebase + Facebook) n'est activée qu'après recueil
+  // du consentement de l'utilisateur — voir TrackingService.initialize(),
+  // appelé après le premier frame dans _MyAppState.initState().
 
   // Initialiser RevenueCat APRÈS Firebase
   await revenue_cat.initialize(
@@ -82,9 +83,17 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     // Initialiser le tracking APRÈS le premier frame pour que la popup ATT iOS
     // puisse s'afficher correctement (sinon elle échoue silencieusement et
-    // setAdvertiserTrackingEnabled(false) est appelé → 0 install attribué Meta)
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      TrackingService().initialize();
+    // setAdvertiserTrackingEnabled(false) est appelé → 0 install attribué Meta).
+    // Sur Android, on affiche d'abord notre propre popup de consentement
+    // (il n'existe pas d'équivalent natif à ATT) avant d'initialiser le tracking.
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (Platform.isAndroid) {
+        final context = _navigatorKey.currentContext;
+        if (context != null) {
+          await TrackingConsentDialog.showIfNeeded(context);
+        }
+      }
+      await TrackingService().initialize();
     });
   }
 

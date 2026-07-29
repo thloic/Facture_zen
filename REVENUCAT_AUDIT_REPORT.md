@@ -713,23 +713,45 @@ These match RevenueCat entitlements and don't change per environment.
 
 ## Security Assessment
 
+> **⚠️ Correction (2026-07-28):** the original version of this section
+> conflated two different things — RevenueCat validating a *purchase receipt*
+> server-side (true, and not something this app needs to worry about) versus
+> this app's *own* entitlement bookkeeping in Firebase being trustworthy
+> (false, until the fix below). See details right after.
+
 ### ✅ No Credentials in Code
 
 - ✅ API keys in `.env` (not hardcoded)
-- ✅ RevenueCat validates purchases server-side
+- ✅ RevenueCat validates purchase *receipts* server-side (signature,
+  expiration, renewal state — this part is genuinely handled by RevenueCat)
 - ✅ Firebase Auth protects user data
 - ✅ No payment info stored locally
 
-### ✅ Proper Entitlement Verification
+### ⚠️ Entitlement bookkeeping in Firebase was NOT server-verified
 
 ```dart
 final isPurchased = result.customerInfo.entitlements.active.isNotEmpty;
 ```
 
-This is the **correct way** to verify purchases are active. RevenueCat handles:
-- Signature validation
-- Expiration date checking
-- Subscription auto-renewal management
+This correctly reflects what the **on-device RevenueCat SDK cache** believes.
+But `SubscriptionSyncService.syncSubscriptionStatus()` then had the **client
+itself** write `isPremium` / `monthlyInvoiceLimit` / `allowedTemplatesCount` /
+`planName` straight into `users/$uid` in Firebase Realtime Database
+(`FirebaseInvoiceService.updateUserPlan()`), and `canCreateInvoice()` read
+those same client-writable fields back to decide whether to allow creating an
+invoice. Since the RTDB rules in place granted any authenticated user
+`.write` access to their own `users/$uid` node, this meant a user could set
+`isPremium: true` (and any invoice/template limit) via a direct Firebase REST
+call using their own auth token — without ever purchasing anything.
+
+**Fix applied:** a Cloud Function (`functions/revenueCatWebhook`, see
+`functions/README.md`) is now the only writer of these four fields, driven by
+RevenueCat's webhook + a server-side call to RevenueCat's REST API for the
+authoritative subscriber state. `database.rules.json` at the repo root now
+rejects any client attempt to set these fields (client can still initialize
+`isPremium` to `false` for new accounts, never to `true`). This still requires
+one-time setup (Blaze plan, RevenueCat webhook config, secrets) — see
+`functions/README.md` — before it is fully active in production.
 
 ---
 

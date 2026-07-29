@@ -2,10 +2,16 @@ import 'dart:io';
 import 'package:app_tracking_transparency/app_tracking_transparency.dart';
 import 'package:flutter/foundation.dart';
 import 'analytics_service.dart';
+import 'consent_service.dart';
 import 'facebook_analytics_service.dart';
 
 /// Service unifié pour le tracking Google Ads + Facebook Ads
 /// Envoie les événements aux deux plateformes en parallèle
+///
+/// Aucun événement (y compris [setUserData] et les montants de factures/
+/// abonnements) n'est envoyé tant que [_isTrackingAuthorized] n'est pas vrai
+/// — c'est-à-dire tant que l'utilisateur n'a pas explicitement consenti
+/// (ATT sur iOS, popup de consentement sur Android via [ConsentService]).
 class TrackingService {
   static final TrackingService _instance = TrackingService._internal();
   factory TrackingService() => _instance;
@@ -18,18 +24,29 @@ class TrackingService {
 
   /// ===== INITIALISATION =====
 
-  /// Initialiser le tracking (demande la permission iOS + active Facebook)
+  /// Initialiser le tracking en fonction du consentement de l'utilisateur.
+  /// Sur Android, appeler [TrackingConsentDialog.showIfNeeded] AVANT cette
+  /// méthode pour que le consentement soit déjà persisté au moment de l'appel.
   Future<void> initialize() async {
-    // Demander la permission de tracking sur iOS
     if (Platform.isIOS) {
       await _requestTrackingPermission();
     } else {
-      // Sur Android, le tracking est autorisé par défaut
-      _isTrackingAuthorized = true;
+      _isTrackingAuthorized = await ConsentService().isGranted();
+    }
+
+    // Active/désactive la collecte native Firebase Analytics — quand
+    // désactivée, le SDK ignore lui-même tous les événements et l'observer
+    // de navigation, sans garde supplémentaire nécessaire côté Firebase.
+    await _firebaseAnalytics.setCollectionEnabled(_isTrackingAuthorized);
+
+    if (!_isTrackingAuthorized) {
+      await _facebookAnalytics.setAdvertiserTrackingEnabled(false);
+      debugPrint('🎯 TrackingService: consentement refusé, tracking désactivé');
+      return;
     }
 
     // Configurer le tracking Facebook selon la permission (doit être fait AVANT logActivateApp)
-    await _facebookAnalytics.setAdvertiserTrackingEnabled(_isTrackingAuthorized);
+    await _facebookAnalytics.setAdvertiserTrackingEnabled(true);
     // S'assurer que l'autolog est activé (important si désactivé côté Facebook)
     await _facebookAnalytics.setAutoLogAppEventsEnabled(true);
     // Activer Facebook App Events
@@ -66,6 +83,7 @@ class TrackingService {
 
   /// Tracker une inscription réussie (Firebase + Facebook)
   Future<void> logSignUp({String? method}) async {
+    if (!_isTrackingAuthorized) return;
     await Future.wait([
       _firebaseAnalytics.logSignUp(method: method),
       _facebookAnalytics.logCompleteRegistration(registrationMethod: method),
@@ -74,6 +92,7 @@ class TrackingService {
 
   /// Tracker une connexion réussie
   Future<void> logLogin({String? method}) async {
+    if (!_isTrackingAuthorized) return;
     await Future.wait([
       _firebaseAnalytics.logLogin(method: method),
       _facebookAnalytics.logCustomEvent(eventName: 'fb_mobile_complete_login'),
@@ -89,6 +108,7 @@ class TrackingService {
     required String currency,
     String? transactionId,
   }) async {
+    if (!_isTrackingAuthorized) return;
     await Future.wait([
       _firebaseAnalytics.logPurchase(
         productId: productId,
@@ -113,6 +133,7 @@ class TrackingService {
     required double price,
     required String currency,
   }) async {
+    if (!_isTrackingAuthorized) return;
     await Future.wait([
       _firebaseAnalytics.logAddToCart(
         productId: productId,
@@ -134,6 +155,7 @@ class TrackingService {
     required double price,
     required String currency,
   }) async {
+    if (!_isTrackingAuthorized) return;
     await Future.wait([
       _firebaseAnalytics.logBeginCheckout(
         productId: productId,
@@ -153,6 +175,7 @@ class TrackingService {
 
   /// Tracker la création d'une facture (Firebase + Facebook)
   Future<void> logCreateInvoice({double? amount, String? currency}) async {
+    if (!_isTrackingAuthorized) return;
     await Future.wait([
       _firebaseAnalytics.logCreateInvoice(amount: amount, currency: currency),
       _facebookAnalytics.logCreateInvoice(amount: amount, currency: currency),
@@ -161,6 +184,7 @@ class TrackingService {
 
   /// Tracker l'utilisation de la voix (Firebase + Facebook)
   Future<void> logVoiceRecording() async {
+    if (!_isTrackingAuthorized) return;
     await Future.wait([
       _firebaseAnalytics.logVoiceRecording(),
       _facebookAnalytics.logVoiceRecording(),
@@ -173,6 +197,7 @@ class TrackingService {
     double? price,
     String? currency,
   }) async {
+    if (!_isTrackingAuthorized) return;
     await Future.wait([
       _firebaseAnalytics.logViewSubscription(),
       _facebookAnalytics.logViewContent(
@@ -188,19 +213,22 @@ class TrackingService {
 
   /// Définir l'ID utilisateur (Firebase + Facebook)
   Future<void> setUserId(String? userId) async {
+    if (!_isTrackingAuthorized) return;
     await Future.wait([
       _firebaseAnalytics.setUserId(userId),
       _facebookAnalytics.setUserId(userId),
     ]);
   }
 
-  /// Définir les données utilisateur pour Facebook (matching avancé)
+  /// Définir les données utilisateur pour Facebook (matching avancé) —
+  /// jamais envoyé sans consentement explicite (email/nom = PII).
   Future<void> setUserData({
     String? email,
     String? firstName,
     String? lastName,
     String? phone,
   }) async {
+    if (!_isTrackingAuthorized) return;
     await _facebookAnalytics.setUserData(
       email: email,
       firstName: firstName,
@@ -216,6 +244,7 @@ class TrackingService {
     required String screenName,
     String? screenClass,
   }) async {
+    if (!_isTrackingAuthorized) return;
     await _firebaseAnalytics.logScreenView(
       screenName: screenName,
       screenClass: screenClass,
@@ -229,6 +258,7 @@ class TrackingService {
     required String name,
     Map<String, Object>? parameters,
   }) async {
+    if (!_isTrackingAuthorized) return;
     await Future.wait([
       _firebaseAnalytics.logCustomEvent(name: name, parameters: parameters),
       _facebookAnalytics.logCustomEvent(

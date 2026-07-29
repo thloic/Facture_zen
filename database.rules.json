@@ -1,0 +1,48 @@
+{
+  "rules": {
+    // Les champs isPremium / monthlyInvoiceLimit / allowedTemplatesCount / planName
+    // ne doivent JAMAIS être modifiables par le client : ils reflètent le vrai
+    // abonnement RevenueCat, écrit uniquement par la Cloud Function
+    // `revenueCatWebhook` (Admin SDK, qui ignore ces règles). Sans ce verrou,
+    // n'importe quel utilisateur authentifié peut s'auto-attribuer le premium
+    // via un simple appel REST sur son propre nœud users/$uid (ancienne faille).
+    "users": {
+      "$uid": {
+        ".read": "$uid === auth.uid",
+        ".write": "$uid === auth.uid",
+        "isPremium": {
+          // Le client peut seulement (ré)initialiser à false (nouveau compte) ;
+          // jamais passer à true depuis le client.
+          ".validate": "newData.val() === false"
+        },
+        "monthlyInvoiceLimit": {
+          ".validate": false
+        },
+        "allowedTemplatesCount": {
+          ".validate": false
+        },
+        "planName": {
+          ".validate": false
+        },
+        "invoices": {
+          ".read": "$uid === auth.uid",
+          ".write": "$uid === auth.uid"
+        }
+      }
+    },
+    "invoices": {
+      ".indexOn": ["userId"],
+      ".read": "auth != null",
+      "$invoiceId": {
+        ".read": "auth != null && data.child('userId').val() === auth.uid",
+        ".write": "auth != null && (!data.exists() || data.child('userId').val() === auth.uid)"
+      }
+    },
+    "notifications": {
+      "$uid": {
+        ".read": "$uid === auth.uid",
+        ".write": "$uid === auth.uid"
+      }
+    }
+  }
+}

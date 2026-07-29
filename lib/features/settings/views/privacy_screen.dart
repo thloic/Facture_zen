@@ -71,7 +71,7 @@ class PrivacyScreen extends StatelessWidget {
                 ),
                 SizedBox(height: responsive.getAdaptiveSpacing(12)),
                 Text(
-                  'Dernière mise à jour : Janvier 2026',
+                  'Dernière mise à jour : Juillet 2026',
                   style: TextStyle(
                     fontSize: responsive.getAdaptiveTextSize(12),
                     color: const Color(0xFF9CA3AF),
@@ -94,7 +94,15 @@ class PrivacyScreen extends StatelessWidget {
 
           _buildPrivacySection(
             title: 'Utilisation des données',
-            content: 'Vos données sont utilisées exclusivement pour la création et la gestion de vos factures. Nous ne vendons ni ne partageons vos informations avec des tiers.',
+            content: 'Vos données sont utilisées principalement pour la création et la gestion de vos factures. Nous ne vendons jamais vos informations.',
+            responsive: responsive,
+          ),
+
+          SizedBox(height: responsive.getAdaptiveSpacing(12)),
+
+          _buildPrivacySection(
+            title: 'Partenaires publicitaires',
+            content: 'Avec votre consentement (demandé au premier lancement), nous partageons certaines données avec Google et Meta (Facebook) à des fins de mesure et d\'amélioration de nos campagnes publicitaires : votre email et votre nom pour Meta, ainsi que les montants de vos factures et de votre abonnement pour les deux plateformes. Vous pouvez refuser ce partage sans que cela affecte l\'utilisation de l\'application.',
             responsive: responsive,
           ),
 
